@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Role } from '../types';
-import { AlertCircle, Shield, User as UserIcon, Mail } from 'lucide-react';
+import { AlertCircle, Shield, User as UserIcon, Mail, ArrowRight, CheckCircle2 } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -23,37 +23,34 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     setError('');
 
     if (!teacherEmail.trim()) {
-      setError('Por favor, introduce tu email corporativo.');
+      setError('Introduce tu email corporativo.');
       return;
     }
 
     if (!teacherEmail.includes('@')) {
-       setError('Formato de email no válido (falta @).');
+       setError('Formato de email incorrecto.');
        return;
     }
 
-    // Logic to extract name from email: nombre.apellido@...
     const localPart = teacherEmail.split('@')[0];
     const nameParts = localPart.split('.');
     
-    // Capitalize each part of the name
     const formatName = nameParts
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
 
     const user: User = {
       email: teacherEmail,
-      name: formatName, // Derived from email
+      name: formatName, 
       role: Role.TEACHER
     };
     
     onLogin(user);
   };
 
-  // --- Admin Login Logic ---
   const handleAdminLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (loading) return; // Prevent double submit
+    if (loading) return; 
 
     setLoading(true);
     setError('');
@@ -65,7 +62,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         body: JSON.stringify({ password: adminPassword })
       });
 
-      // Check if response is ok
       if (!response.ok) {
          const errorData = await response.json();
          throw new Error(errorData.message || 'Error en la autenticación');
@@ -80,141 +76,153 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       }
     } catch (err: any) {
       console.error("Login Error:", err);
-      // Sin fallback local, mostramos el error directamente
-      setError('Error de conexión con el servidor. Verifica que la aplicación está activa.');
+      setError('No se pudo conectar con el servidor.');
     } finally {
       setLoading(false); 
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-slate-100">
-      <div className="max-w-md w-full bg-white rounded-3xl shadow-2xl overflow-hidden animate-slide-up border border-slate-200 relative">
+    <div className="min-h-screen flex w-full">
+      {/* LEFT SIDE - BRANDING */}
+      <div className="hidden lg:flex w-1/2 bg-slate-900 relative overflow-hidden flex-col justify-between p-16 text-white">
+        {/* Background Effects */}
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 z-0"></div>
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-brand-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-indigo-500 rounded-full mix-blend-multiply filter blur-[128px] opacity-20 animate-blob"></div>
         
-        {/* Header Section */}
-        <div className="bg-primary-700 p-8 pb-10 text-center relative overflow-hidden">
-             {/* Abstract background shapes */}
-             <div className="absolute top-0 left-0 w-full h-full opacity-10">
-                <div className="absolute top-[-50px] left-[-50px] w-32 h-32 rounded-full bg-white blur-2xl"></div>
-                <div className="absolute bottom-[-20px] right-[-20px] w-40 h-40 rounded-full bg-white blur-3xl"></div>
-             </div>
+        {/* Content */}
+        <div className="relative z-10 animate-fade-in">
+           <div className="flex items-center space-x-4 mb-8">
+              <div className="h-14 w-14 bg-white rounded-2xl flex items-center justify-center shadow-lg">
+                <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain" />
+              </div>
+              <div>
+                <h2 className="text-xl font-bold tracking-tight">La Hispanidad</h2>
+                <p className="text-brand-200 text-sm font-medium tracking-widest uppercase">Portal Docente</p>
+              </div>
+           </div>
+        </div>
 
-            <div className="relative z-10 flex flex-col items-center">
-                <div className="bg-white p-4 rounded-2xl shadow-lg mb-4">
-                    {/* Aumentamos el tamaño y eliminamos la restricción cuadrada estricta para acomodar el logo vertical con texto */}
-                    <img src="/logo.png" alt="Logo La Hispanidad" className="h-20 w-auto object-contain" />
-                </div>
-                <h1 className="text-2xl font-extrabold text-white tracking-tight">La Hispanidad</h1>
-                <p className="text-primary-100 text-sm font-medium mt-1">Gestión de Espacios</p>
+        <div className="relative z-10 max-w-lg animate-slide-up">
+            <h1 className="text-5xl font-extrabold tracking-tight leading-tight mb-6">
+              Gestiona tus espacios <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-300 to-indigo-300">sin complicaciones.</span>
+            </h1>
+            <p className="text-slate-400 text-lg leading-relaxed mb-8">
+              Plataforma centralizada para la reserva y gestión de aulas de informática e idiomas. Optimizando el tiempo de enseñanza.
+            </p>
+            
+            <div className="flex space-x-8 text-sm font-medium text-slate-400">
+               <div className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-brand-400"/> Acceso Instantáneo</div>
+               <div className="flex items-center"><CheckCircle2 className="w-4 h-4 mr-2 text-brand-400"/> Gestión en Tiempo Real</div>
             </div>
         </div>
 
-        <div className="px-6 py-8 relative -mt-6 bg-white rounded-t-3xl">
+        <div className="relative z-10 text-xs text-slate-500 font-medium">
+           &copy; {new Date().getFullYear()} Colegio La Hispanidad. Todos los derechos reservados.
+        </div>
+      </div>
+
+      {/* RIGHT SIDE - FORM */}
+      <div className="w-full lg:w-1/2 bg-white flex items-center justify-center p-8 lg:p-16 relative">
+         <div className="w-full max-w-md animate-scale-in">
+            {/* Mobile Logo */}
+            <div className="lg:hidden flex justify-center mb-8">
+                <div className="h-16 w-16 bg-slate-50 rounded-2xl flex items-center justify-center shadow-sm border border-slate-100">
+                   <img src="/logo.png" alt="Logo" className="h-10 w-auto object-contain" />
+                </div>
+            </div>
+
+            <div className="text-center lg:text-left mb-10">
+               <h2 className="text-3xl font-bold text-slate-900 tracking-tight">Bienvenido</h2>
+               <p className="text-slate-500 mt-2">Introduce tus credenciales para acceder.</p>
+            </div>
+
             {/* Tabs */}
-            <div className="grid grid-cols-2 gap-1 p-1.5 bg-slate-100 rounded-xl mb-8 border border-slate-200">
+            <div className="grid grid-cols-2 p-1 bg-slate-100/80 rounded-xl mb-8">
               <button
-                type="button"
                 onClick={() => { setActiveTab('teacher'); setError(''); }}
                 className={`py-2.5 text-sm font-bold rounded-lg transition-all duration-200 ${
                   activeTab === 'teacher' 
-                    ? 'bg-white text-primary-700 shadow-md ring-1 ring-black/5' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 Profesorado
               </button>
               <button
-                type="button"
                 onClick={() => { setActiveTab('admin'); setError(''); }}
                 className={`py-2.5 text-sm font-bold rounded-lg transition-all duration-200 ${
                   activeTab === 'admin' 
-                    ? 'bg-white text-slate-900 shadow-md ring-1 ring-black/5' 
-                    : 'text-slate-500 hover:text-slate-700 hover:bg-slate-200/50'
+                    ? 'bg-white text-slate-900 shadow-sm ring-1 ring-black/5' 
+                    : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
                 Dirección
               </button>
             </div>
 
-            <div className="min-h-[220px]">
-              {error && (
-                <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 rounded-r-lg flex items-start gap-3 animate-pulse-soft">
-                  <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
-                  <span className="text-sm font-semibold text-red-800 leading-snug">{error}</span>
-                </div>
-              )}
+            {error && (
+               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm font-medium animate-pulse-soft">
+                  <AlertCircle className="w-5 h-5 shrink-0" />
+                  <span>{error}</span>
+               </div>
+            )}
 
-              {activeTab === 'teacher' ? (
-                <form onSubmit={handleTeacherLogin} className="space-y-6 animate-fade-in">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Email Corporativo
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Mail className="h-6 w-6 text-slate-400" />
+            {activeTab === 'teacher' ? (
+                <form onSubmit={handleTeacherLogin} className="space-y-5">
+                   <div className="space-y-1.5">
+                      <label className="block text-sm font-semibold text-slate-700">Email Corporativo</label>
+                      <div className="relative group">
+                         <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
+                         <input
+                           type="email"
+                           value={teacherEmail}
+                           onChange={(e) => setTeacherEmail(e.target.value)}
+                           className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium"
+                           placeholder="nombre.apellido@..."
+                           required
+                         />
                       </div>
-                      <input
-                        type="email"
-                        value={teacherEmail}
-                        onChange={(e) => setTeacherEmail(e.target.value)}
-                        className="block w-full pl-12 pr-4 py-4 text-base bg-white border-2 border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:border-primary-600 focus:ring-1 focus:ring-primary-600 transition-colors shadow-sm"
-                        placeholder="nombre.apellido@..."
-                        autoComplete="email"
-                        required
-                      />
-                    </div>
-                    <p className="mt-2 text-xs text-slate-500 font-medium ml-1">
-                        Usa tu correo @colegiolahispanidad.es
-                    </p>
-                  </div>
-
-                  <button
+                   </div>
+                   <button
                     type="submit"
-                    className="w-full flex justify-center py-4 px-4 border border-transparent text-base font-bold rounded-xl text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-100 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0"
-                  >
-                    Entrar como Profesor
-                  </button>
+                    className="w-full flex items-center justify-center py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+                   >
+                     Entrar <ArrowRight className="w-4 h-4 ml-2" />
+                   </button>
                 </form>
-              ) : (
-                <form onSubmit={handleAdminLogin} className="space-y-6 animate-fade-in">
-                  <div>
-                    <label className="block text-sm font-bold text-slate-700 mb-2">
-                        Contraseña de Administración
-                    </label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                        <Shield className="h-6 w-6 text-slate-400" />
-                        </div>
-                        <input
-                        type="password"
-                        value={adminPassword}
-                        onChange={(e) => setAdminPassword(e.target.value)}
-                        className="block w-full pl-12 pr-4 py-4 text-base bg-white border-2 border-slate-300 rounded-xl text-slate-900 placeholder-slate-500 focus:outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900 transition-colors shadow-sm"
-                        placeholder="••••••••"
-                        autoComplete="current-password"
-                        required
-                        />
-                    </div>
-                  </div>
-                  
-                  <button
+            ) : (
+                <form onSubmit={handleAdminLogin} className="space-y-5">
+                   <div className="space-y-1.5">
+                      <label className="block text-sm font-semibold text-slate-700">Contraseña Maestra</label>
+                      <div className="relative group">
+                         <Shield className="absolute left-4 top-3.5 h-5 w-5 text-slate-400 group-focus-within:text-brand-500 transition-colors" />
+                         <input
+                           type="password"
+                           value={adminPassword}
+                           onChange={(e) => setAdminPassword(e.target.value)}
+                           className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-900/20 focus:border-slate-900 transition-all font-medium"
+                           placeholder="••••••••"
+                           required
+                         />
+                      </div>
+                   </div>
+                   <button
                     type="submit"
                     disabled={loading}
-                    className="w-full flex justify-center py-4 px-4 border border-transparent text-base font-bold rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-4 focus:ring-slate-200 transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 active:translate-y-0 disabled:opacity-70 disabled:cursor-not-allowed"
-                  >
-                    {loading ? 'Verificando...' : 'Acceder al Panel de Control'}
-                  </button>
+                    className="w-full flex items-center justify-center py-3.5 px-4 bg-slate-900 hover:bg-slate-800 text-white text-sm font-bold rounded-xl transition-all shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 disabled:opacity-70 disabled:cursor-not-allowed"
+                   >
+                     {loading ? 'Verificando...' : 'Acceder al Panel'}
+                     {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+                   </button>
                 </form>
-              )}
-            </div>
-        </div>
-      </div>
-      
-      <div className="fixed bottom-0 left-0 w-full p-4 text-center bg-slate-100/80 backdrop-blur-sm border-t border-slate-200">
-         <p className="text-xs text-slate-400 font-medium">
-            &copy; {new Date().getFullYear()} Javier Barrero
-         </p>
+            )}
+
+            <p className="mt-8 text-center text-xs text-slate-400 font-medium">
+                ¿Problemas para acceder? Contacta con soporte TIC.
+            </p>
+         </div>
       </div>
     </div>
   );
