@@ -27,14 +27,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       return;
     }
 
-    if (!teacherEmail.includes('@')) {
-       setError('Formato de email incorrecto.');
+    // Validación estricta del dominio
+    const VALID_DOMAIN = '@colegiolahispanidad.es';
+    if (!teacherEmail.toLowerCase().endsWith(VALID_DOMAIN)) {
+       setError(`Acceso restringido a cuentas ${VALID_DOMAIN}`);
        return;
     }
 
     const localPart = teacherEmail.split('@')[0];
     const nameParts = localPart.split('.');
     
+    // Intenta formatear el nombre basado en nombre.apellido (común en correos corporativos)
     const formatName = nameParts
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join(' ');
@@ -180,7 +183,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                            value={teacherEmail}
                            onChange={(e) => setTeacherEmail(e.target.value)}
                            className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all font-medium text-sm"
-                           placeholder="nombre.apellido@..."
+                           placeholder="nombre.apellido@colegiolahispanidad.es"
                            required
                          />
                       </div>
