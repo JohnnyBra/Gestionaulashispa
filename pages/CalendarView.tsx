@@ -3,7 +3,7 @@ import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES
 import { getBookings, saveBooking, saveBatchBookings, removeBooking } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
-import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon, WifiOff, RefreshCw, Repeat, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon, WifiOff, RefreshCw, Repeat, CalendarDays, MoreHorizontal } from 'lucide-react';
 import { addWeeks, subWeeks, format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -38,8 +38,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
   const courses = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
   const roomName = stage === Stage.PRIMARY ? 'Aula de Idiomas' : 'Aula de Informática';
-  const themeColor = stage === Stage.PRIMARY ? 'blue' : 'emerald';
-  const themeClasses = stage === Stage.PRIMARY ? 'from-blue-600 to-blue-500' : 'from-emerald-600 to-emerald-500';
+  
+  // Configuración de colores dinámica
+  const colors = stage === Stage.PRIMARY 
+    ? { primary: 'blue', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', gradient: 'from-blue-600 to-indigo-600' }
+    : { primary: 'emerald', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-600 to-teal-600' };
 
   const loadData = async () => {
     setLoading(true);
@@ -49,7 +52,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       setBookings(data);
     } catch (err) {
       console.error("Error loading bookings:", err);
-      setError("No se pudo conectar con el servidor. Verifica tu conexión.");
+      setError("No se pudo conectar con el servidor.");
     } finally {
       setLoading(false);
     }
@@ -87,8 +90,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setTeacherName(existing?.teacherName || user.name);
     setBlockReason(existing?.justification || '');
     setIsBlocking(existing?.isBlocked || false);
-    
-    // Reset recurring state
     setIsRecurring(false);
     setRecurringEndDate('');
     
@@ -97,8 +98,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const handleDelete = async () => {
      if (!existingBooking) return;
-     
-     if (confirm('¿Estás seguro de que quieres eliminar esta reserva?')) {
+     if (confirm('¿Eliminar esta reserva permanentemente?')) {
         setIsSubmitting(true);
         try {
           await removeBooking(existingBooking.id);
@@ -106,7 +106,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           setIsModalOpen(false);
           await loadData();
         } catch (e) {
-          alert("Error al eliminar. Inténtalo de nuevo.");
+          alert("Error al eliminar.");
           setIsSubmitting(false);
         }
      }
@@ -139,15 +139,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
     try {
       if (isRecurring && user.role === Role.ADMIN && recurringEndDate) {
-          // Batch Generation Logic
           const bookingsToCreate: Booking[] = [];
           let loopDate = selectedSlot.date;
           const end = new Date(recurringEndDate);
           
-          // Loop weekly until end date
           while (loopDate <= end) {
-              // Optional: Skip if day is holiday/non-bookable, or keep it (admin might want to force)
-              // Let's check bookable to correspond with UI logic
               if (isBookableDay(loopDate)) {
                  bookingsToCreate.push({
                      ...baseBooking,
@@ -157,12 +153,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
               }
               loopDate = addWeeks(loopDate, 1);
           }
-
-          if (bookingsToCreate.length > 0) {
-              await saveBatchBookings(bookingsToCreate);
-          }
+          if (bookingsToCreate.length > 0) await saveBatchBookings(bookingsToCreate);
       } else {
-          // Single Booking
           const newBooking: Booking = {
             ...baseBooking,
             id: crypto.randomUUID(),
@@ -170,204 +162,172 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           };
           await saveBooking(newBooking);
       }
-      
       setIsSubmitting(false);
       setIsModalOpen(false);
       await loadData(); 
     } catch (e) {
-      alert("Error al guardar. Verifica tu conexión.");
+      alert("Error de conexión al guardar.");
       setIsSubmitting(false);
     }
   };
 
-  // Error State View
   if (error && bookings.length === 0) {
      return (
-        <div className="h-screen flex flex-col items-center justify-center p-4 animate-fade-in text-center">
-            <div className="bg-red-50 p-6 rounded-full mb-6">
-                <WifiOff className="w-16 h-16 text-red-400" />
+        <div className="h-[calc(100vh-100px)] flex flex-col items-center justify-center p-4 animate-fade-in text-center">
+            <div className="bg-red-50 p-8 rounded-full mb-6 border border-red-100 shadow-xl shadow-red-500/10">
+                <WifiOff className="w-12 h-12 text-red-500" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2">Sin conexión con el servidor</h2>
-            <p className="text-slate-500 max-w-md mb-8">
-               No se pudieron cargar las reservas. Asegúrate de que el servidor está activo y que tienes conexión a la red.
-            </p>
-            <button 
-              onClick={onBack}
-              className="mb-4 text-slate-500 hover:text-slate-700 font-medium block"
-            >
-               &larr; Volver al menú
-            </button>
-            <button 
-               onClick={loadData}
-               className="flex items-center px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl"
-            >
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Conexión interrumpida</h2>
+            <button onClick={loadData} className="mt-6 flex items-center px-8 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1">
                <RefreshCw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
-               {loading ? 'Reconectando...' : 'Reintentar'}
+               {loading ? 'Reintentando...' : 'Reintentar Conexión'}
             </button>
         </div>
      );
   }
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in h-screen flex flex-col">
-      {/* Header */}
-      <div className="flex-none flex flex-col md:flex-row justify-between items-center mb-6 bg-white/90 backdrop-blur-md p-4 rounded-2xl shadow-sm border border-slate-200">
+    <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in flex flex-col h-[calc(100vh-80px)]">
+      
+      {/* --- HEADER CONTROLS --- */}
+      <div className="flex-none flex flex-col md:flex-row justify-between items-center mb-6 glass-panel p-4 rounded-3xl">
         <div className="flex items-center space-x-4 mb-4 md:mb-0 w-full md:w-auto">
-          <button onClick={onBack} className="p-2.5 hover:bg-slate-100 rounded-xl transition-colors text-slate-600 border border-slate-200 hover:border-slate-300">
+          <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-500 border border-transparent hover:border-slate-200">
             <ArrowLeft className="h-5 w-5" />
           </button>
           <div>
-            <h2 className={`text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${themeClasses}`}>{roomName}</h2>
-            <div className="flex items-center text-xs text-slate-500 font-semibold mt-0.5">
-                <span className={`w-2 h-2 rounded-full bg-${themeColor}-500 mr-2`}></span>
+            <h2 className={`text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2>
+            <div className="flex items-center text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                <span className={`w-2 h-2 rounded-full bg-${colors.primary}-500 mr-2`}></span>
                 {stage}
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
-          {error && (
-             <div className="flex items-center text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
-                <WifiOff className="w-3 h-3 mr-2" />
-                Sin conexión
-             </div>
-          )}
-          {loading && !error && <Loader2 className="animate-spin text-primary-500 h-5 w-5" />}
-          
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
-            <button onClick={handlePrevWeek} className="p-2 hover:bg-slate-50 rounded-lg transition-all text-slate-600">
+        <div className="flex items-center space-x-4 bg-slate-50/50 p-1.5 rounded-2xl border border-slate-200/60">
+            <button onClick={handlePrevWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <span className="px-4 font-semibold text-slate-700 min-w-[160px] text-center flex items-center justify-center text-sm">
-              <CalendarIcon className="w-4 h-4 mr-2 text-slate-400" />
-              {formatDate(weekDays[0])}
-            </span>
-            <button onClick={handleNextWeek} className="p-2 hover:bg-slate-50 rounded-lg transition-all text-slate-600">
+            <div className="px-6 flex flex-col items-center justify-center min-w-[140px]">
+              <span className="text-sm font-bold text-slate-800 capitalize">{format(weekDays[0], 'MMMM', { locale: es })}</span>
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{format(weekDays[0], 'yyyy')}</span>
+            </div>
+            <button onClick={handleNextWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
               <ChevronRight className="h-4 w-4" />
             </button>
-          </div>
         </div>
       </div>
 
-      {/* Grid Container with Sticky Headers */}
-      <div className="flex-1 bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-200 relative flex flex-col">
+      {/* --- CALENDAR GRID --- */}
+      <div className="flex-1 glass-panel rounded-[2.5rem] overflow-hidden shadow-2xl shadow-slate-200/50 flex flex-col relative border-0">
         <div className="overflow-auto flex-1 custom-scrollbar">
-            <div className="min-w-[800px] relative">
+            <div className="min-w-[900px] relative">
               
-              {/* Table Header (Days) - Sticky Top */}
-              <div className="grid grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 shadow-sm">
-                {/* Top-Left Corner - Sticky Both */}
-                <div className="sticky left-0 top-0 z-30 bg-slate-50 border-b border-r border-slate-200 p-4 flex items-center justify-center text-xs font-bold text-slate-400 uppercase tracking-widest">
-                   <Clock className="w-4 h-4 mr-1.5" /> Hora
+              {/* Header Days */}
+              <div className="grid grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20">
+                <div className="sticky left-0 top-0 z-30 glass-header p-5 flex items-center justify-center text-[10px] font-bold text-slate-400 uppercase tracking-widest border-r border-slate-100">
+                   Horario
                 </div>
-                
-                {/* Days Columns */}
                 {weekDays.slice(0, 5).map((day) => {
                    const isToday = isSameDay(day, new Date());
                    return (
-                    <div key={day.toISOString()} className={`p-3 text-center border-b border-r border-slate-100 last:border-r-0 bg-slate-50/95 backdrop-blur-sm ${!isBookableDay(day) ? 'bg-red-50/50' : ''}`}>
-                      <div className={`font-extrabold text-base capitalize ${isToday ? `text-${themeColor}-600` : 'text-slate-800'}`}>
-                          {format(day, 'EEEE', { locale: es })}
+                    <div key={day.toISOString()} className={`p-4 text-center glass-header border-r border-slate-100/50 last:border-r-0 ${isToday ? 'bg-blue-50/30' : ''}`}>
+                      <div className={`text-2xl font-black ${isToday ? colors.text : 'text-slate-800'}`}>
+                          {format(day, 'd')}
                       </div>
-                      <div className={`text-xs font-medium ${isToday ? `text-${themeColor}-600` : 'text-slate-500'}`}>
-                          {format(day, 'd MMM', { locale: es })}
+                      <div className={`text-xs font-bold uppercase tracking-widest ${isToday ? colors.text : 'text-slate-400'}`}>
+                          {format(day, 'EEE', { locale: es })}
                       </div>
                     </div>
                   );
                 })}
               </div>
 
-              {/* Slots Rows */}
-              {slots.map((slot) => (
-                <div key={slot.id} className="grid grid-cols-[100px_repeat(5,1fr)] group">
+              {/* Rows */}
+              {slots.map((slot, idx) => (
+                <div key={slot.id} className={`grid grid-cols-[100px_repeat(5,1fr)] group ${idx % 2 === 0 ? 'bg-white/40' : 'bg-white/10'}`}>
                   
-                  {/* Time Label - Sticky Left */}
-                  <div className="sticky left-0 z-10 bg-slate-50/95 backdrop-blur-sm p-4 flex flex-col items-center justify-center border-b border-r border-slate-200 text-xs font-semibold text-slate-500 group-hover:bg-slate-100/90 transition-colors">
+                  {/* Time Column */}
+                  <div className="sticky left-0 z-10 glass-header border-r border-slate-100 p-4 flex flex-col items-center justify-center text-xs font-bold text-slate-500 group-hover:bg-slate-50/80 transition-colors">
                     <span>{slot.start}</span>
-                    <span className="h-4 w-[1px] bg-slate-300 my-1"></span>
-                    <span>{slot.end}</span>
+                    <div className="h-8 w-[1px] bg-slate-200 my-1"></div>
+                    <span className="text-slate-400">{slot.end}</span>
                   </div>
                   
-                  {/* Booking Cells */}
+                  {/* Slot Cells */}
                   {weekDays.slice(0, 5).map((day) => {
                     const booking = getBookingForSlot(day, slot.id);
                     const isHoliday = !isBookableDay(day);
                     
-                    let cellClasses = "min-h-[140px] p-2 border-b border-r border-slate-100 relative transition-all duration-200 last:border-r-0 ";
-                    let content;
-
                     if (isHoliday) {
-                      cellClasses += "bg-red-50/30";
-                      content = (
-                        <div className="h-full w-full flex items-center justify-center opacity-50">
-                            <span className="text-xs text-red-400 font-bold uppercase tracking-widest rotate-[-15deg] border-2 border-red-200 px-2 py-1 rounded">No Lectivo</span>
+                      return (
+                        <div key={`${day}-${slot.id}`} className="min-h-[160px] p-2 border-r border-slate-100/30 bg-slate-50/50 flex items-center justify-center">
+                           <div className="bg-slate-100 text-slate-300 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest transform -rotate-6">No Lectivo</div>
                         </div>
-                      );
-                    } else if (booking) {
-                      cellClasses += "cursor-pointer hover:brightness-95 ";
-                      
-                      if (booking.isBlocked) {
-                        cellClasses += "bg-white"; // Wrapper
-                        content = (
-                          <div className="h-full w-full rounded-lg bg-slate-800 text-white p-3 shadow-md flex flex-col justify-center relative overflow-hidden group/card border border-slate-700">
-                             <div className="absolute top-0 right-0 p-1.5 opacity-50 group-hover/card:opacity-100 transition-opacity">
-                                <Lock className="w-4 h-4" />
-                             </div>
-                             <div className="text-center z-10">
-                                <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-1 block">Bloqueado</span>
-                                <span className="text-sm font-bold text-white line-clamp-3 leading-snug">{booking.justification}</span>
-                             </div>
-                          </div>
-                        );
-                      } else {
-                        const isMyBooking = booking.teacherEmail === user.email;
-                        
-                        // HIGH CONTRAST STYLING
-                        const borderColor = isMyBooking ? `border-${themeColor}-600` : "border-amber-500";
-                        const topBarColor = isMyBooking ? `bg-${themeColor}-600` : "bg-amber-500";
-                        const iconColor = isMyBooking ? `text-${themeColor}-700` : "text-amber-700";
-                        
-                        content = (
-                          <div className={`h-full w-full rounded-lg bg-white border border-slate-200 shadow-sm hover:shadow-lg transition-all flex flex-col overflow-hidden group/card`}>
-                             {/* Top Color Bar */}
-                             <div className={`h-1.5 w-full ${topBarColor}`}></div>
-                             
-                             <div className="p-3 flex-1 flex flex-col">
-                                 <div className="font-extrabold text-sm text-slate-900 leading-tight mb-1">{booking.course}</div>
-                                 <div className="text-xs text-slate-600 font-medium leading-tight line-clamp-2 mb-auto">{booking.subject}</div>
-                                 
-                                 <div className="mt-3 pt-2 border-t border-slate-100 flex items-center justify-between">
-                                   <div className="flex items-center text-xs font-bold text-slate-500">
-                                     <UserIcon className="w-3 h-3 mr-1.5 opacity-60" />
-                                     <span className="truncate max-w-[90px] text-slate-700">{booking.teacherName.split(' ')[0]}</span>
-                                   </div>
-                                   {isMyBooking && (
-                                     <div className={`px-1.5 py-0.5 rounded text-[10px] font-bold bg-${themeColor}-100 text-${themeColor}-800`}>MÍO</div>
-                                   )}
-                                 </div>
-                             </div>
-                          </div>
-                        );
-                      }
-                    } else {
-                      cellClasses += "hover:bg-slate-50 cursor-pointer group/cell";
-                      content = (
-                          <div className="h-full w-full flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity duration-200">
-                              <div className={`flex flex-col items-center text-${themeColor}-600 bg-white px-3 py-2 rounded-lg border-2 border-${themeColor}-200 shadow-sm`}>
-                                  <span className="font-bold text-xs">+ Reservar</span>
-                              </div>
-                          </div>
                       );
                     }
 
+                    if (booking) {
+                        const isMyBooking = booking.teacherEmail === user.email;
+                        const cardStyle = booking.isBlocked 
+                            ? "bg-slate-800 text-slate-300 border-slate-700" 
+                            : isMyBooking 
+                                ? `${colors.bg} ${colors.text} border-${colors.primary}-200` 
+                                : "bg-white text-slate-600 border-slate-200";
+
+                        return (
+                           <div key={`${day}-${slot.id}`} className="min-h-[160px] p-3 border-r border-slate-100/50 relative group/cell" onClick={() => handleSlotClick(day, slot)}>
+                              <div className={`h-full w-full rounded-2xl p-4 border ${cardStyle} shadow-sm hover:shadow-md transition-all cursor-pointer flex flex-col justify-between relative overflow-hidden`}>
+                                  
+                                  {/* Decorative bar */}
+                                  <div className={`absolute top-0 left-0 w-full h-1 ${booking.isBlocked ? 'bg-red-500' : (isMyBooking ? `bg-${colors.primary}-500` : 'bg-amber-400')}`}></div>
+
+                                  <div>
+                                      {booking.isBlocked ? (
+                                          <div className="flex items-center gap-2 mb-2">
+                                              <Lock className="w-3 h-3 text-red-400" />
+                                              <span className="text-[10px] font-bold uppercase tracking-wider text-red-400">Bloqueado</span>
+                                          </div>
+                                      ) : (
+                                          <div className="font-extrabold text-sm leading-tight mb-1 line-clamp-2">
+                                              {booking.course}
+                                          </div>
+                                      )}
+                                      
+                                      <div className={`text-xs font-medium leading-snug ${booking.isBlocked ? 'text-slate-400' : 'opacity-80'}`}>
+                                          {booking.isBlocked ? booking.justification : booking.subject}
+                                      </div>
+                                  </div>
+
+                                  <div className="flex items-center justify-between mt-2 pt-2 border-t border-black/5">
+                                      <div className="flex items-center gap-1.5">
+                                          <div className={`w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold ${booking.isBlocked ? 'bg-slate-700 text-white' : 'bg-white shadow-sm'}`}>
+                                              {booking.teacherName.charAt(0)}
+                                          </div>
+                                          <span className="text-[10px] font-bold truncate max-w-[60px] opacity-70">
+                                              {booking.teacherName.split(' ')[0]}
+                                          </span>
+                                      </div>
+                                      {isMyBooking && <div className={`w-1.5 h-1.5 rounded-full bg-${colors.primary}-500`}></div>}
+                                  </div>
+                              </div>
+                           </div>
+                        );
+                    }
+
                     return (
-                      <div 
-                        key={`${day.toISOString()}-${slot.id}`} 
-                        className={cellClasses}
-                        onClick={() => handleSlotClick(day, slot)}
-                      >
-                        {content}
-                      </div>
+                        <div key={`${day}-${slot.id}`} 
+                             className="min-h-[160px] p-3 border-r border-slate-100/50 relative group/cell cursor-pointer"
+                             onClick={() => handleSlotClick(day, slot)}>
+                             <div className="h-full w-full rounded-2xl border border-dashed border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all flex items-center justify-center opacity-0 group-hover/cell:opacity-100 scale-95 group-hover/cell:scale-100">
+                                 <div className="flex flex-col items-center">
+                                     <div className={`h-8 w-8 rounded-full ${colors.bg} flex items-center justify-center text-${colors.primary}-600 mb-2`}>
+                                         <span className="text-xl leading-none font-light">+</span>
+                                     </div>
+                                     <span className="text-xs font-bold text-slate-400">Reservar</span>
+                                 </div>
+                             </div>
+                        </div>
                     );
                   })}
                 </div>
@@ -376,67 +336,74 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         </div>
       </div>
 
-      {/* Modal Reused from previous implementation */}
+      {/* --- MODAL --- */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
         title={existingBooking 
-            ? (existingBooking.isBlocked ? 'Detalles del Bloqueo' : 'Detalles de la Reserva') 
+            ? (existingBooking.isBlocked ? 'Bloqueo Administrativo' : 'Detalles de Reserva') 
             : `Nueva Reserva`
         }
       >
+        <div className="animate-scale-in">
         {existingBooking ? (
             <div className="space-y-6">
-                <div className={`p-5 rounded-xl ${existingBooking.isBlocked ? 'bg-slate-100 border border-slate-200' : `bg-white border border-${themeColor}-200 shadow-sm`}`}>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Estado</span>
-                            <div className="mt-1 font-semibold flex items-center text-sm">
-                                {existingBooking.isBlocked ? (
-                                    <><Lock className="w-4 h-4 mr-2 text-red-600" /> <span className="text-red-700 font-bold">Bloqueado</span></>
-                                ) : (
-                                    <><Book className={`w-4 h-4 mr-2 text-${themeColor}-600`} /> <span className={`text-${themeColor}-700 font-bold`}>Reservado</span></>
-                                )}
-                            </div>
+                <div className={`p-6 rounded-2xl border ${existingBooking.isBlocked ? 'bg-slate-50 border-slate-200' : `bg-white border-${colors.primary}-100 shadow-lg shadow-${colors.primary}-500/5`}`}>
+                    <div className="grid grid-cols-2 gap-6">
+                        <div className="col-span-2 flex items-center gap-3 pb-4 border-b border-slate-100">
+                           <div className={`h-10 w-10 rounded-full flex items-center justify-center ${existingBooking.isBlocked ? 'bg-red-100 text-red-600' : `bg-${colors.primary}-100 ${colors.text}`}`}>
+                              {existingBooking.isBlocked ? <Lock className="w-5 h-5" /> : <Book className="w-5 h-5" />}
+                           </div>
+                           <div>
+                               <p className="text-xs text-slate-400 font-bold uppercase tracking-wider">Estado</p>
+                               <p className={`text-sm font-bold ${existingBooking.isBlocked ? 'text-red-600' : colors.text}`}>
+                                   {existingBooking.isBlocked ? 'Espacio Bloqueado' : 'Reserva Confirmada'}
+                               </p>
+                           </div>
                         </div>
+
                         <div>
-                             <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Responsable</span>
-                             <div className="mt-1 text-sm font-bold text-slate-800">{existingBooking.teacherName}</div>
+                             <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Profesor</span>
+                             <div className="mt-1 flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600">{existingBooking.teacherName.charAt(0)}</div>
+                                <span className="text-sm font-bold text-slate-800">{existingBooking.teacherName}</span>
+                             </div>
                         </div>
+
                         {!existingBooking.isBlocked && (
-                            <>
-                                <div className="col-span-2 pt-2">
-                                    <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Asignatura/Curso</span>
-                                    <div className="mt-1 text-lg font-extrabold text-slate-900">{existingBooking.course}</div>
-                                    <div className="text-base text-slate-700 font-medium">{existingBooking.subject}</div>
+                            <div className="col-span-2">
+                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Detalles Académicos</span>
+                                <div className="mt-2 p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                    <div className="text-base font-extrabold text-slate-900">{existingBooking.course}</div>
+                                    <div className="text-sm text-slate-600 font-medium">{existingBooking.subject}</div>
                                 </div>
-                            </>
+                            </div>
                         )}
                         {existingBooking.isBlocked && (
-                            <div className="col-span-2 pt-2">
-                                <span className="text-xs text-slate-500 uppercase tracking-wider font-bold">Motivo</span>
-                                <div className="mt-1 p-3 bg-white rounded-lg border border-slate-300 text-sm font-medium text-slate-700">{existingBooking.justification}</div>
+                            <div className="col-span-2">
+                                <span className="text-xs text-slate-400 font-bold uppercase tracking-wider">Motivo</span>
+                                <div className="mt-2 p-4 bg-white rounded-xl border border-slate-200 text-sm font-medium text-slate-700 italic">"{existingBooking.justification}"</div>
                             </div>
                         )}
                     </div>
                 </div>
 
                 {user.role === Role.ADMIN && (
-                    <div className="border-t border-slate-100 pt-4">
-                        <h4 className="text-sm font-bold text-slate-700 flex items-center mb-3">
-                            <History className="w-4 h-4 mr-2" /> Historial
+                    <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
+                        <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center">
+                            <History className="w-3 h-3 mr-2" /> Historial de Cambios
                         </h4>
-                        <div className="space-y-3 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className="space-y-3">
                             {existingBooking.logs?.map((log, idx) => (
-                                <div key={idx} className="flex text-xs items-start">
-                                    <div className="min-w-[70px] text-slate-400 font-mono">
+                                <div key={idx} className="flex text-xs items-center gap-3">
+                                    <span className="font-mono text-slate-400 bg-white px-2 py-0.5 rounded border border-slate-100">
                                         {format(new Date(log.timestamp), 'dd/MM HH:mm')}
-                                    </div>
-                                    <div className="ml-2">
+                                    </span>
+                                    <div>
                                         <span className={`font-bold ${log.action === 'BLOCKED' ? 'text-red-600' : 'text-blue-600'}`}>
                                             {log.action === 'CREATED' ? 'Creado' : 'Bloqueado'}
                                         </span>
-                                        <span className="text-slate-500"> por </span>
+                                        <span className="text-slate-500 px-1">por</span>
                                         <span className="font-bold text-slate-700">{log.userName}</span>
                                     </div>
                                 </div>
@@ -446,154 +413,141 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 )}
 
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (
-                     <div className="pt-4 flex justify-end">
+                     <div className="pt-2 flex justify-end">
                         <button
                             onClick={handleDelete}
                             disabled={isSubmitting}
-                            className="flex items-center px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors text-sm font-bold border border-red-200"
+                            className="flex items-center px-5 py-2.5 bg-red-50 text-red-600 rounded-xl hover:bg-red-100 transition-colors text-sm font-bold border border-red-200 shadow-sm"
                         >
                             <Trash2 className="w-4 h-4 mr-2" />
-                            {isSubmitting ? 'Eliminando...' : 'Eliminar Reserva'}
+                            {isSubmitting ? 'Procesando...' : 'Eliminar Reserva'}
                         </button>
                     </div>
                 )}
             </div>
         ) : (
-            <form onSubmit={handleSaveBooking} className="space-y-5">
+            <form onSubmit={handleSaveBooking} className="space-y-6">
             {user.role === Role.ADMIN && (
-                <div className="space-y-3">
-                    {/* Block Toggle */}
-                    <div className="flex items-center p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsBlocking(!isBlocking)}>
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isBlocking ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300'}`}>
-                            {isBlocking && <Lock className="w-3 h-3 text-white" />}
+                <div className="grid grid-cols-2 gap-4">
+                    <div 
+                        className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col gap-2 ${isBlocking ? 'bg-slate-800 border-slate-900 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`} 
+                        onClick={() => setIsBlocking(!isBlocking)}
+                    >
+                        <div className="flex justify-between items-center">
+                            <Lock className={`w-5 h-5 ${isBlocking ? 'text-red-400' : 'text-slate-400'}`} />
+                            {isBlocking && <div className="h-2 w-2 bg-red-500 rounded-full animate-pulse"></div>}
                         </div>
-                        <div className="flex-1">
-                            <span className="block text-sm font-bold text-slate-800">Modo Bloqueo Administrativo</span>
-                            <span className="text-xs text-slate-500">Impide que otros profesores reserven este tramo.</span>
-                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider mt-auto">Modo Bloqueo</span>
                     </div>
 
-                    {/* Recurring Toggle */}
-                    <div className="flex items-center p-3 rounded-xl bg-blue-50 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setIsRecurring(!isRecurring)}>
-                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isRecurring ? 'bg-blue-600 border-blue-600' : 'bg-white border-blue-300'}`}>
-                            {isRecurring && <Repeat className="w-3 h-3 text-white" />}
+                    <div 
+                        className={`p-3 rounded-xl border cursor-pointer transition-all flex flex-col gap-2 ${isRecurring ? 'bg-blue-600 border-blue-700 text-white shadow-lg' : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'}`} 
+                        onClick={() => setIsRecurring(!isRecurring)}
+                    >
+                        <div className="flex justify-between items-center">
+                            <Repeat className={`w-5 h-5 ${isRecurring ? 'text-white' : 'text-slate-400'}`} />
+                            {isRecurring && <div className="h-2 w-2 bg-white rounded-full"></div>}
                         </div>
-                        <div className="flex-1">
-                            <span className="block text-sm font-bold text-blue-900">Reserva Periódica</span>
-                            <span className="text-xs text-blue-700">Repetir esta reserva todas las semanas.</span>
-                        </div>
+                        <span className="text-xs font-bold uppercase tracking-wider mt-auto">Repetir Semanal</span>
                     </div>
-
-                    {/* End Date Picker (Only if recurring) */}
+                    
                     {isRecurring && (
-                        <div className="animate-scale-in p-3 bg-white border border-blue-200 rounded-xl shadow-sm">
-                            <label className="block text-xs font-bold text-blue-500 uppercase tracking-wider mb-2 flex items-center">
-                                <CalendarDays className="w-4 h-4 mr-2" />
-                                Repetir hasta
-                            </label>
-                            <input 
-                                type="date"
-                                required
-                                min={formatDate(selectedSlot?.date || new Date())}
-                                value={recurringEndDate}
-                                onChange={(e) => setRecurringEndDate(e.target.value)}
-                                className="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
-                            />
-                            <p className="text-[10px] text-slate-400 mt-2">
-                                Se crearán reservas todos los {format(selectedSlot?.date || new Date(), 'EEEE', { locale: es })} hasta la fecha seleccionada.
-                            </p>
+                        <div className="col-span-2 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 animate-fade-in">
+                            <CalendarDays className="w-5 h-5 text-blue-500" />
+                            <div className="flex-1">
+                                <label className="text-[10px] font-bold text-blue-500 uppercase tracking-wider block mb-1">Repetir hasta</label>
+                                <input 
+                                    type="date"
+                                    required
+                                    min={formatDate(selectedSlot?.date || new Date())}
+                                    value={recurringEndDate}
+                                    onChange={(e) => setRecurringEndDate(e.target.value)}
+                                    className="bg-white border border-blue-200 text-blue-900 text-sm rounded-lg block w-full p-1.5 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                />
+                            </div>
                         </div>
                     )}
                 </div>
             )}
 
             {!isBlocking ? (
-                <div className="space-y-4 animate-scale-in">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Profesor/a</label>
-                    <div className="flex rounded-lg shadow-sm">
-                    <span className="inline-flex items-center px-3 rounded-l-lg border border-r-0 border-slate-300 bg-slate-50 text-slate-500">
-                        <UserIcon className="h-4 w-4" />
-                    </span>
-                    <input
-                        type="text"
-                        required
-                        value={teacherName}
-                        onChange={(e) => setTeacherName(e.target.value)}
-                        className="flex-1 block w-full px-3 py-2.5 rounded-r-lg border border-slate-300 focus:ring-primary-500 focus:border-primary-500 text-sm font-medium text-slate-900"
-                    />
-                    </div>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Curso</label>
-                    <select
-                    value={course}
-                    onChange={(e) => setCourse(e.target.value)}
-                    className="block w-full px-3 py-2.5 text-sm border border-slate-300 focus:outline-none focus:ring-primary-500 focus:border-primary-500 rounded-lg bg-white font-medium text-slate-900"
-                    >
-                    {courses.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                </div>
-
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Asignatura</label>
-                    <div className="relative">
-                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <Book className="h-4 w-4 text-slate-400" />
+                <div className="space-y-5">
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Profesor Responsable</label>
+                        <div className="flex items-center px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl">
+                            <UserIcon className="h-5 w-5 text-slate-400 mr-3" />
+                            <input
+                                type="text"
+                                required
+                                value={teacherName}
+                                onChange={(e) => setTeacherName(e.target.value)}
+                                className="flex-1 bg-transparent border-none p-0 text-sm font-bold text-slate-800 focus:ring-0 placeholder-slate-400"
+                            />
                         </div>
-                        <input
-                            type="text"
-                            required
-                            value={subject}
-                            onChange={(e) => setSubject(e.target.value)}
-                            placeholder="Ej: Matemáticas, Taller..."
-                            className="block w-full pl-10 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-primary-500 focus:border-primary-500 text-sm font-medium text-slate-900"
-                        />
                     </div>
-                </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Curso</label>
+                        <div className="relative">
+                            <select
+                                value={course}
+                                onChange={(e) => setCourse(e.target.value)}
+                                className="block w-full px-4 py-3 text-sm font-bold text-slate-800 bg-white border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 appearance-none"
+                            >
+                                {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                            </select>
+                            <MoreHorizontal className="absolute right-4 top-3.5 h-5 w-5 text-slate-400 pointer-events-none" />
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Asignatura</label>
+                        <div className="flex items-center px-4 py-3 bg-white border border-slate-200 rounded-xl focus-within:ring-2 focus-within:ring-brand-500/20 focus-within:border-brand-500 transition-all">
+                            <Book className="h-5 w-5 text-slate-400 mr-3" />
+                            <input
+                                type="text"
+                                required
+                                value={subject}
+                                onChange={(e) => setSubject(e.target.value)}
+                                placeholder="Ej: Matemáticas, Taller..."
+                                className="flex-1 bg-transparent border-none p-0 text-sm font-bold text-slate-800 focus:ring-0 placeholder-slate-400"
+                            />
+                        </div>
+                    </div>
                 </div>
             ) : (
-                <div className="animate-scale-in">
-                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1">Motivo del bloqueo</label>
-                <div className="relative">
+                <div>
+                    <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Motivo del bloqueo</label>
                     <textarea
                         required
                         value={blockReason}
                         onChange={(e) => setBlockReason(e.target.value)}
-                        placeholder="Ej: Mantenimiento de equipos, Reunión de evaluación..."
-                        rows={4}
-                        className="block w-full p-3 border border-slate-300 rounded-lg focus:ring-slate-500 focus:border-slate-500 text-sm font-medium"
+                        placeholder="Describe la razón..."
+                        rows={3}
+                        className="block w-full p-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-slate-500 focus:border-transparent"
                     />
-                    <div className="absolute top-3 right-3">
-                        <AlertTriangle className="h-5 w-5 text-amber-500" />
-                    </div>
-                </div>
                 </div>
             )}
 
-            <div className="flex justify-end pt-4 gap-3">
+            <div className="flex justify-end pt-2 gap-3">
                 <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-50 hover:text-slate-800 transition-colors"
+                className="px-5 py-3 rounded-xl text-sm font-bold text-slate-500 hover:bg-slate-100 transition-colors"
                 >
                 Cancelar
                 </button>
                 <button
                 type="submit"
                 disabled={isSubmitting}
-                className={`flex items-center justify-center px-6 py-2 border border-transparent text-sm font-bold rounded-lg text-white shadow-lg transition-all transform hover:-translate-y-0.5 ${isBlocking ? 'bg-slate-800 hover:bg-slate-900 shadow-slate-500/30' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/30'} ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
+                className={`flex items-center justify-center px-8 py-3 rounded-xl text-sm font-bold text-white shadow-lg transition-all transform hover:-translate-y-0.5 ${isBlocking ? 'bg-slate-900 hover:bg-slate-800' : 'bg-brand-600 hover:bg-brand-700'}`}
                 >
-                {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : (
-                    isBlocking 
-                        ? (isRecurring ? 'Bloquear Periódicamente' : 'Bloquear Aula') 
-                        : (isRecurring ? 'Reservar Periódicamente' : 'Confirmar Reserva')
-                )}
+                {isSubmitting ? <Loader2 className="animate-spin h-5 w-5" /> : (isBlocking ? 'Bloquear' : 'Confirmar')}
                 </button>
             </div>
             </form>
         )}
+        </div>
       </Modal>
     </div>
   );
