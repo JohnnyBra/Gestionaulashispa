@@ -108,15 +108,22 @@ app.get('/api/bookings', (req, res) => {
   }
 });
 
-// POST: Create a booking
+// POST: Create a booking (or multiple)
 app.post('/api/bookings', (req, res) => {
   try {
-    const newBooking = req.body;
+    const data = req.body;
     const bookings = readBookings();
-    bookings.push(newBooking);
+    
+    if (Array.isArray(data)) {
+        // Batch insert
+        bookings.push(...data);
+    } else {
+        // Single insert
+        bookings.push(data);
+    }
     
     fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-    res.status(201).json(newBooking);
+    res.status(201).json({ message: 'Saved successfully', count: Array.isArray(data) ? data.length : 1 });
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: 'Failed to save data' });
