@@ -67,6 +67,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       // Check if response is ok
       if (!response.ok) {
+         // If 404, it means server is not running API, try local fallback
+         if (response.status === 404) {
+             throw new Error('SERVER_OFFLINE');
+         }
          const errorData = await response.json();
          throw new Error(errorData.message || 'Error en la autenticación');
       }
@@ -79,11 +83,23 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError('Respuesta del servidor inválida');
       }
     } catch (err: any) {
-      console.error("Login Error:", err);
-      setError(err.message || 'No se pudo conectar con el servidor.');
+      console.warn("Login Error (intentando fallback local):", err);
+      
+      // FALLBACK LOCAL PARA MODO SIN SERVIDOR
+      // Contraseña por defecto: adminhispanidad
+      // O la que esté guardada en localStorage
+      const localAdminPass = localStorage.getItem('hispanidad_admin_pass') || 'adminhispanidad';
+      
+      if (adminPassword === localAdminPass) {
+          onLogin({
+            email: 'direccion@colegiolahispanidad.es', 
+            name: 'Administración (Local)', 
+            role: Role.ADMIN 
+          });
+      } else {
+          setError('Contraseña incorrecta (Modo Local/Offline).');
+      }
     } finally {
-      // Only set loading false if we are not logging in (which unmounts component)
-      // But we can just set it anyway, React handles state updates on unmounting well enough in new versions
       setLoading(false); 
     }
   };

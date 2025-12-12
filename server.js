@@ -4,7 +4,8 @@ const path = require('path');
 const cors = require('cors');
 
 const app = express();
-const PORT = 3000;
+// Se usa el puerto definido en el entorno o el 3001 por defecto para evitar conflicto con el 3000
+const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'bookings.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
 
