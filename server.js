@@ -8,6 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'bookings.json');
 const CONFIG_FILE = path.join(__dirname, 'config.json');
+const BACKUP_DIR = path.join(__dirname, 'backups');
 
 // Middleware
 app.use(cors());
@@ -56,6 +57,66 @@ const readBookings = () => {
     return [];
   }
 };
+
+// --- BACKUP SYSTEM ---
+const performBackup = () => {
+  try {
+    // Ensure backup directory exists
+    if (!fs.existsSync(BACKUP_DIR)) {
+      fs.mkdirSync(BACKUP_DIR);
+    }
+
+    if (fs.existsSync(DATA_FILE)) {
+      const date = new Date();
+      // Format: YYYY-MM-DD-HHmm
+      const timestamp = date.toISOString().replace(/T/, '-').replace(/:/g, '').split('.')[0];
+      const backupFilename = `bookings-${timestamp}.json`;
+      const destination = path.join(BACKUP_DIR, backupFilename);
+
+      fs.copyFileSync(DATA_FILE, destination);
+      console.log(`[BACKUP] Copia de seguridad creada exitosamente: ${backupFilename}`);
+      
+      // Optional: Clean old backups (keep last 30 days)
+      cleanOldBackups();
+    }
+  } catch (err) {
+    console.error('[BACKUP] Error al crear la copia de seguridad:', err);
+  }
+};
+
+const cleanOldBackups = () => {
+    try {
+        const files = fs.readdirSync(BACKUP_DIR);
+        // Sort by time, newest first
+        const sortedFiles = files.map(file => {
+            const filepath = path.join(BACKUP_DIR, file);
+            return {
+                name: file,
+                time: fs.statSync(filepath).mtime.getTime(),
+                path: filepath
+            };
+        }).sort((a, b) => b.time - a.time);
+
+        // Keep only the last 30 backups
+        if (sortedFiles.length > 30) {
+            const filesToDelete = sortedFiles.slice(30);
+            filesToDelete.forEach(file => {
+                fs.unlinkSync(file.path);
+                console.log(`[BACKUP] Eliminada copia antigua: ${file.name}`);
+            });
+        }
+    } catch (err) {
+        console.error('[BACKUP] Error limpiando copias antiguas:', err);
+    }
+};
+
+// Schedule Backup every 24 hours (milliseconds)
+const TWENTY_FOUR_HOURS = 24 * 60 * 60 * 1000;
+setInterval(performBackup, TWENTY_FOUR_HOURS);
+
+// Perform an initial backup on server start if data exists
+setTimeout(performBackup, 5000); 
+
 
 // --- API Endpoints (MUST BE BEFORE STATIC FILES) ---
 
