@@ -1,83 +1,85 @@
-# Guía de Instalación y Puesta en Marcha - Reserva Aulas Hispanidad
+# Gestión de Reservas - Cooperativa de Enseñanza La Hispanidad
 
-Esta guía explica paso a paso cómo instalar esta aplicación en un servidor Ubuntu desde cero. Incluye persistencia de datos en el servidor.
+Aplicación web para la gestión de reservas de aulas (Informática e Idiomas).
 
-## Requisitos Previos
+## Instalación Automática en Servidor (Ubuntu/Debian)
 
-1.  **Servidor Ubuntu:** Acceso a un servidor (VPS) con Ubuntu 20.04 o superior.
-2.  **Dominio (Opcional):** Una cuenta de Cloudflare configurada.
+Sigue estos pasos para desplegar la aplicación en tu servidor VPS.
 
----
+### 1. Preparación
+Conéctate a tu servidor por SSH y asegúrate de estar en una carpeta limpia (o en tu carpeta de usuario home).
 
-## Paso 1: Conectarse al Servidor
-
-Usa una terminal para conectarte a tu servidor:
+### 2. Crear y ejecutar el instalador
+Copia y pega el siguiente bloque de comandos en tu terminal. Esto creará el script de instalación y le dará permisos:
 
 ```bash
-ssh root@TU_IP_DEL_SERVIDOR
+nano install.sh
 ```
 
----
+Pega dentro el contenido del archivo `install.sh` de este repositorio. Guarda con `Ctrl+O` y sal con `Ctrl+X`.
 
-## Paso 2: Instalar las herramientas necesarias
-
-Ejecuta estos comandos para instalar Node.js:
+Después, ejecuta:
 
 ```bash
-# 1. Actualizar sistema
-sudo apt update && sudo apt upgrade -y
-
-# 2. Instalar Node.js 18+
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
-
-# 3. Instalar PM2 (Gestor de procesos)
-sudo npm install -g pm2
+chmod +x install.sh
+sudo ./install.sh
 ```
 
----
+### 3. Sigue las instrucciones
+El script te pedirá:
+1. La **URL de tu repositorio de GitHub**.
+2. El **Puerto** donde quieres que funcione la web. **Por defecto usará el 3001** para evitar conflictos con otras aplicaciones en el puerto 3000.
 
-## Paso 3: Instalar la Aplicación
+## Configuración de Cloudflare Tunnel
 
-Sube los archivos a una carpeta (ej. `/root/reservas-hispanidad`) y ejecuta:
+Si tienes otro servicio en el puerto 3000, esta aplicación correrá por defecto en el **3001** (o el que hayas elegido en la instalación).
+
+Debes actualizar la configuración de tu `cloudflared` (en `config.yml` o en el panel Zero Trust):
+
+1. Servicio: `HTTP`
+2. URL: `localhost:3001` (o el puerto que hayas configurado).
+
+Si usas el panel web de Cloudflare Zero Trust:
+1. Ve a **Access** > **Tunnels**.
+2. Configura el **Public Hostname**.
+3. Cambia el destino del servicio a `http://localhost:3001`.
+
+## Mantenimiento
+
+### Actualizar la web
+Si haces cambios en el código y los subes a GitHub:
 
 ```bash
-cd /root/reservas-hispanidad
-
-# Instalar dependencias del servidor (express, cors, etc.)
+cd nombre-de-tu-repo
+git pull
 npm install
+npm run build
+pm2 restart hispanidad-reservas
 ```
 
----
-
-## Paso 4: Poner la web en marcha
-
-Ahora usaremos `node` para arrancar el servidor `server.js`, que servirá la web y guardará los datos.
+### Cambiar el puerto manualmente
+Si necesitas cambiar el puerto una vez instalada la aplicación:
 
 ```bash
-# Iniciar con PM2 para que no se apague
-pm2 start server.js --name "reservas-hispanidad"
-
-# Guardar la configuración para reinicios del servidor
+# Ejemplo para cambiar al puerto 4000
+pm2 delete hispanidad-reservas
+PORT=4000 pm2 start npm --name "hispanidad-reservas" -- start
 pm2 save
-pm2 startup
 ```
-*(Ejecuta el comando que te indique `pm2 startup` si es necesario).*
 
-La aplicación estará corriendo en el puerto **3000**. Los datos de las reservas se guardarán automáticamente en el archivo `bookings.json` en la misma carpeta.
+### Ver estado
+Para ver si la aplicación está corriendo:
+```bash
+pm2 status
+```
 
----
+Para ver los logs (errores o accesos):
+```bash
+pm2 logs hispanidad-reservas
+```
 
-## Paso 5: Publicar con Cloudflare
+## Desarrollo Local
 
-1.  En Cloudflare Zero Trust > Tunnels, crea un túnel y conéctalo a tu servidor.
-2.  Añade un Public Hostname:
-    *   **Domain:** `reservas.colegiolahispanidad.es`
-    *   **Service:** `HTTP` -> `localhost:3000`
-
----
-
-## Notas de Administración
-
-*   **Usuario Administrador:** Para gestionar bloqueos, inicia sesión con un email que empiece por `admin` o `direccion` (ej: `admin@colegiolahispanidad.es`).
-*   **Créditos:** Aplicación desarrollada por Javi Barrero.
+1. Clonar repositorio.
+2. `npm install`
+3. `npm start` (Por defecto usa el puerto 3001 si no se especifica otro).

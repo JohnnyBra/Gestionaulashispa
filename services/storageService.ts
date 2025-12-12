@@ -2,19 +2,19 @@ import { Booking, Stage } from '../types';
 
 // Helper to determine API URL
 const API_URL = '/api/bookings';
+const LOCAL_STORAGE_KEY = 'hispanidad_bookings';
 
 export const getBookings = async (): Promise<Booking[]> => {
   try {
     const response = await fetch(API_URL);
     if (!response.ok) {
-      const text = await response.text();
-      console.error(`Fetch failed: ${response.status} ${response.statusText}`, text);
-      throw new Error(`Failed to fetch bookings: ${response.status}`);
+      throw new Error(`Server returned ${response.status}`);
     }
     return await response.json();
   } catch (error) {
-    console.error('Error fetching bookings:', error);
-    return [];
+    console.warn('API no disponible, usando almacenamiento local (LocalStorage).', error);
+    const localData = localStorage.getItem(LOCAL_STORAGE_KEY);
+    return localData ? JSON.parse(localData) : [];
   }
 };
 
@@ -28,12 +28,14 @@ export const saveBooking = async (booking: Booking): Promise<void> => {
       body: JSON.stringify(booking),
     });
     if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`Failed to save booking: ${response.status} ${text}`);
+        throw new Error(`Server returned ${response.status}`);
     }
   } catch (error) {
-    console.error('Error saving booking:', error);
-    throw error;
+    console.warn('API no disponible, guardando en local.', error);
+    // Local Fallback
+    const currentBookings = await getBookings();
+    currentBookings.push(booking);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(currentBookings));
   }
 };
 
@@ -42,10 +44,13 @@ export const removeBooking = async (bookingId: string): Promise<void> => {
     const response = await fetch(`${API_URL}/${bookingId}`, {
       method: 'DELETE',
     });
-    if (!response.ok) throw new Error('Failed to delete booking');
+    if (!response.ok) throw new Error('Failed to delete booking on server');
   } catch (error) {
-    console.error('Error deleting booking:', error);
-    throw error;
+    console.warn('API no disponible, eliminando en local.', error);
+    // Local Fallback
+    const currentBookings = await getBookings();
+    const updatedBookings = currentBookings.filter(b => b.id !== bookingId);
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedBookings));
   }
 };
 
