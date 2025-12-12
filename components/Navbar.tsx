@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Role } from '../types';
-import { LogOut, School, Shield, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { LogOut, Shield, Key, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { Modal } from './Modal';
 
 interface NavbarProps {
@@ -71,8 +71,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3 group cursor-pointer">
-              <div className="p-2 bg-white/10 rounded-lg group-hover:bg-white/20 transition-colors">
-                <School className="h-6 w-6 text-white" />
+              <div className="h-10 w-10 bg-white rounded-lg p-1 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 overflow-hidden">
+                <img src="/logo.png" alt="Logo La Hispanidad" className="h-full w-full object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg leading-tight tracking-tight">La Hispanidad</span>

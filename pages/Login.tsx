@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { User, Role } from '../types';
-import { AlertCircle, Shield, School, User as UserIcon, Mail } from 'lucide-react';
+import { AlertCircle, Shield, User as UserIcon, Mail } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -118,7 +118,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
             <div className="relative z-10 flex flex-col items-center">
                 <div className="bg-white p-3 rounded-2xl shadow-lg mb-4">
-                    <School className="w-8 h-8 text-primary-700" />
+                    <img src="/logo.png" alt="Logo La Hispanidad" className="w-16 h-16 object-contain" />
                 </div>
                 <h1 className="text-2xl font-extrabold text-white tracking-tight">La Hispanidad</h1>
                 <p className="text-primary-100 text-sm font-medium mt-1">Gestión de Espacios</p>
