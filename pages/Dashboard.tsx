@@ -1,6 +1,6 @@
 import React from 'react';
 import { Stage } from '../types';
-import { BookOpen, Monitor, ArrowRight, Sparkles } from 'lucide-react';
+import { BookOpen, Monitor, ArrowRight } from 'lucide-react';
 
 interface DashboardProps {
   onSelectStage: (stage: Stage) => void;
@@ -12,9 +12,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
       
       {/* Hero Header */}
       <div className="text-center mb-16 relative">
-         <div className="inline-flex items-center px-3 py-1 rounded-full bg-brand-50 border border-brand-100 text-brand-700 text-xs font-bold uppercase tracking-wider mb-4 shadow-sm">
-            <Sparkles className="w-3 h-3 mr-2 text-brand-500" /> Nuevo Curso Académico
-         </div>
          <h1 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
             ¿Dónde quieres <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600">enseñar hoy?</span>
          </h1>
@@ -92,10 +89,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
           <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-emerald-400/10 rounded-full blur-3xl group-hover:bg-emerald-400/20 transition-all duration-500"></div>
         </div>
 
-      </div>
-      
-      <div className="mt-16 text-center text-sm text-slate-400 font-medium">
-         Sistema de Gestión Escolar v1.2
       </div>
     </div>
   );
