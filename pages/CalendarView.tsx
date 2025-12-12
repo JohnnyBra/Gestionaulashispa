@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role } from '../types';
-import { getBookings, saveBooking, removeBooking } from '../services/storageService';
+import { getBookings, saveBooking, saveBatchBookings, removeBooking } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
-import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon, WifiOff, RefreshCw, Repeat, CalendarDays } from 'lucide-react';
 import { addWeeks, subWeeks, format, isSameDay } from 'date-fns';
 import { es } from 'date-fns/locale';
 
@@ -17,6 +17,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date, slot: TimeSlot } | null>(null);
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -27,6 +28,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [teacherName, setTeacherName] = useState(user.name);
   const [blockReason, setBlockReason] = useState('');
   const [isBlocking, setIsBlocking] = useState(false);
+  
+  // Recurring State
+  const [isRecurring, setIsRecurring] = useState(false);
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
@@ -37,9 +43,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const loadData = async () => {
     setLoading(true);
-    const data = await getBookings();
-    setBookings(data);
-    setLoading(false);
+    setError(null);
+    try {
+      const data = await getBookings();
+      setBookings(data);
+    } catch (err) {
+      console.error("Error loading bookings:", err);
+      setError("No se pudo conectar con el servidor. Verifica tu conexión.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -75,6 +88,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setBlockReason(existing?.justification || '');
     setIsBlocking(existing?.isBlocked || false);
     
+    // Reset recurring state
+    setIsRecurring(false);
+    setRecurringEndDate('');
+    
     setIsModalOpen(true);
   };
 
@@ -83,10 +100,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
      
      if (confirm('¿Estás seguro de que quieres eliminar esta reserva?')) {
         setIsSubmitting(true);
-        await removeBooking(existingBooking.id);
-        setIsSubmitting(false);
-        setIsModalOpen(false);
-        await loadData();
+        try {
+          await removeBooking(existingBooking.id);
+          setIsSubmitting(false);
+          setIsModalOpen(false);
+          await loadData();
+        } catch (e) {
+          alert("Error al eliminar. Inténtalo de nuevo.");
+          setIsSubmitting(false);
+        }
      }
   };
 
@@ -96,9 +118,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
     setIsSubmitting(true);
 
-    const newBooking: Booking = {
-      id: crypto.randomUUID(),
-      date: formatDate(selectedSlot.date),
+    const baseBooking = {
       slotId: selectedSlot.slot.id,
       stage,
       teacherEmail: user.email,
@@ -114,14 +134,79 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           userName: user.name,
           timestamp: Date.now(),
           details: isBlocking ? blockReason : `${course} - ${subject}`
-      }]
+      }] as any[]
     };
 
-    await saveBooking(newBooking);
-    setIsSubmitting(false);
-    setIsModalOpen(false);
-    await loadData(); 
+    try {
+      if (isRecurring && user.role === Role.ADMIN && recurringEndDate) {
+          // Batch Generation Logic
+          const bookingsToCreate: Booking[] = [];
+          let loopDate = selectedSlot.date;
+          const end = new Date(recurringEndDate);
+          
+          // Loop weekly until end date
+          while (loopDate <= end) {
+              // Optional: Skip if day is holiday/non-bookable, or keep it (admin might want to force)
+              // Let's check bookable to correspond with UI logic
+              if (isBookableDay(loopDate)) {
+                 bookingsToCreate.push({
+                     ...baseBooking,
+                     id: crypto.randomUUID(),
+                     date: formatDate(loopDate)
+                 });
+              }
+              loopDate = addWeeks(loopDate, 1);
+          }
+
+          if (bookingsToCreate.length > 0) {
+              await saveBatchBookings(bookingsToCreate);
+          }
+      } else {
+          // Single Booking
+          const newBooking: Booking = {
+            ...baseBooking,
+            id: crypto.randomUUID(),
+            date: formatDate(selectedSlot.date),
+          };
+          await saveBooking(newBooking);
+      }
+      
+      setIsSubmitting(false);
+      setIsModalOpen(false);
+      await loadData(); 
+    } catch (e) {
+      alert("Error al guardar. Verifica tu conexión.");
+      setIsSubmitting(false);
+    }
   };
+
+  // Error State View
+  if (error && bookings.length === 0) {
+     return (
+        <div className="h-screen flex flex-col items-center justify-center p-4 animate-fade-in text-center">
+            <div className="bg-red-50 p-6 rounded-full mb-6">
+                <WifiOff className="w-16 h-16 text-red-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-slate-800 mb-2">Sin conexión con el servidor</h2>
+            <p className="text-slate-500 max-w-md mb-8">
+               No se pudieron cargar las reservas. Asegúrate de que el servidor está activo y que tienes conexión a la red.
+            </p>
+            <button 
+              onClick={onBack}
+              className="mb-4 text-slate-500 hover:text-slate-700 font-medium block"
+            >
+               &larr; Volver al menú
+            </button>
+            <button 
+               onClick={loadData}
+               className="flex items-center px-6 py-3 bg-slate-900 text-white rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg hover:shadow-xl"
+            >
+               <RefreshCw className={`w-5 h-5 mr-2 ${loading ? 'animate-spin' : ''}`} />
+               {loading ? 'Reconectando...' : 'Reintentar'}
+            </button>
+        </div>
+     );
+  }
 
   return (
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in h-screen flex flex-col">
@@ -141,7 +226,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         </div>
 
         <div className="flex items-center space-x-4">
-          {loading && <Loader2 className="animate-spin text-primary-500 h-5 w-5" />}
+          {error && (
+             <div className="flex items-center text-xs font-bold text-red-600 bg-red-50 px-3 py-1.5 rounded-lg border border-red-100">
+                <WifiOff className="w-3 h-3 mr-2" />
+                Sin conexión
+             </div>
+          )}
+          {loading && !error && <Loader2 className="animate-spin text-primary-500 h-5 w-5" />}
           
           <div className="flex items-center bg-white border border-slate-200 rounded-xl p-1 shadow-sm">
             <button onClick={handlePrevWeek} className="p-2 hover:bg-slate-50 rounded-lg transition-all text-slate-600">
@@ -232,8 +323,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         const isMyBooking = booking.teacherEmail === user.email;
                         
                         // HIGH CONTRAST STYLING
-                        // Using white background for all cards to ensure text readability
-                        // Using thick colored borders to distinguish ownership/status
                         const borderColor = isMyBooking ? `border-${themeColor}-600` : "border-amber-500";
                         const topBarColor = isMyBooking ? `bg-${themeColor}-600` : "bg-amber-500";
                         const iconColor = isMyBooking ? `text-${themeColor}-700` : "text-amber-700";
@@ -372,14 +461,49 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         ) : (
             <form onSubmit={handleSaveBooking} className="space-y-5">
             {user.role === Role.ADMIN && (
-                <div className="flex items-center p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsBlocking(!isBlocking)}>
-                <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isBlocking ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300'}`}>
-                    {isBlocking && <Lock className="w-3 h-3 text-white" />}
-                </div>
-                <div className="flex-1">
-                    <span className="block text-sm font-bold text-slate-800">Modo Bloqueo Administrativo</span>
-                    <span className="text-xs text-slate-500">Impide que otros profesores reserven este tramo.</span>
-                </div>
+                <div className="space-y-3">
+                    {/* Block Toggle */}
+                    <div className="flex items-center p-3 rounded-xl bg-slate-50 border border-slate-200 cursor-pointer hover:bg-slate-100 transition-colors" onClick={() => setIsBlocking(!isBlocking)}>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isBlocking ? 'bg-slate-800 border-slate-800' : 'bg-white border-slate-300'}`}>
+                            {isBlocking && <Lock className="w-3 h-3 text-white" />}
+                        </div>
+                        <div className="flex-1">
+                            <span className="block text-sm font-bold text-slate-800">Modo Bloqueo Administrativo</span>
+                            <span className="text-xs text-slate-500">Impide que otros profesores reserven este tramo.</span>
+                        </div>
+                    </div>
+
+                    {/* Recurring Toggle */}
+                    <div className="flex items-center p-3 rounded-xl bg-blue-50 border border-blue-200 cursor-pointer hover:bg-blue-100 transition-colors" onClick={() => setIsRecurring(!isRecurring)}>
+                        <div className={`w-5 h-5 rounded border flex items-center justify-center mr-3 ${isRecurring ? 'bg-blue-600 border-blue-600' : 'bg-white border-blue-300'}`}>
+                            {isRecurring && <Repeat className="w-3 h-3 text-white" />}
+                        </div>
+                        <div className="flex-1">
+                            <span className="block text-sm font-bold text-blue-900">Reserva Periódica</span>
+                            <span className="text-xs text-blue-700">Repetir esta reserva todas las semanas.</span>
+                        </div>
+                    </div>
+
+                    {/* End Date Picker (Only if recurring) */}
+                    {isRecurring && (
+                        <div className="animate-scale-in p-3 bg-white border border-blue-200 rounded-xl shadow-sm">
+                            <label className="block text-xs font-bold text-blue-500 uppercase tracking-wider mb-2 flex items-center">
+                                <CalendarDays className="w-4 h-4 mr-2" />
+                                Repetir hasta
+                            </label>
+                            <input 
+                                type="date"
+                                required
+                                min={formatDate(selectedSlot?.date || new Date())}
+                                value={recurringEndDate}
+                                onChange={(e) => setRecurringEndDate(e.target.value)}
+                                className="block w-full px-3 py-2 border border-slate-300 rounded-lg text-sm focus:ring-blue-500 focus:border-blue-500"
+                            />
+                            <p className="text-[10px] text-slate-400 mt-2">
+                                Se crearán reservas todos los {format(selectedSlot?.date || new Date(), 'EEEE', { locale: es })} hasta la fecha seleccionada.
+                            </p>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -461,7 +585,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 disabled={isSubmitting}
                 className={`flex items-center justify-center px-6 py-2 border border-transparent text-sm font-bold rounded-lg text-white shadow-lg transition-all transform hover:-translate-y-0.5 ${isBlocking ? 'bg-slate-800 hover:bg-slate-900 shadow-slate-500/30' : 'bg-primary-600 hover:bg-primary-700 shadow-primary-500/30'} ${isSubmitting ? 'opacity-70 cursor-wait' : ''}`}
                 >
-                {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : (isBlocking ? 'Bloquear Aula' : 'Confirmar Reserva')}
+                {isSubmitting ? <Loader2 className="animate-spin h-4 w-4" /> : (
+                    isBlocking 
+                        ? (isRecurring ? 'Bloquear Periódicamente' : 'Bloquear Aula') 
+                        : (isRecurring ? 'Reservar Periódicamente' : 'Confirmar Reserva')
+                )}
                 </button>
             </div>
             </form>

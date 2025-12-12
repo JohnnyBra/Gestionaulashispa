@@ -40,19 +40,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
         setMsg({ type: 'error', text: data.message || 'Error al actualizar.' });
       }
     } catch (error) {
-      console.warn("API Error, fallback local");
-      // Fallback LOCAL
-      const localAdminPass = localStorage.getItem('hispanidad_admin_pass') || 'adminhispanidad';
-      
-      if (currentPassword === localAdminPass) {
-          localStorage.setItem('hispanidad_admin_pass', newPassword);
-          setMsg({ type: 'success', text: 'Contraseña actualizada (Modo Local).' });
-          setCurrentPassword('');
-          setNewPassword('');
-          setTimeout(() => setIsPasswordModalOpen(false), 2000);
-      } else {
-          setMsg({ type: 'error', text: 'Contraseña actual incorrecta (Modo Local).' });
-      }
+      console.error("API Error", error);
+      // Sin fallback local, mostramos error de red
+      setMsg({ type: 'error', text: 'Error de conexión con el servidor.' });
     } finally {
       setIsLoading(false);
     }
@@ -71,8 +61,9 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
             <div className="flex items-center space-x-3 group cursor-pointer">
-              <div className="h-10 w-10 bg-white rounded-lg p-1 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 overflow-hidden">
-                <img src="/logo.png" alt="Logo La Hispanidad" className="h-full w-full object-contain" />
+              {/* Contenedor del logo más flexible */}
+              <div className="h-11 px-1 bg-white rounded-lg flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform duration-200 overflow-hidden">
+                <img src="/logo.png" alt="Logo La Hispanidad" className="h-full w-auto object-contain" />
               </div>
               <div className="flex flex-col">
                 <span className="font-bold text-lg leading-tight tracking-tight">La Hispanidad</span>

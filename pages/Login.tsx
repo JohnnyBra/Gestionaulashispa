@@ -67,10 +67,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
       // Check if response is ok
       if (!response.ok) {
-         // If 404, it means server is not running API, try local fallback
-         if (response.status === 404) {
-             throw new Error('SERVER_OFFLINE');
-         }
          const errorData = await response.json();
          throw new Error(errorData.message || 'Error en la autenticación');
       }
@@ -83,22 +79,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError('Respuesta del servidor inválida');
       }
     } catch (err: any) {
-      console.warn("Login Error (intentando fallback local):", err);
-      
-      // FALLBACK LOCAL PARA MODO SIN SERVIDOR
-      // Contraseña por defecto: adminhispanidad
-      // O la que esté guardada en localStorage
-      const localAdminPass = localStorage.getItem('hispanidad_admin_pass') || 'adminhispanidad';
-      
-      if (adminPassword === localAdminPass) {
-          onLogin({
-            email: 'direccion@colegiolahispanidad.es', 
-            name: 'Administración (Local)', 
-            role: Role.ADMIN 
-          });
-      } else {
-          setError('Contraseña incorrecta (Modo Local/Offline).');
-      }
+      console.error("Login Error:", err);
+      // Sin fallback local, mostramos el error directamente
+      setError('Error de conexión con el servidor. Verifica que la aplicación está activa.');
     } finally {
       setLoading(false); 
     }
@@ -117,8 +100,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
              </div>
 
             <div className="relative z-10 flex flex-col items-center">
-                <div className="bg-white p-3 rounded-2xl shadow-lg mb-4">
-                    <img src="/logo.png" alt="Logo La Hispanidad" className="w-16 h-16 object-contain" />
+                <div className="bg-white p-4 rounded-2xl shadow-lg mb-4">
+                    {/* Aumentamos el tamaño y eliminamos la restricción cuadrada estricta para acomodar el logo vertical con texto */}
+                    <img src="/logo.png" alt="Logo La Hispanidad" className="h-20 w-auto object-contain" />
                 </div>
                 <h1 className="text-2xl font-extrabold text-white tracking-tight">La Hispanidad</h1>
                 <p className="text-primary-100 text-sm font-medium mt-1">Gestión de Espacios</p>
