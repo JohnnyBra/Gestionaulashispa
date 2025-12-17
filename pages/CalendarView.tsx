@@ -1,11 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role } from '../types';
 import { getBookings, saveBooking, saveBatchBookings, removeBooking } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
-import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon, WifiOff, RefreshCw, Repeat, CalendarDays, MoreHorizontal } from 'lucide-react';
-import { addWeeks, subWeeks, format, isSameDay } from 'date-fns';
+import { HistoryModal } from '../components/HistoryModal';
+import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, Clock, History, AlertTriangle, Calendar as CalendarIcon, WifiOff, RefreshCw, Repeat, CalendarDays, MoreHorizontal, Filter, Search, XCircle } from 'lucide-react';
+import { addWeeks, subWeeks, format, isSameDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { io } from 'socket.io-client';
 
 interface CalendarViewProps {
   stage: Stage;
@@ -22,6 +24,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // --- Admin Filters & Tools State ---
+  const [teacherFilter, setTeacherFilter] = useState('');
+  const [courseFilter, setCourseFilter] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+
   // Form State
   const [course, setCourse] = useState('');
   const [subject, setSubject] = useState('');
@@ -45,7 +53,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     : { primary: 'emerald', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-600 to-teal-600' };
 
   const loadData = async () => {
-    setLoading(true);
+    // Si ya hay datos, hacemos carga silenciosa (sin loading spinner global) para no parpadear
+    if (bookings.length === 0) setLoading(true);
     setError(null);
     try {
       const data = await getBookings();
@@ -58,29 +67,62 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     }
   };
 
+  // --- SOCKET.IO & INITIAL LOAD ---
   useEffect(() => {
     loadData();
-  }, [isModalOpen]); 
 
-  useEffect(() => {
-    const interval = setInterval(loadData, 30000); 
-    return () => clearInterval(interval);
-  }, []);
+    // Conectar WebSocket
+    const socket = io(); // Se conecta automáticamente al host actual
+
+    socket.on('connect', () => {
+      console.log('Conectado al servidor de reservas en tiempo real');
+    });
+
+    socket.on('server:bookings_updated', (updatedBookings: Booking[]) => {
+      console.log('Actualización en tiempo real recibida');
+      setBookings(updatedBookings);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, []); 
+
+  // --- FILTER LOGIC ---
+  const filteredBookings = useMemo(() => {
+    if (!teacherFilter && !courseFilter) return bookings;
+    
+    return bookings.filter(b => {
+        const matchTeacher = !teacherFilter || b.teacherName.toLowerCase().includes(teacherFilter.toLowerCase());
+        const matchCourse = !courseFilter || b.course?.toLowerCase().includes(courseFilter.toLowerCase());
+        return matchTeacher && matchCourse;
+    });
+  }, [bookings, teacherFilter, courseFilter]);
 
   const handlePrevWeek = () => setCurrentDate(subWeeks(currentDate, 1));
   const handleNextWeek = () => setCurrentDate(addWeeks(currentDate, 1));
+  const handleDateJump = (e: React.ChangeEvent<HTMLInputElement>) => {
+      if(e.target.value) setCurrentDate(parseISO(e.target.value));
+  };
 
   const weekDays = getWeekDays(currentDate);
 
   const getBookingForSlot = (day: Date, slotId: string) => {
     const dateStr = formatDate(day);
-    return bookings.find(b => b.date === dateStr && b.slotId === slotId && b.stage === stage);
+    // Usamos filteredBookings para la visualización. 
+    // Si hay un filtro activo, los slots que no coincidan parecerán vacíos (intencional para "búsqueda").
+    // Sin embargo, para evitar reservas dobles por error visual, si hay filtros activos y el slot está "vacío" pero realmente ocupado,
+    // deberíamos manejarlo. Aquí, simplemente mostramos lo que coincide con el filtro.
+    return filteredBookings.find(b => b.date === dateStr && b.slotId === slotId && b.stage === stage);
   };
 
   const handleSlotClick = (day: Date, slot: TimeSlot) => {
     if (!isBookableDay(day)) return;
     
-    const existing = getBookingForSlot(day, slot.id);
+    // Al hacer clic, comprobamos contra TODOS los bookings, no solo los filtrados, para evitar conflictos
+    const realDateStr = formatDate(day);
+    const existing = bookings.find(b => b.date === realDateStr && b.slotId === slot.id && b.stage === stage);
+    
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
 
@@ -101,10 +143,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
      if (confirm('¿Eliminar esta reserva permanentemente?')) {
         setIsSubmitting(true);
         try {
-          await removeBooking(existingBooking.id);
+          // Actualización: Se pasa el usuario actual para registrar quién elimina
+          await removeBooking(existingBooking.id, user);
           setIsSubmitting(false);
           setIsModalOpen(false);
-          await loadData();
+          // loadData se llamará automáticamente vía socket
         } catch (e) {
           alert("Error al eliminar.");
           setIsSubmitting(false);
@@ -164,10 +207,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       }
       setIsSubmitting(false);
       setIsModalOpen(false);
-      await loadData(); 
-    } catch (e) {
-      alert("Error de conexión al guardar.");
+      // loadData(); // Ya no es necesario forzarlo, el socket lo hará
+    } catch (e: any) {
       setIsSubmitting(false);
+      if (e.message === 'CONFLICT') {
+        alert("⚠️ ¡Ups! Alguien acaba de reservar este hueco hace un instante. La página se actualizará.");
+        setIsModalOpen(false);
+        loadData(); // Forzar recarga inmediata
+      } else {
+        alert("Error de conexión al guardar.");
+      }
     }
   };
 
@@ -190,32 +239,94 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     <div className="max-w-screen-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8 animate-fade-in flex flex-col h-[calc(100vh-80px)]">
       
       {/* --- HEADER CONTROLS --- */}
-      <div className="flex-none flex flex-col md:flex-row justify-between items-center mb-6 glass-panel p-4 rounded-3xl">
-        <div className="flex items-center space-x-4 mb-4 md:mb-0 w-full md:w-auto">
-          <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-500 border border-transparent hover:border-slate-200">
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h2 className={`text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2>
-            <div className="flex items-center text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
-                <span className={`w-2 h-2 rounded-full bg-${colors.primary}-500 mr-2`}></span>
-                {stage}
+      <div className="flex-none flex flex-col gap-4 mb-6">
+          <div className="flex flex-col md:flex-row justify-between items-center glass-panel p-4 rounded-3xl gap-4">
+            <div className="flex items-center space-x-4 w-full md:w-auto">
+              <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-500 border border-transparent hover:border-slate-200">
+                <ArrowLeft className="h-5 w-5" />
+              </button>
+              <div>
+                <h2 className={`text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2>
+                <div className="flex items-center text-xs text-slate-400 font-bold uppercase tracking-wider mt-1">
+                    <span className={`w-2 h-2 rounded-full bg-${colors.primary}-500 mr-2`}></span>
+                    {stage}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+                {/* Admin Tools Toggle */}
+                {user.role === Role.ADMIN && (
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={() => setIsHistoryOpen(true)}
+                            className="p-3 bg-slate-100 text-slate-600 rounded-xl hover:bg-slate-200 transition-colors"
+                            title="Ver Historial"
+                        >
+                            <History className="h-5 w-5" />
+                        </button>
+                        <button 
+                            onClick={() => setShowFilters(!showFilters)}
+                            className={`p-3 rounded-xl transition-colors flex items-center gap-2 ${showFilters ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
+                        >
+                            <Filter className="h-5 w-5" />
+                            <span className="hidden sm:inline text-sm font-bold">Filtros</span>
+                        </button>
+                    </div>
+                )}
+                
+                {/* Date Navigation */}
+                <div className="flex items-center space-x-4 bg-slate-50/50 p-1.5 rounded-2xl border border-slate-200/60">
+                    <button onClick={handlePrevWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
+                    <ChevronLeft className="h-4 w-4" />
+                    </button>
+                    <div className="px-6 flex flex-col items-center justify-center min-w-[140px] cursor-pointer relative group">
+                        <span className="text-sm font-bold text-slate-800 capitalize">{format(weekDays[0], 'MMMM', { locale: es })}</span>
+                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{format(weekDays[0], 'yyyy')}</span>
+                        {/* Hidden date input overlay for quick jump */}
+                        <input 
+                            type="date" 
+                            className="absolute inset-0 opacity-0 cursor-pointer"
+                            onChange={handleDateJump}
+                        />
+                    </div>
+                    <button onClick={handleNextWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
+                    <ChevronRight className="h-4 w-4" />
+                    </button>
+                </div>
             </div>
           </div>
-        </div>
 
-        <div className="flex items-center space-x-4 bg-slate-50/50 p-1.5 rounded-2xl border border-slate-200/60">
-            <button onClick={handlePrevWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="px-6 flex flex-col items-center justify-center min-w-[140px]">
-              <span className="text-sm font-bold text-slate-800 capitalize">{format(weekDays[0], 'MMMM', { locale: es })}</span>
-              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{format(weekDays[0], 'yyyy')}</span>
-            </div>
-            <button onClick={handleNextWeek} className="p-2.5 hover:bg-white rounded-xl transition-all text-slate-600 shadow-sm hover:shadow-md">
-              <ChevronRight className="h-4 w-4" />
-            </button>
-        </div>
+          {/* --- ADMIN FILTER BAR --- */}
+          {user.role === Role.ADMIN && showFilters && (
+             <div className="glass-panel p-4 rounded-2xl animate-slide-up flex flex-col md:flex-row gap-4 items-center">
+                 <div className="relative flex-1 w-full">
+                     <Search className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                     <input 
+                        type="text" 
+                        placeholder="Filtrar por profesor..."
+                        value={teacherFilter}
+                        onChange={(e) => setTeacherFilter(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200"
+                     />
+                     {teacherFilter && <button onClick={() => setTeacherFilter('')} className="absolute right-3 top-3"><XCircle className="w-4 h-4 text-slate-400 hover:text-slate-600"/></button>}
+                 </div>
+                 <div className="relative flex-1 w-full">
+                     <Book className="absolute left-3 top-3 h-4 w-4 text-slate-400" />
+                     <select 
+                        value={courseFilter}
+                        onChange={(e) => setCourseFilter(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-slate-200 appearance-none"
+                     >
+                        <option value="">Todos los cursos</option>
+                        {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                     </select>
+                 </div>
+                 <div className="text-xs font-bold text-slate-400 uppercase tracking-wider px-2">
+                     {filteredBookings.length} reservas visibles
+                 </div>
+             </div>
+          )}
       </div>
 
       {/* --- CALENDAR GRID --- */}
@@ -256,6 +367,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                   
                   {/* Slot Cells */}
                   {weekDays.slice(0, 5).map((day) => {
+                    // Aquí usamos la función que consulta filteredBookings
                     const booking = getBookingForSlot(day, slot.id);
                     const isHoliday = !isBookableDay(day);
                     
@@ -336,7 +448,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         </div>
       </div>
 
-      {/* --- MODAL --- */}
+      {/* --- HISTORY MODAL --- */}
+      <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
+
+      {/* --- BOOKING MODAL --- */}
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)} 
