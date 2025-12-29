@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog } from '../types';
 import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers } from '../services/storageService';
@@ -85,9 +84,21 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
+    
     setCourse(existing?.course || courses[0]);
     setSubject(existing?.subject || '');
-    setSelectedTeacherEmail(existing?.teacherEmail || user.email);
+    
+    // Gestión inteligente del selector de profesor para ADMIN
+    if (existing) {
+        setSelectedTeacherEmail(existing.teacherEmail);
+    } else if (user.role === Role.ADMIN && teachers.length > 0) {
+        // Si es nueva reserva y somos admin, seleccionamos el primer profe de la lista importada
+        // para evitar que se seleccione el email del admin (que suele no estar en la lista de profes)
+        setSelectedTeacherEmail(teachers[0].email);
+    } else {
+        setSelectedTeacherEmail(user.email);
+    }
+
     setBlockReason(existing?.justification || '');
     setIsBlocking(existing?.isBlocked || false);
     setIsModalOpen(true);
