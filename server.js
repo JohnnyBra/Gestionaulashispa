@@ -1,4 +1,3 @@
-
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -21,6 +20,18 @@ const io = new Server(server, {
 app.use(cors());
 app.use(express.json());
 
+// --- MEMORY CACHE ---
+let usersMemoryCache = [];
+
+// Inicializar caché desde disco si existe
+if (fs.existsSync(USERS_CACHE_FILE)) {
+  try {
+    usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
+  } catch (e) {
+    console.error("Error leyendo caché local:", e);
+  }
+}
+
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
   try {
@@ -29,22 +40,18 @@ const syncUsers = async () => {
     if (!response.ok) throw new Error('Error al conectar con PrismaEdu');
     
     const users = await response.json();
-    // Guardamos solo los datos necesarios para el selector (id, nombre, email)
+    // Actualizamos memoria y disco
+    usersMemoryCache = users;
     fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
     console.log(`[SYNC] ${users.length} profesores sincronizados correctamente.`);
   } catch (err) {
-    console.error(`[SYNC] Error: No se pudo actualizar la lista de profesores. Usando cache local.`, err.message);
+    console.error(`[SYNC] Error: No se pudo actualizar la lista de profesores. Usando datos en memoria/disco.`, err.message);
   }
 };
 
 // Sincronizar al iniciar y cada 1 hora
 syncUsers();
 setInterval(syncUsers, 60 * 60 * 1000);
-
-const readUsersCache = () => {
-  if (!fs.existsSync(USERS_CACHE_FILE)) return [];
-  return JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
-};
 
 const readBookings = () => {
   if (!fs.existsSync(DATA_FILE)) return [];
@@ -62,11 +69,12 @@ const appendToHistory = (actionLog) => {
 
 // --- API ENDPOINTS ---
 
-// Autenticación Centralizada
-app.post('/api/auth/login', async (req, res) => {
+// Autenticación Proxy (Fase 1)
+app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
+    // Delegamos la validación a PrismaEdu
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -96,8 +104,10 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
+// Obtener profesores (Fase 2)
 app.get('/api/teachers', (req, res) => {
-  res.json(readUsersCache());
+  // Servir desde memoria para máxima velocidad
+  res.json(usersMemoryCache);
 });
 
 app.get('/api/bookings', (req, res) => {
@@ -165,4 +175,5 @@ app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 server.listen(PORT, () => {
   console.log(`Servidor Reservas Activo en puerto ${PORT}`);
+  console.log(`Conectado a PrismaEdu en ${EXTERNAL_API_BASE}`);
 });

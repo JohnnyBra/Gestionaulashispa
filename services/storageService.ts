@@ -1,4 +1,3 @@
-
 import { Booking, Stage, User, ActionLog } from '../types';
 
 export const getBookings = async (): Promise<Booking[]> => {
@@ -18,7 +17,8 @@ export const getTeachers = async (): Promise<{name: string, email: string}[]> =>
 };
 
 export const loginExternal = async (credentials: {email: string, password: string}): Promise<any> => {
-  const response = await fetch('/api/auth/login', {
+  // Endpoint Proxy actualizado
+  const response = await fetch('/api/proxy/login', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(credentials)
