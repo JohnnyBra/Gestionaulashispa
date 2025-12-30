@@ -109,14 +109,14 @@ const appendToHistory = (actionLog) => {
 
 /**
  * Endpoint: /api/auth/google
- * Descripción: Verifica token de Google y busca usuario en caché sincronizada
+ * Descripción: Verifica token de Google Y comprueba que el email exista en la lista de Prisma.
  */
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false, message: 'Falta el token.' });
 
   try {
-    // Verificar token contra Google (método ligero sin librería externa)
+    // 1. Validar el token con Google para estar seguros de que no es falso
     const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
     
     if (!googleRes.ok) {
@@ -128,20 +128,21 @@ app.post('/api/auth/google', async (req, res) => {
 
     if (!email) return res.status(400).json({ success: false, message: 'El token no contiene email.' });
 
-    // Buscar si este email existe en nuestros usuarios sincronizados de Prisma
+    // 2. SEGURIDAD: Comprobar si este email está en nuestra lista "usersMemoryCache" (la que viene de Prisma)
     const existingUser = usersMemoryCache.find(u => u.email.toLowerCase() === email.toLowerCase());
 
     if (existingUser) {
-        console.log(`[AUTH GOOGLE] Éxito: ${existingUser.name}`);
+        console.log(`[AUTH GOOGLE] Acceso Permitido: ${existingUser.name} (${existingUser.role})`);
+        // Devolvemos el usuario con el rol que tiene en Prisma, no el de Google.
         return res.json({
             success: true,
-            user: existingUser
+            user: existingUser 
         });
     } else {
-        console.warn(`[AUTH GOOGLE] Fallido: ${email} no encontrado en lista de profesores.`);
+        console.warn(`[AUTH GOOGLE] Acceso Denegado: ${email} es válido en Google pero no está activo en Prisma.`);
         return res.status(403).json({ 
             success: false, 
-            message: 'Tu cuenta de Google es válida, pero no estás registrado como Profesor activo en Prisma.' 
+            message: 'Acceso denegado: Tu cuenta de Google no corresponde a un profesor activo en PrismaEdu.' 
         });
     }
 
