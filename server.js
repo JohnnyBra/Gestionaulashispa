@@ -103,12 +103,11 @@ app.post('/api/proxy/login', async (req, res) => {
 
   console.log(`[AUTH] Iniciando login para: ${cleanEmail}`);
 
-  // LISTA DE ENDPOINTS A PROBAR (En orden de probabilidad)
+  // LISTA DE ENDPOINTS A PROBAR (Prioridad: Ruta confirmada por usuario)
   const candidateEndpoints = [
-    '/api/auth/login',    // Estándar moderno
-    '/api/login',         // Estándar simple
-    '/api/users/login',   // Alternativa REST
-    '/api/external/login' // Legado
+    '/api/auth/external-check', // Ruta ESPECÍFICA confirmada
+    '/api/auth/login',    
+    '/api/login'
   ];
 
   for (const endpoint of candidateEndpoints) {
@@ -128,8 +127,7 @@ app.post('/api/proxy/login', async (req, res) => {
         continue; 
       }
 
-      // Si llegamos aquí, el servidor respondió (200 OK, 401 Unauthorized, 403 Forbidden, etc.)
-      // Leemos la respuesta
+      // Si llegamos aquí, el servidor respondió
       const responseText = await response.text();
 
       // Chequeo de seguridad Cloudflare (Captcha/Challenge)
@@ -143,7 +141,6 @@ app.post('/api/proxy/login', async (req, res) => {
 
       if (!response.ok) {
         // Es un error de credenciales (401) o permisos (403), pero la ruta EXISTE.
-        // Devolvemos el error al usuario y NO seguimos probando rutas.
         let errorMessage = 'Credenciales inválidas.';
         try {
           const jsonError = JSON.parse(responseText);
@@ -159,6 +156,7 @@ app.post('/api/proxy/login', async (req, res) => {
       try {
         externalUser = JSON.parse(responseText);
       } catch (e) {
+        console.error('[AUTH ERROR] JSON inválido:', responseText.substring(0, 50));
         return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor.' });
       }
 
@@ -190,11 +188,9 @@ app.post('/api/proxy/login', async (req, res) => {
 
     } catch (err) {
       console.error(`[AUTH] Error de red en ${endpoint}:`, err.message);
-      // Si es error de red, seguimos probando por si acaso otro endpoint responde
     }
   }
 
-  // Si terminamos el bucle y nada funcionó (todos 404 o errores de red)
   console.error('[AUTH] Ningún endpoint respondió correctamente.');
   res.status(404).json({ 
     success: false, 
