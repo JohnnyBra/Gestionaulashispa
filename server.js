@@ -86,9 +86,18 @@ const syncUsers = async () => {
         const appRole = ROLE_MAP[rawRole];
 
         if (appRole) {
+            // 1. Resolvemos el nombre primero para asegurarnos que existe
+            const validName = u.nombre || u.name || 'Desconocido';
+            
+            // 2. Resolvemos el email. Si no viene, usamos el nombre resuelto
+            const generatedEmail = (
+                u.email || 
+                (u.id && u.id.includes('@') ? u.id : `${validName.replace(/\s+/g, '.').toLowerCase()}@colegiolahispanidad.es`)
+            ).toLowerCase();
+
             allowedUsers.push({
-              name: u.nombre || u.name || 'Desconocido',
-              email: (u.email || (u.id && u.id.includes('@') ? u.id : `${u.nombre?.replace(/\s+/g, '.').toLowerCase()}@colegiolahispanidad.es`)).toLowerCase(),
+              name: validName,
+              email: generatedEmail,
               role: appRole, // 'ADMIN' o 'TEACHER'
               originalRole: rawRole // Guardamos el original por si acaso
             });
