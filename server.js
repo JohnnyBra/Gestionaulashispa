@@ -198,10 +198,13 @@ app.post('/api/proxy/login', async (req, res) => {
         return res.status(403).json({ success: false, message: 'Tu rol no tiene acceso a esta aplicación.' });
     }
 
+    // ASEGURAMOS QUE name TENGA VALOR
+    const fallbackName = extUser.name || extUser.nombre || cleanEmail.split('@')[0] || 'Usuario';
+    
     const finalUser = {
         id: extUser.id || cleanEmail,
         email: extUser.email || cleanEmail,
-        name: extUser.name || extUser.nombre,
+        name: fallbackName,
         role: appRole
     };
     
@@ -217,6 +220,7 @@ app.post('/api/proxy/login', async (req, res) => {
     });
 
   } catch (err) {
+    console.error("Error en proxy login:", err);
     res.status(503).json({ success: false, message: 'Error de conexión' });
   }
 });
