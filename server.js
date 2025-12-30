@@ -40,10 +40,10 @@ let usersMemoryCache = [];
 const ROLE_MAP = {
   'ADMIN': 'ADMIN',
   'DIRECCION': 'ADMIN',
-  'JEFATURA': 'ADMIN',    // Añadido por seguridad
+  'JEFATURA': 'ADMIN',
   'TUTOR': 'TEACHER',
-  'PROFESOR': 'TEACHER',  // Añadido por seguridad
-  'DOCENTE': 'TEACHER',   // Añadido por seguridad
+  'PROFESOR': 'TEACHER',
+  'DOCENTE': 'TEACHER',
   'TEACHER': 'TEACHER'
 };
 
@@ -78,47 +78,37 @@ const syncUsers = async () => {
 
     if (Array.isArray(externalUsers)) {
       const allowedUsers = [];
-      let debugCount = 0;
+      
+      // LOG DEBUG: Ver estructura exacta del primer usuario para diagnosticar fallos
+      if (externalUsers.length > 0) {
+        console.log("🔍 [DEBUG API SAMPLE]", JSON.stringify(externalUsers[0], null, 2));
+      }
 
       for (const u of externalUsers) {
-        // Normalización de Roles
+        // 1. Normalización de Rol
         const rawRole = (u.role || u.rol || '').toUpperCase().trim();
         const appRole = ROLE_MAP[rawRole];
 
-        // LOG DE DEBUG (Solo los primeros 3 para no saturar)
-        if (debugCount < 3) {
-            console.log(`🔍 [DEBUG DATA] Usuario: ${u.name || u.nombre} | ID: ${u.id} | Rol: ${rawRole} -> ${appRole} | EmailRaw: ${u.email}`);
-            debugCount++;
-        }
-
         if (appRole) {
-            const validName = u.nombre || u.name || 'Desconocido';
-            
-            // ESTRATEGIA DE EMAIL ROBUSTA
-            // 1. Buscamos el campo explícito
-            let realEmail = u.email || u.correo || u.mail;
+            // 2. Extracción de Email
+            // Prioridad: campo email directo -> campo correo -> campo mail -> id (si tiene @) -> id + dominio
+            let finalEmail = u.email || u.correo || u.mail;
 
-            // 2. Si no hay email, pero hay ID...
-            if (!realEmail && u.id) {
-                // Si el ID parece un email, lo usamos
-                if (u.id.includes('@')) {
-                    realEmail = u.id;
-                } 
-                // Si no, asumimos que el ID es el nombre de usuario (ej: 'jbarrero') 
-                // y construimos el email. Esto es más seguro que usar el Nombre completo.
-                else {
-                    realEmail = `${u.id}@colegiolahispanidad.es`;
+            if (!finalEmail && u.id) {
+                if (u.id.toString().includes('@')) {
+                    finalEmail = u.id;
+                } else {
+                    // Fallback vital: Si no hay email explícito, asumimos id@dominio
+                    finalEmail = `${u.id}@colegiolahispanidad.es`;
                 }
             }
 
-            if (realEmail) {
-                realEmail = realEmail.toLowerCase().trim();
+            if (finalEmail) {
                 allowedUsers.push({
-                  id: u.id || realEmail, 
-                  name: validName,
-                  email: realEmail,
-                  role: appRole, 
-                  originalRole: rawRole
+                  id: u.id || finalEmail, 
+                  name: u.name || u.nombre || 'Docente',
+                  email: finalEmail.toLowerCase().trim(),
+                  role: appRole
                 });
             }
         }
@@ -128,8 +118,8 @@ const syncUsers = async () => {
       fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
       console.log(`✅ [SYNC] Completado. Usuarios importados: ${allowedUsers.length}`);
       
-      if (allowedUsers.length === 0) {
-          console.warn("⚠️ [ATENCIÓN] Se han importado 0 usuarios. Revisa los logs de 'DEBUG DATA' arriba para ver si los roles coinciden.");
+      if (allowedUsers.length === 0 && externalUsers.length > 0) {
+          console.warn("⚠️ [ATENCIÓN] Se descargaron usuarios pero se filtraron todos. Revisa el mapeo de roles o campos de email.");
       }
     } 
 
@@ -223,7 +213,7 @@ app.post('/api/proxy/login', async (req, res) => {
     // Lógica idéntica al Sync para consistencia
     let finalEmail = extUser.email || extUser.correo || extUser.mail;
     if (!finalEmail && extUser.id) {
-        if (extUser.id.includes('@')) finalEmail = extUser.id;
+        if (extUser.id.toString().includes('@')) finalEmail = extUser.id;
         else finalEmail = `${extUser.id}@colegiolahispanidad.es`;
     }
     
