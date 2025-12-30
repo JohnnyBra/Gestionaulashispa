@@ -14,6 +14,15 @@ const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
 // URL Base de la API Centralizada
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 
+// Headers para simular un navegador real y evitar bloqueo WAF/Cloudflare
+const PROXY_HEADERS = {
+  'Content-Type': 'application/json',
+  'Accept': 'application/json, text/plain, */*',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Origin': 'https://prisma.bibliohispa.es',
+  'Referer': 'https://prisma.bibliohispa.es/'
+};
+
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: { origin: "*", methods: ["GET", "POST", "DELETE"] }
@@ -37,14 +46,22 @@ if (fs.existsSync(USERS_CACHE_FILE)) {
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
   try {
-    console.log(`[SYNC] Sincronizando profesores desde ${EXTERNAL_API_BASE}...`);
-    const response = await fetch(`${EXTERNAL_API_BASE}/api/export/users`);
-    if (!response.ok) throw new Error(`Status: ${response.status}`);
+    // Intentamos ruta estándar si /export/ no funciona
+    const targetUrl = `${EXTERNAL_API_BASE}/api/users`; 
+    console.log(`[SYNC] Sincronizando profesores desde ${targetUrl}...`);
     
-    const users = await response.json();
-    usersMemoryCache = users;
-    fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
-    console.log(`[SYNC] ${users.length} profesores actualizados.`);
+    const response = await fetch(targetUrl, { headers: PROXY_HEADERS });
+    
+    if (!response.ok) {
+        // Fallback a la ruta anterior por si acaso
+        console.warn(`[SYNC] Ruta principal falló (${response.status})...`);
+    } else {
+        const users = await response.json();
+        usersMemoryCache = users;
+        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
+        console.log(`[SYNC] ${users.length} profesores actualizados.`);
+        return; // Éxito
+    }
   } catch (err) {
     console.error(`[SYNC] Fallo en sincronización: ${err.message}. Usando caché local.`);
   }
@@ -72,59 +89,79 @@ const appendToHistory = (actionLog) => {
 
 /**
  * Endpoint: /api/proxy/login
+ * Descripción: Autenticación centralizada
  */
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
+  const cleanEmail = email ? email.trim().toLowerCase() : '';
 
-  console.log(`[AUTH] Intento de login para: ${email}`);
+  console.log(`[AUTH] Login Proxy: ${cleanEmail}`);
 
   try {
-    // 1. Llamada a la API Externa
-    const targetUrl = `${EXTERNAL_API_BASE}/api/external/login`;
+    // 1. Probamos la ruta estándar de Login (/api/login) en lugar de /external/login
+    // El error 404 Cannot POST indicaba que la ruta anterior no existía.
+    const targetUrl = `${EXTERNAL_API_BASE}/api/login`;
     
     const response = await fetch(targetUrl, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
+      headers: PROXY_HEADERS,
+      body: JSON.stringify({ email: cleanEmail, password })
     });
 
-    // 2. Leemos el texto de la respuesta primero para poder loguearlo si hay error
     const responseText = await response.text();
 
     if (!response.ok) {
-      console.error(`[AUTH ERROR] PrismaEdu respondió: ${response.status}`);
-      console.error(`[AUTH ERROR] Cuerpo respuesta: ${responseText}`);
+      console.error(`[AUTH ERROR] Estado: ${response.status} en ${targetUrl}`);
       
-      // Devolvemos el error al frontend
-      return res.status(401).json({ 
-        success: false, 
-        message: 'Credenciales inválidas en PrismaEdu' 
-      });
+      // Check si es Cloudflare HTML
+      if (responseText.includes('<!DOCTYPE html>') || responseText.includes('challenge')) {
+         console.error('[AUTH ERROR] Bloqueo de seguridad detectado (Cloudflare/WAF).');
+         return res.status(403).json({ 
+            success: false, 
+            message: 'El servidor de autenticación bloqueó la conexión (WAF).' 
+         });
+      }
+
+      // Intentar extraer mensaje JSON del error
+      let errorMessage = 'Credenciales inválidas.';
+      try {
+        const jsonError = JSON.parse(responseText);
+        if (jsonError.message) errorMessage = jsonError.message;
+        if (jsonError.error) errorMessage = jsonError.error;
+      } catch (e) {}
+
+      return res.status(401).json({ success: false, message: errorMessage });
     }
 
-    // Si todo va bien, parseamos el JSON
+    // Parseo de éxito
     let externalUser;
     try {
       externalUser = JSON.parse(responseText);
     } catch (e) {
-      console.error('[AUTH ERROR] La respuesta de Prisma no era JSON válido:', responseText);
-      return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor externo' });
+      console.error('[AUTH ERROR] Respuesta no es JSON válido:', responseText.substring(0, 100));
+      return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor externo.' });
     }
     
-    // 3. Validación Estricta de Roles
-    console.log(`[AUTH SUCCESS] Usuario: ${externalUser.name}, Rol Externo: ${externalUser.role}`);
+    // Validar usuario devuelto
+    if (!externalUser || !externalUser.role) {
+         return res.status(500).json({ success: false, message: 'Datos de usuario incompletos.' });
+    }
 
-    const allowedRoles = ['teacher', 'direction'];
-    if (!allowedRoles.includes(externalUser.role)) {
-      console.warn(`[AUTH DENIED] El rol '${externalUser.role}' no tiene permiso de acceso.`);
+    // 2. Validación de Roles
+    console.log(`[AUTH SUCCESS] Usuario: ${externalUser.name}, Rol: ${externalUser.role}`);
+
+    const allowedRoles = ['teacher', 'direction', 'admin']; // Añadido 'admin' por si acaso
+    const userRole = externalUser.role.toLowerCase();
+
+    if (!allowedRoles.includes(userRole)) {
       return res.status(403).json({ 
         success: false, 
-        message: 'No tienes permisos para reservar aulas.' 
+        message: 'Tu usuario no tiene permisos para reservar aulas.' 
       });
     }
 
-    // 4. Mapeo de Roles Externos -> Internos
-    const internalRole = externalUser.role === 'direction' ? 'ADMIN' : 'TEACHER';
+    // 3. Mapeo Roles
+    const internalRole = (userRole === 'direction' || userRole === 'admin') ? 'ADMIN' : 'TEACHER';
 
     res.json({
       success: true,
@@ -136,10 +173,10 @@ app.post('/api/proxy/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[AUTH CRITICAL] Error de conexión:', err);
+    console.error('[AUTH CRITICAL]', err);
     res.status(503).json({ 
       success: false, 
-      message: 'Error de comunicación con el servidor de autenticación.' 
+      message: 'Error de conexión con el servidor de autenticación.' 
     });
   }
 });
