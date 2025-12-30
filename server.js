@@ -14,13 +14,11 @@ const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
 // URL Base de la API Centralizada
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 
-// Headers específicos para identificarnos ante Cloudflare
-// NOTA: En Cloudflare WAF -> Custom Rules, puedes crear una regla:
-// IF User-Agent contains "HispanidadReservas-Server" THEN Skip WAF/Super Bot Fight Mode
+// Headers para simular un navegador real (Chrome) y evitar filtros de bots
 const PROXY_HEADERS = {
   'Content-Type': 'application/json',
   'Accept': 'application/json, text/plain, */*',
-  'User-Agent': 'HispanidadReservas-Server/1.0', 
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Origin': 'https://prisma.bibliohispa.es',
   'Referer': 'https://prisma.bibliohispa.es/'
 };
@@ -47,25 +45,32 @@ if (fs.existsSync(USERS_CACHE_FILE)) {
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
-  try {
-    // Intentamos ruta estándar si /export/ no funciona
-    const targetUrl = `${EXTERNAL_API_BASE}/api/users`; 
-    console.log(`[SYNC] Sincronizando profesores desde ${targetUrl}...`);
-    
-    const response = await fetch(targetUrl, { headers: PROXY_HEADERS });
-    
-    if (!response.ok) {
-        console.warn(`[SYNC] Ruta principal falló (${response.status})...`);
-    } else {
-        const users = await response.json();
-        usersMemoryCache = users;
-        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
-        console.log(`[SYNC] ${users.length} profesores actualizados.`);
-        return; // Éxito
+  // Intentamos varias rutas comunes para obtener usuarios
+  const endpoints = ['/api/users', '/api/teachers', '/api/auth/users'];
+  
+  for (const endpoint of endpoints) {
+    try {
+      const targetUrl = `${EXTERNAL_API_BASE}${endpoint}`;
+      console.log(`[SYNC] Probando: ${targetUrl}...`);
+      
+      const response = await fetch(targetUrl, { headers: PROXY_HEADERS });
+      
+      if (response.status === 404) continue; // Ruta incorrecta, probar siguiente
+
+      if (response.ok) {
+          const users = await response.json();
+          if (Array.isArray(users)) {
+            usersMemoryCache = users;
+            fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
+            console.log(`[SYNC] Éxito: ${users.length} profesores actualizados desde ${endpoint}.`);
+            return;
+          }
+      }
+    } catch (err) {
+      console.warn(`[SYNC] Error conectando a ${endpoint}: ${err.message}`);
     }
-  } catch (err) {
-    console.error(`[SYNC] Fallo en sincronización: ${err.message}. Usando caché local.`);
   }
+  console.log('[SYNC] No se pudo sincronizar con ninguna ruta. Usando caché local.');
 };
 
 // Sincronizar al iniciar y cada 1 hora
@@ -90,96 +95,111 @@ const appendToHistory = (actionLog) => {
 
 /**
  * Endpoint: /api/proxy/login
- * Descripción: Autenticación centralizada
+ * Descripción: Autenticación con estrategia de reintento en múltiples rutas
  */
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
   const cleanEmail = email ? email.trim().toLowerCase() : '';
 
-  console.log(`[AUTH] Login Proxy: ${cleanEmail}`);
+  console.log(`[AUTH] Iniciando login para: ${cleanEmail}`);
 
-  try {
-    // 1. Probamos la ruta estándar de Login (/api/login)
-    // Si sigue fallando con 404, prueba: /api/auth/login o consulta al admin de Prisma la ruta exacta.
-    const targetUrl = `${EXTERNAL_API_BASE}/api/login`;
+  // LISTA DE ENDPOINTS A PROBAR (En orden de probabilidad)
+  const candidateEndpoints = [
+    '/api/auth/login',    // Estándar moderno
+    '/api/login',         // Estándar simple
+    '/api/users/login',   // Alternativa REST
+    '/api/external/login' // Legado
+  ];
+
+  for (const endpoint of candidateEndpoints) {
+    const targetUrl = `${EXTERNAL_API_BASE}${endpoint}`;
     
-    const response = await fetch(targetUrl, {
-      method: 'POST',
-      headers: PROXY_HEADERS,
-      body: JSON.stringify({ email: cleanEmail, password })
-    });
+    try {
+      const response = await fetch(targetUrl, {
+        method: 'POST',
+        headers: PROXY_HEADERS,
+        body: JSON.stringify({ email: cleanEmail, password })
+      });
 
-    const responseText = await response.text();
+      // Si devuelve 404, es que la ruta no existe en el servidor remoto.
+      // Continuamos al siguiente endpoint del bucle.
+      if (response.status === 404) {
+        console.warn(`[AUTH] Ruta fallida (404): ${endpoint}`);
+        continue; 
+      }
 
-    if (!response.ok) {
-      console.error(`[AUTH ERROR] Estado: ${response.status} en ${targetUrl}`);
-      
-      // Check si es Cloudflare HTML
-      if (responseText.includes('<!DOCTYPE html>') || responseText.includes('challenge')) {
-         console.error('[AUTH ERROR] Bloqueo de seguridad detectado (Cloudflare/WAF).');
+      // Si llegamos aquí, el servidor respondió (200 OK, 401 Unauthorized, 403 Forbidden, etc.)
+      // Leemos la respuesta
+      const responseText = await response.text();
+
+      // Chequeo de seguridad Cloudflare (Captcha/Challenge)
+      if (responseText.includes('<!DOCTYPE html>') || responseText.includes('challenge-platform')) {
+         console.error(`[AUTH] WAF Bloqueó la petición en ${endpoint}`);
          return res.status(403).json({ 
             success: false, 
-            message: 'Cloudflare bloqueó la conexión. Añade la IP del servidor a la Whitelist en Cloudflare > Security > WAF > IP Access Rules.' 
+            message: 'El sistema de seguridad (WAF) está bloqueando la conexión. Verifica la Whitelist de IP.' 
          });
       }
 
-      // Intentar extraer mensaje JSON del error
-      let errorMessage = 'Credenciales inválidas.';
-      try {
-        const jsonError = JSON.parse(responseText);
-        if (jsonError.message) errorMessage = jsonError.message;
-        if (jsonError.error) errorMessage = jsonError.error;
-      } catch (e) {}
-
-      return res.status(401).json({ success: false, message: errorMessage });
-    }
-
-    // Parseo de éxito
-    let externalUser;
-    try {
-      externalUser = JSON.parse(responseText);
-    } catch (e) {
-      console.error('[AUTH ERROR] Respuesta no es JSON válido:', responseText.substring(0, 100));
-      return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor externo.' });
-    }
-    
-    // Validar usuario devuelto
-    if (!externalUser || !externalUser.role) {
-         return res.status(500).json({ success: false, message: 'Datos de usuario incompletos.' });
-    }
-
-    // 2. Validación de Roles
-    console.log(`[AUTH SUCCESS] Usuario: ${externalUser.name}, Rol: ${externalUser.role}`);
-
-    const allowedRoles = ['teacher', 'direction', 'admin'];
-    const userRole = externalUser.role.toLowerCase();
-
-    if (!allowedRoles.includes(userRole)) {
-      return res.status(403).json({ 
-        success: false, 
-        message: 'Tu usuario no tiene permisos para reservar aulas.' 
-      });
-    }
-
-    // 3. Mapeo Roles
-    const internalRole = (userRole === 'direction' || userRole === 'admin') ? 'ADMIN' : 'TEACHER';
-
-    res.json({
-      success: true,
-      user: {
-        email: externalUser.email,
-        name: externalUser.name,
-        role: internalRole
+      if (!response.ok) {
+        // Es un error de credenciales (401) o permisos (403), pero la ruta EXISTE.
+        // Devolvemos el error al usuario y NO seguimos probando rutas.
+        let errorMessage = 'Credenciales inválidas.';
+        try {
+          const jsonError = JSON.parse(responseText);
+          errorMessage = jsonError.message || jsonError.error || errorMessage;
+        } catch (e) {}
+        
+        console.log(`[AUTH] Fallo de credenciales en ${endpoint}: ${errorMessage}`);
+        return res.status(401).json({ success: false, message: errorMessage });
       }
-    });
 
-  } catch (err) {
-    console.error('[AUTH CRITICAL]', err);
-    res.status(503).json({ 
-      success: false, 
-      message: 'Error de conexión con el servidor de autenticación.' 
-    });
+      // --- ÉXITO (200 OK) ---
+      let externalUser;
+      try {
+        externalUser = JSON.parse(responseText);
+      } catch (e) {
+        return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor.' });
+      }
+
+      // Validar usuario
+      if (!externalUser || !externalUser.role) {
+         return res.status(500).json({ success: false, message: 'Datos de usuario incompletos recibidos.' });
+      }
+
+      console.log(`[AUTH SUCCESS] Login correcto en ${endpoint}. Usuario: ${externalUser.name}`);
+
+      // Mapeo de Roles
+      const allowedRoles = ['teacher', 'direction', 'admin'];
+      const userRole = externalUser.role.toLowerCase();
+
+      if (!allowedRoles.includes(userRole)) {
+        return res.status(403).json({ success: false, message: 'No tienes permisos para acceder.' });
+      }
+
+      const internalRole = (userRole === 'direction' || userRole === 'admin') ? 'ADMIN' : 'TEACHER';
+
+      return res.json({
+        success: true,
+        user: {
+          email: externalUser.email,
+          name: externalUser.name,
+          role: internalRole
+        }
+      });
+
+    } catch (err) {
+      console.error(`[AUTH] Error de red en ${endpoint}:`, err.message);
+      // Si es error de red, seguimos probando por si acaso otro endpoint responde
+    }
   }
+
+  // Si terminamos el bucle y nada funcionó (todos 404 o errores de red)
+  console.error('[AUTH] Ningún endpoint respondió correctamente.');
+  res.status(404).json({ 
+    success: false, 
+    message: 'No se pudo conectar con el servicio de autenticación (Rutas no encontradas).' 
+  });
 });
 
 // Endpoint para obtener lista de profesores
