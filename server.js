@@ -10,7 +10,9 @@ const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'bookings.json');
 const HISTORY_FILE = path.join(__dirname, 'history.json');
 const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
-const EXTERNAL_API_BASE = 'http://localhost:3020';
+
+// URL Base de la API Centralizada
+const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -33,19 +35,21 @@ if (fs.existsSync(USERS_CACHE_FILE)) {
 }
 
 // --- EXTERNAL DATA SYNC ---
+// Mantenemos la sincronización de usuarios para el selector de profesores
 const syncUsers = async () => {
   try {
-    console.log(`[SYNC] Intentando sincronizar profesores desde ${EXTERNAL_API_BASE}...`);
+    console.log(`[SYNC] Sincronizando profesores desde ${EXTERNAL_API_BASE}...`);
+    // Asumimos que la ruta de exportación se mantiene relativa a la base, 
+    // si cambia en producción, ajustar aquí.
     const response = await fetch(`${EXTERNAL_API_BASE}/api/export/users`);
-    if (!response.ok) throw new Error('Error al conectar con PrismaEdu');
+    if (!response.ok) throw new Error(`Status: ${response.status}`);
     
     const users = await response.json();
-    // Actualizamos memoria y disco
     usersMemoryCache = users;
     fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(users, null, 2));
-    console.log(`[SYNC] ${users.length} profesores sincronizados correctamente.`);
+    console.log(`[SYNC] ${users.length} profesores actualizados.`);
   } catch (err) {
-    console.error(`[SYNC] Error: No se pudo actualizar la lista de profesores. Usando datos en memoria/disco.`, err.message);
+    console.error(`[SYNC] Fallo en sincronización: ${err.message}. Usando caché local.`);
   }
 };
 
@@ -69,27 +73,49 @@ const appendToHistory = (actionLog) => {
 
 // --- API ENDPOINTS ---
 
-// Autenticación Proxy (Fase 1)
+/**
+ * Endpoint: /api/proxy/login
+ * Descripción: Autenticación centralizada contra Prisma Bibliohispa
+ * Lógica:
+ * 1. Envía credenciales a la API externa.
+ * 2. Verifica si el usuario tiene rol 'teacher' o 'direction'.
+ * 3. Si no tiene rol válido, devuelve 403.
+ * 4. Si es válido, mapea a roles internos (TEACHER/ADMIN) y devuelve la sesión.
+ */
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
 
   try {
-    // Delegamos la validación a PrismaEdu
-    const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
+    // 1. Llamada a la API Externa
+    const response = await fetch(`${EXTERNAL_API_BASE}/api/external/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password })
     });
 
     if (!response.ok) {
-      return res.status(401).json({ success: false, message: 'Credenciales inválidas en PrismaEdu' });
+      // Si la API externa rechaza (401/404), devolvemos credenciales inválidas
+      return res.status(401).json({ success: false, message: 'Credenciales incorrectas o usuario no encontrado.' });
     }
 
     const externalUser = await response.json();
     
-    // Mapeo de Roles: PrismaEdu 'admin' -> ADMIN, 'profesor' -> TEACHER
-    const internalRole = externalUser.role === 'admin' ? 'ADMIN' : 'TEACHER';
+    // 2. Validación Estricta de Roles
+    const allowedRoles = ['teacher', 'direction'];
+    if (!allowedRoles.includes(externalUser.role)) {
+      console.warn(`[AUTH] Acceso denegado para ${email}. Rol detectado: ${externalUser.role}`);
+      return res.status(403).json({ 
+        success: false, 
+        message: 'No tienes permisos para reservar aulas.' 
+      });
+    }
 
+    // 3. Mapeo de Roles Externos -> Internos
+    // 'direction' -> ADMIN (Permiso total: bloquear, borrar cualquiera, ver logs)
+    // 'teacher'   -> TEACHER (Permiso estándar: reservar, borrar propias)
+    const internalRole = externalUser.role === 'direction' ? 'ADMIN' : 'TEACHER';
+
+    // 4. Respuesta Exitosa
     res.json({
       success: true,
       user: {
@@ -98,15 +124,18 @@ app.post('/api/proxy/login', async (req, res) => {
         role: internalRole
       }
     });
+
   } catch (err) {
-    console.error('[AUTH] Error de conexión con PrismaEdu:', err);
-    res.status(503).json({ success: false, message: 'Servicio de autenticación no disponible' });
+    console.error('[AUTH] Error de conexión con Prisma:', err);
+    res.status(503).json({ 
+      success: false, 
+      message: 'Error de comunicación con el servidor de autenticación.' 
+    });
   }
 });
 
-// Obtener profesores (Fase 2)
+// Endpoint para obtener lista de profesores (usado por Admin en frontend)
 app.get('/api/teachers', (req, res) => {
-  // Servir desde memoria para máxima velocidad
   res.json(usersMemoryCache);
 });
 
@@ -127,6 +156,7 @@ app.post('/api/bookings', (req, res) => {
     let bookings = readBookings();
     const items = Array.isArray(incomingData) ? incomingData : [incomingData];
     
+    // Check conflicto básico
     for (const item of items) {
        if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage)) {
          return res.status(409).json({ error: 'Conflict' });
@@ -174,6 +204,6 @@ app.use(express.static(__dirname));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 server.listen(PORT, () => {
-  console.log(`Servidor Reservas Activo en puerto ${PORT}`);
-  console.log(`Conectado a PrismaEdu en ${EXTERNAL_API_BASE}`);
+  console.log(`Servidor de Reservas corriendo en puerto ${PORT}`);
+  console.log(`Autenticación delegada a: ${EXTERNAL_API_BASE}`);
 });
