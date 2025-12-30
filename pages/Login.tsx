@@ -49,7 +49,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const result = await loginGoogle(response.credential);
       if (result.success) {
-        onLogin(result.user);
+        // La API ahora devuelve los campos planos (role, name, email) en lugar de un objeto user
+        onLogin({
+          name: result.name,
+          email: result.email,
+          role: result.role
+        });
       } else {
         // Mensaje específico si el backend rechaza por no ser profesor
         setError(result.message || 'Error al validar con Google.');
@@ -69,7 +74,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const result = await loginExternal({ email, password });
       if (result.success) {
-        onLogin(result.user);
+        // La API ahora devuelve los campos planos (role, name, email) en lugar de un objeto user
+        onLogin({
+          name: result.name,
+          email: result.email,
+          role: result.role
+        });
       } else {
         setError(result.message || 'Credenciales incorrectas.');
       }
