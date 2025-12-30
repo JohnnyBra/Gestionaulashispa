@@ -86,22 +86,32 @@ const syncUsers = async () => {
         const appRole = ROLE_MAP[rawRole];
 
         if (appRole) {
-            // 1. Resolvemos el nombre primero para asegurarnos que existe
+            // 1. Resolvemos el nombre
             const validName = u.nombre || u.name || 'Desconocido';
             
-            // 2. Resolvemos el email. Si no viene, usamos el nombre resuelto
-            const generatedEmail = (
-                u.email || 
-                (u.id && u.id.includes('@') ? u.id : `${validName.replace(/\s+/g, '.').toLowerCase()}@colegiolahispanidad.es`)
-            ).toLowerCase();
+            // 2. Resolvemos el email EXACTO. 
+            // Buscamos en 'email', 'correo', 'mail' o si el 'id' tiene formato de email.
+            // YA NO construimos emails artificiales con nombre + dominio.
+            let realEmail = u.email || u.correo || u.mail;
 
-            allowedUsers.push({
-              id: u.id || generatedEmail, // Aseguramos que haya un ID
-              name: validName,
-              email: generatedEmail,
-              role: appRole, // 'ADMIN' o 'TEACHER'
-              originalRole: rawRole
-            });
+            if (!realEmail && u.id && u.id.includes('@')) {
+                realEmail = u.id;
+            }
+
+            if (realEmail) {
+                // Normalizamos
+                realEmail = realEmail.toLowerCase().trim();
+
+                allowedUsers.push({
+                  id: u.id || realEmail, 
+                  name: validName,
+                  email: realEmail,
+                  role: appRole, 
+                  originalRole: rawRole
+                });
+            } else {
+                console.warn(`⚠️ [SYNC SKIP] Usuario ${validName} (Rol: ${rawRole}) ignorado: No tiene email válido.`);
+            }
         }
       }
 
@@ -198,17 +208,26 @@ app.post('/api/proxy/login', async (req, res) => {
         return res.status(403).json({ success: false, message: 'Tu rol no tiene acceso a esta aplicación.' });
     }
 
-    // ASEGURAMOS QUE name TENGA VALOR
-    const fallbackName = extUser.name || extUser.nombre || cleanEmail.split('@')[0] || 'Usuario';
+    // Prioridad absoluta al email que viene de la API, igual que en el Sync
+    let finalEmail = extUser.email || extUser.correo || extUser.mail;
+    if (!finalEmail && extUser.id && extUser.id.includes('@')) {
+        finalEmail = extUser.id;
+    }
+    // Fallback final solo si no hay nada más: usamos lo que el usuario escribió en el login
+    if (!finalEmail) finalEmail = cleanEmail;
+
+    finalEmail = finalEmail.toLowerCase().trim();
+
+    const fallbackName = extUser.name || extUser.nombre || finalEmail.split('@')[0] || 'Usuario';
     
     const finalUser = {
-        id: extUser.id || cleanEmail,
-        email: extUser.email || cleanEmail,
+        id: extUser.id || finalEmail,
+        email: finalEmail,
         name: fallbackName,
         role: appRole
     };
     
-    console.log(`✅ [LOGIN EXITOSO] ${finalUser.name} (${rawRole} -> ${appRole})`);
+    console.log(`✅ [LOGIN EXITOSO] ${finalUser.name} (${rawRole} -> ${appRole}) Email: ${finalUser.email}`);
     
     // Respuesta plana como solicitada
     return res.json({
