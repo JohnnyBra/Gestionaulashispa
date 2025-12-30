@@ -96,10 +96,11 @@ const syncUsers = async () => {
             ).toLowerCase();
 
             allowedUsers.push({
+              id: u.id || generatedEmail, // Aseguramos que haya un ID
               name: validName,
               email: generatedEmail,
               role: appRole, // 'ADMIN' o 'TEACHER'
-              originalRole: rawRole // Guardamos el original por si acaso
+              originalRole: rawRole
             });
         }
       }
@@ -152,7 +153,14 @@ app.post('/api/auth/google', async (req, res) => {
 
     if (user) {
         console.log(`✅ [ACCESO CONCEDIDO] ${user.name} -> Rol App: ${user.role}`);
-        return res.json({ success: true, user });
+        // Respuesta plana como solicitada
+        return res.json({
+            success: true,
+            role: user.role,
+            name: user.name,
+            id: user.id,
+            email: user.email 
+        });
     } else {
         console.warn(`⛔ [ACCESO DENEGADO] ${googleEmail} no tiene rol TUTOR o DIRECCION en Prisma.`);
         return res.status(403).json({ success: false, message: 'Acceso exclusivo para Docentes y Dirección.' });
@@ -191,13 +199,22 @@ app.post('/api/proxy/login', async (req, res) => {
     }
 
     const finalUser = {
+        id: extUser.id || cleanEmail,
         email: extUser.email || cleanEmail,
         name: extUser.name || extUser.nombre,
         role: appRole
     };
     
     console.log(`✅ [LOGIN EXITOSO] ${finalUser.name} (${rawRole} -> ${appRole})`);
-    return res.json({ success: true, user: finalUser });
+    
+    // Respuesta plana como solicitada
+    return res.json({
+        success: true,
+        role: finalUser.role,
+        name: finalUser.name,
+        id: finalUser.id,
+        email: finalUser.email 
+    });
 
   } catch (err) {
     res.status(503).json({ success: false, message: 'Error de conexión' });
