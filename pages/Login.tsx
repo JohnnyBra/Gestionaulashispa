@@ -23,10 +23,13 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   // IMPORTANTE: Sustituye esto por tu Client ID real de Google Cloud Console
   // Si no tienes uno, el botón de Google no cargará o dará error.
   const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID_AQUI"; 
+  
+  // Verificación simple para saber si Google está habilitado
+  const isGoogleEnabled = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "TU_GOOGLE_CLIENT_ID_AQUI";
 
   useEffect(() => {
-    // FIX: Evitar errores de consola si el ID no ha sido configurado
-    if (GOOGLE_CLIENT_ID === "TU_GOOGLE_CLIENT_ID_AQUI" || !GOOGLE_CLIENT_ID) {
+    // Si no hay client ID válido, no intentamos inicializar Google para evitar errores 403 y de consola
+    if (!isGoogleEnabled) {
       return;
     }
 
@@ -50,16 +53,16 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         console.warn("Error inicializando Google Auth:", e);
       }
     }
-  }, []);
+  }, [isGoogleEnabled]);
 
   const handleGoogleResponse = async (response: any) => {
     setLoading(true);
     setError('');
     try {
       const result = await loginGoogle(response.credential);
-      if (result.success) {
+      if (result.success && result.email) {
         onLogin({
-          name: result.name,
+          name: result.name || 'Usuario Google',
           email: result.email,
           role: result.role
         });
@@ -81,13 +84,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const result = await loginExternal({ email, password });
       
+      // Validación robusta de la respuesta
       if (result && result.success) {
-        // La API ahora devuelve los campos planos (role, name, email) en lugar de un objeto user
-        onLogin({
-          name: result.name,
-          email: result.email,
-          role: result.role
-        });
+        // Aseguramos que tenemos los campos mínimos para que la app no falle
+        const safeUser: User = {
+            name: result.name || email.split('@')[0] || 'Usuario',
+            email: result.email || email,
+            role: result.role
+        };
+        onLogin(safeUser);
       } else {
         setError(result.message || 'Credenciales incorrectas.');
       }
@@ -131,8 +136,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                </div>
             )}
 
-            {/* Google Button Container - Solo se muestra si hay configuración válida */}
-            {GOOGLE_CLIENT_ID !== "TU_GOOGLE_CLIENT_ID_AQUI" && (
+            {/* Google Button Container - Solo se renderiza si está habilitado */}
+            {isGoogleEnabled && (
                 <div className="mb-6">
                     <div id="googleButtonDiv" className="w-full h-[44px]"></div>
                     <div className="relative mt-6">

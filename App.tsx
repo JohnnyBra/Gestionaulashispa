@@ -13,7 +13,21 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedUser = localStorage.getItem('hispanidad_user');
     if (savedUser) {
-      setUser(JSON.parse(savedUser));
+      try {
+        const parsed = JSON.parse(savedUser);
+        // Validamos que el objeto tenga lo mínimo necesario
+        if (parsed && parsed.email && parsed.role && parsed.name) {
+            setUser(parsed);
+        } else {
+            // Si está corrupto (ej. falta name), limpiamos para forzar login limpio
+            console.warn("Datos de sesión inválidos, cerrando sesión.");
+            localStorage.removeItem('hispanidad_user');
+            setUser(null);
+        }
+      } catch (e) {
+        localStorage.removeItem('hispanidad_user');
+        setUser(null);
+      }
     }
   }, []);
 
