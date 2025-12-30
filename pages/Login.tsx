@@ -1,11 +1,17 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { User } from '../types';
-import { loginExternal } from '../services/storageService';
-import { AlertCircle, Shield, Mail, ArrowRight, Lock, Loader2 } from 'lucide-react';
+import { loginExternal, loginGoogle } from '../services/storageService';
+import { AlertCircle, Mail, ArrowRight, Lock, Loader2 } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
+}
+
+// Declaración global para TS ya que usamos script externo
+declare global {
+  interface Window {
+    google: any;
+  }
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
@@ -13,6 +19,46 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // IMPORTANTE: Sustituye esto por tu Client ID real de Google Cloud Console
+  // Si no tienes uno, el botón de Google no cargará o dará error.
+  const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID_AQUI"; 
+
+  useEffect(() => {
+    // Inicializar Google Auth
+    if (window.google) {
+      window.google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleResponse
+      });
+
+      // Renderizar botón
+      const buttonDiv = document.getElementById("googleButtonDiv");
+      if (buttonDiv) {
+        window.google.accounts.id.renderButton(
+          buttonDiv,
+          { theme: "outline", size: "large", width: "100%", text: "continue_with" } 
+        );
+      }
+    }
+  }, []);
+
+  const handleGoogleResponse = async (response: any) => {
+    setLoading(true);
+    setError('');
+    try {
+      const result = await loginGoogle(response.credential);
+      if (result.success) {
+        onLogin(result.user);
+      } else {
+        setError(result.message || 'Error al validar con Google.');
+      }
+    } catch (err) {
+      setError('Error de conexión validando Google.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,6 +110,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                   <span>{error}</span>
                </div>
             )}
+
+            {/* Google Button Container */}
+            <div className="mb-6">
+                <div id="googleButtonDiv" className="w-full h-[44px]"></div>
+                <div className="relative mt-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-slate-200"></div>
+                    </div>
+                    <div className="relative flex justify-center text-sm">
+                        <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
+                    </div>
+                </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-4">
                <div>
