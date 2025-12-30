@@ -14,11 +14,13 @@ const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
 // URL Base de la API Centralizada
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 
-// Headers para simular un navegador real y evitar bloqueo WAF/Cloudflare
+// Headers específicos para identificarnos ante Cloudflare
+// NOTA: En Cloudflare WAF -> Custom Rules, puedes crear una regla:
+// IF User-Agent contains "HispanidadReservas-Server" THEN Skip WAF/Super Bot Fight Mode
 const PROXY_HEADERS = {
   'Content-Type': 'application/json',
   'Accept': 'application/json, text/plain, */*',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': 'HispanidadReservas-Server/1.0', 
   'Origin': 'https://prisma.bibliohispa.es',
   'Referer': 'https://prisma.bibliohispa.es/'
 };
@@ -53,7 +55,6 @@ const syncUsers = async () => {
     const response = await fetch(targetUrl, { headers: PROXY_HEADERS });
     
     if (!response.ok) {
-        // Fallback a la ruta anterior por si acaso
         console.warn(`[SYNC] Ruta principal falló (${response.status})...`);
     } else {
         const users = await response.json();
@@ -98,8 +99,8 @@ app.post('/api/proxy/login', async (req, res) => {
   console.log(`[AUTH] Login Proxy: ${cleanEmail}`);
 
   try {
-    // 1. Probamos la ruta estándar de Login (/api/login) en lugar de /external/login
-    // El error 404 Cannot POST indicaba que la ruta anterior no existía.
+    // 1. Probamos la ruta estándar de Login (/api/login)
+    // Si sigue fallando con 404, prueba: /api/auth/login o consulta al admin de Prisma la ruta exacta.
     const targetUrl = `${EXTERNAL_API_BASE}/api/login`;
     
     const response = await fetch(targetUrl, {
@@ -118,7 +119,7 @@ app.post('/api/proxy/login', async (req, res) => {
          console.error('[AUTH ERROR] Bloqueo de seguridad detectado (Cloudflare/WAF).');
          return res.status(403).json({ 
             success: false, 
-            message: 'El servidor de autenticación bloqueó la conexión (WAF).' 
+            message: 'Cloudflare bloqueó la conexión. Añade la IP del servidor a la Whitelist en Cloudflare > Security > WAF > IP Access Rules.' 
          });
       }
 
@@ -150,7 +151,7 @@ app.post('/api/proxy/login', async (req, res) => {
     // 2. Validación de Roles
     console.log(`[AUTH SUCCESS] Usuario: ${externalUser.name}, Rol: ${externalUser.role}`);
 
-    const allowedRoles = ['teacher', 'direction', 'admin']; // Añadido 'admin' por si acaso
+    const allowedRoles = ['teacher', 'direction', 'admin'];
     const userRole = externalUser.role.toLowerCase();
 
     if (!allowedRoles.includes(userRole)) {
