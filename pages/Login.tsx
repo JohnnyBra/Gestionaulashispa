@@ -25,20 +25,29 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID_AQUI"; 
 
   useEffect(() => {
+    // FIX: Evitar errores de consola si el ID no ha sido configurado
+    if (GOOGLE_CLIENT_ID === "TU_GOOGLE_CLIENT_ID_AQUI" || !GOOGLE_CLIENT_ID) {
+      return;
+    }
+
     // Inicializar Google Auth
     if (window.google) {
-      window.google.accounts.id.initialize({
-        client_id: GOOGLE_CLIENT_ID,
-        callback: handleGoogleResponse
-      });
+      try {
+        window.google.accounts.id.initialize({
+          client_id: GOOGLE_CLIENT_ID,
+          callback: handleGoogleResponse
+        });
 
-      // Renderizar botón
-      const buttonDiv = document.getElementById("googleButtonDiv");
-      if (buttonDiv) {
-        window.google.accounts.id.renderButton(
-          buttonDiv,
-          { theme: "outline", size: "large", width: "100%", text: "continue_with" } 
-        );
+        // Renderizar botón solo si existe el contenedor
+        const buttonDiv = document.getElementById("googleButtonDiv");
+        if (buttonDiv) {
+          window.google.accounts.id.renderButton(
+            buttonDiv,
+            { theme: "outline", size: "large", width: "100%", text: "continue_with" } 
+          );
+        }
+      } catch (e) {
+        console.warn("Error inicializando Google Auth:", e);
       }
     }
   }, []);
@@ -49,14 +58,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const result = await loginGoogle(response.credential);
       if (result.success) {
-        // La API ahora devuelve los campos planos (role, name, email) en lugar de un objeto user
         onLogin({
           name: result.name,
           email: result.email,
           role: result.role
         });
       } else {
-        // Mensaje específico si el backend rechaza por no ser profesor
         setError(result.message || 'Error al validar con Google.');
       }
     } catch (err) {
@@ -73,7 +80,8 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       const result = await loginExternal({ email, password });
-      if (result.success) {
+      
+      if (result && result.success) {
         // La API ahora devuelve los campos planos (role, name, email) en lugar de un objeto user
         onLogin({
           name: result.name,
@@ -84,6 +92,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         setError(result.message || 'Credenciales incorrectas.');
       }
     } catch (err) {
+      console.error("Login error:", err);
       setError('Error al conectar con el servidor de autenticación.');
     } finally {
       setLoading(false);
@@ -122,18 +131,20 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                </div>
             )}
 
-            {/* Google Button Container */}
-            <div className="mb-6">
-                <div id="googleButtonDiv" className="w-full h-[44px]"></div>
-                <div className="relative mt-6">
-                    <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-slate-200"></div>
-                    </div>
-                    <div className="relative flex justify-center text-sm">
-                        <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
+            {/* Google Button Container - Solo se muestra si hay configuración válida */}
+            {GOOGLE_CLIENT_ID !== "TU_GOOGLE_CLIENT_ID_AQUI" && (
+                <div className="mb-6">
+                    <div id="googleButtonDiv" className="w-full h-[44px]"></div>
+                    <div className="relative mt-6">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-slate-200"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
+                        </div>
                     </div>
                 </div>
-            </div>
+            )}
 
             <form onSubmit={handleSubmit} className="space-y-4">
                <div>
