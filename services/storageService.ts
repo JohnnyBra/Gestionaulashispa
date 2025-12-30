@@ -26,6 +26,15 @@ export const loginExternal = async (credentials: {email: string, password: strin
   return await response.json();
 };
 
+export const loginGoogle = async (token: string): Promise<any> => {
+  const response = await fetch('/api/auth/google', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token })
+  });
+  return await response.json();
+};
+
 export const saveBooking = async (booking: Booking): Promise<void> => {
   const response = await fetch('/api/bookings', {
     method: 'POST',

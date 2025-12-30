@@ -108,6 +108,50 @@ const appendToHistory = (actionLog) => {
 // --- API ENDPOINTS ---
 
 /**
+ * Endpoint: /api/auth/google
+ * Descripción: Verifica token de Google y busca usuario en caché sincronizada
+ */
+app.post('/api/auth/google', async (req, res) => {
+  const { token } = req.body;
+  if (!token) return res.status(400).json({ success: false, message: 'Falta el token.' });
+
+  try {
+    // Verificar token contra Google (método ligero sin librería externa)
+    const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
+    
+    if (!googleRes.ok) {
+        return res.status(401).json({ success: false, message: 'Token de Google inválido.' });
+    }
+
+    const payload = await googleRes.json();
+    const email = payload.email;
+
+    if (!email) return res.status(400).json({ success: false, message: 'El token no contiene email.' });
+
+    // Buscar si este email existe en nuestros usuarios sincronizados de Prisma
+    const existingUser = usersMemoryCache.find(u => u.email.toLowerCase() === email.toLowerCase());
+
+    if (existingUser) {
+        console.log(`[AUTH GOOGLE] Éxito: ${existingUser.name}`);
+        return res.json({
+            success: true,
+            user: existingUser
+        });
+    } else {
+        console.warn(`[AUTH GOOGLE] Fallido: ${email} no encontrado en lista de profesores.`);
+        return res.status(403).json({ 
+            success: false, 
+            message: 'Tu cuenta de Google es válida, pero no estás registrado como Profesor activo en Prisma.' 
+        });
+    }
+
+  } catch (e) {
+      console.error('[AUTH GOOGLE ERROR]', e);
+      res.status(500).json({ success: false, message: 'Error interno verificando Google.' });
+  }
+});
+
+/**
  * Endpoint: /api/proxy/login
  * Target: POST /api/auth/external-check
  */
@@ -120,11 +164,9 @@ app.post('/api/proxy/login', async (req, res) => {
   const targetUrl = `${EXTERNAL_API_BASE}/api/auth/external-check`;
   
   try {
-    // Enviamos 'username' porque muchas APIs de autenticación lo esperan en lugar de 'email'
-    // aunque el valor sea el correo electrónico.
     const payload = {
         username: cleanEmail, 
-        email: cleanEmail,    // Enviamos ambos para máxima compatibilidad
+        email: cleanEmail,    
         password: password
     };
 
@@ -136,24 +178,20 @@ app.post('/api/proxy/login', async (req, res) => {
 
     const responseText = await response.text();
 
-    // Check Cloudflare
     if (responseText.includes('<!DOCTYPE html>') || responseText.includes('challenge')) {
          console.error(`[AUTH ERROR] WAF/Cloudflare bloqueó la petición.`);
          return res.status(403).json({ success: false, message: 'Bloqueo de seguridad (WAF).' });
     }
 
     if (!response.ok) {
-      console.warn(`[AUTH FAIL] Status ${response.status}: ${responseText.substring(0, 100)}`);
       let errorMessage = 'Credenciales inválidas.';
       try {
         const jsonError = JSON.parse(responseText);
         errorMessage = jsonError.message || jsonError.error || errorMessage;
       } catch (e) {}
-      
       return res.status(401).json({ success: false, message: errorMessage });
     }
 
-    // Login Exitoso
     let externalUser;
     try {
       externalUser = JSON.parse(responseText);
@@ -161,21 +199,16 @@ app.post('/api/proxy/login', async (req, res) => {
       return res.status(502).json({ success: false, message: 'Respuesta inválida del servidor.' });
     }
 
-    // Normalizar usuario devuelto
-    // A veces el login devuelve el usuario completo, a veces solo token. 
-    // Si falta info, intentamos buscarlo en nuestra caché de sincronización.
     let finalUser = {
         email: externalUser.email || cleanEmail,
         name: externalUser.name || externalUser.nombre || 'Usuario',
         role: 'TEACHER'
     };
 
-    // Mapeo de Roles
     const rawRole = (externalUser.role || externalUser.rol || '').toUpperCase();
     if (rawRole === 'ADMIN' || rawRole === 'DIRECTION') {
         finalUser.role = 'ADMIN';
     } else {
-        // Por defecto todos son teachers si loguean correctamente, salvo que sean admins
         finalUser.role = 'TEACHER'; 
     }
     
@@ -213,7 +246,6 @@ app.post('/api/bookings', (req, res) => {
     let bookings = readBookings();
     const items = Array.isArray(incomingData) ? incomingData : [incomingData];
     
-    // Check conflicto básico
     for (const item of items) {
        if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage)) {
          return res.status(409).json({ error: 'Conflict' });
