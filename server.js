@@ -36,15 +36,15 @@ let usersMemoryCache = [];
 /**
  * CONFIGURACIÓN DE ROLES
  * Mapea los roles de Prisma a los roles de la App de Reservas.
- * Si un rol no está aquí, el usuario será ignorado (Access Denied).
  */
 const ROLE_MAP = {
-  'ADMIN': 'ADMIN',       // Admin del sistema -> Admin Reservas
-  'DIRECCION': 'ADMIN',   // Dirección/Jefatura -> Admin Reservas
-  'TUTOR': 'TEACHER',     // Profesor -> Usuario normal
-  // 'TESORERIA': Ignorado
-  // 'PARENT': Ignorado
-  // 'STUDENT': Ignorado
+  'ADMIN': 'ADMIN',
+  'DIRECCION': 'ADMIN',
+  'JEFATURA': 'ADMIN',    // Añadido por seguridad
+  'TUTOR': 'TEACHER',
+  'PROFESOR': 'TEACHER',  // Añadido por seguridad
+  'DOCENTE': 'TEACHER',   // Añadido por seguridad
+  'TEACHER': 'TEACHER'
 };
 
 // Carga inicial
@@ -52,7 +52,7 @@ if (fs.existsSync(USERS_CACHE_FILE)) {
   try {
     const rawData = fs.readFileSync(USERS_CACHE_FILE, 'utf8');
     usersMemoryCache = JSON.parse(rawData || '[]');
-    console.log(`✅ [SISTEMA] Caché cargada: ${usersMemoryCache.length} usuarios permitidos.`);
+    console.log(`✅ [SISTEMA] Caché cargada: ${usersMemoryCache.length} usuarios.`);
   } catch (e) {
     console.error("❌ [ERROR] Error leyendo caché local:", e.message);
   }
@@ -78,30 +78,41 @@ const syncUsers = async () => {
 
     if (Array.isArray(externalUsers)) {
       const allowedUsers = [];
+      let debugCount = 0;
 
       for (const u of externalUsers) {
-        const rawRole = (u.role || u.rol || '').toUpperCase();
-        
-        // Verificamos si el rol está permitido en nuestro mapa
+        // Normalización de Roles
+        const rawRole = (u.role || u.rol || '').toUpperCase().trim();
         const appRole = ROLE_MAP[rawRole];
 
+        // LOG DE DEBUG (Solo los primeros 3 para no saturar)
+        if (debugCount < 3) {
+            console.log(`🔍 [DEBUG DATA] Usuario: ${u.name || u.nombre} | ID: ${u.id} | Rol: ${rawRole} -> ${appRole} | EmailRaw: ${u.email}`);
+            debugCount++;
+        }
+
         if (appRole) {
-            // 1. Resolvemos el nombre
             const validName = u.nombre || u.name || 'Desconocido';
             
-            // 2. Resolvemos el email EXACTO. 
-            // Buscamos en 'email', 'correo', 'mail' o si el 'id' tiene formato de email.
-            // YA NO construimos emails artificiales con nombre + dominio.
+            // ESTRATEGIA DE EMAIL ROBUSTA
+            // 1. Buscamos el campo explícito
             let realEmail = u.email || u.correo || u.mail;
 
-            if (!realEmail && u.id && u.id.includes('@')) {
-                realEmail = u.id;
+            // 2. Si no hay email, pero hay ID...
+            if (!realEmail && u.id) {
+                // Si el ID parece un email, lo usamos
+                if (u.id.includes('@')) {
+                    realEmail = u.id;
+                } 
+                // Si no, asumimos que el ID es el nombre de usuario (ej: 'jbarrero') 
+                // y construimos el email. Esto es más seguro que usar el Nombre completo.
+                else {
+                    realEmail = `${u.id}@colegiolahispanidad.es`;
+                }
             }
 
             if (realEmail) {
-                // Normalizamos
                 realEmail = realEmail.toLowerCase().trim();
-
                 allowedUsers.push({
                   id: u.id || realEmail, 
                   name: validName,
@@ -109,15 +120,17 @@ const syncUsers = async () => {
                   role: appRole, 
                   originalRole: rawRole
                 });
-            } else {
-                console.warn(`⚠️ [SYNC SKIP] Usuario ${validName} (Rol: ${rawRole}) ignorado: No tiene email válido.`);
             }
         }
       }
 
       usersMemoryCache = allowedUsers;
       fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-      console.log(`✅ [SYNC] Completado. Usuarios permitidos (Tutor/Dirección): ${allowedUsers.length}`);
+      console.log(`✅ [SYNC] Completado. Usuarios importados: ${allowedUsers.length}`);
+      
+      if (allowedUsers.length === 0) {
+          console.warn("⚠️ [ATENCIÓN] Se han importado 0 usuarios. Revisa los logs de 'DEBUG DATA' arriba para ver si los roles coinciden.");
+      }
     } 
 
   } catch (err) {
@@ -163,7 +176,6 @@ app.post('/api/auth/google', async (req, res) => {
 
     if (user) {
         console.log(`✅ [ACCESO CONCEDIDO] ${user.name} -> Rol App: ${user.role}`);
-        // Respuesta plana como solicitada
         return res.json({
             success: true,
             role: user.role,
@@ -172,7 +184,7 @@ app.post('/api/auth/google', async (req, res) => {
             email: user.email 
         });
     } else {
-        console.warn(`⛔ [ACCESO DENEGADO] ${googleEmail} no tiene rol TUTOR o DIRECCION en Prisma.`);
+        console.warn(`⛔ [ACCESO DENEGADO] ${googleEmail} no tiene rol permitido.`);
         return res.status(403).json({ success: false, message: 'Acceso exclusivo para Docentes y Dirección.' });
     }
 
@@ -208,14 +220,15 @@ app.post('/api/proxy/login', async (req, res) => {
         return res.status(403).json({ success: false, message: 'Tu rol no tiene acceso a esta aplicación.' });
     }
 
-    // Prioridad absoluta al email que viene de la API, igual que en el Sync
+    // Lógica idéntica al Sync para consistencia
     let finalEmail = extUser.email || extUser.correo || extUser.mail;
-    if (!finalEmail && extUser.id && extUser.id.includes('@')) {
-        finalEmail = extUser.id;
+    if (!finalEmail && extUser.id) {
+        if (extUser.id.includes('@')) finalEmail = extUser.id;
+        else finalEmail = `${extUser.id}@colegiolahispanidad.es`;
     }
-    // Fallback final solo si no hay nada más: usamos lo que el usuario escribió en el login
+    
+    // Último recurso: usar el email con el que se logueó
     if (!finalEmail) finalEmail = cleanEmail;
-
     finalEmail = finalEmail.toLowerCase().trim();
 
     const fallbackName = extUser.name || extUser.nombre || finalEmail.split('@')[0] || 'Usuario';
@@ -229,7 +242,6 @@ app.post('/api/proxy/login', async (req, res) => {
     
     console.log(`✅ [LOGIN EXITOSO] ${finalUser.name} (${rawRole} -> ${appRole}) Email: ${finalUser.email}`);
     
-    // Respuesta plana como solicitada
     return res.json({
         success: true,
         role: finalUser.role,
