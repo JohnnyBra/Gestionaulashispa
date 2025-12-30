@@ -51,6 +51,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       if (result.success) {
         onLogin(result.user);
       } else {
+        // Mensaje específico si el backend rechaza por no ser profesor
         setError(result.message || 'Error al validar con Google.');
       }
     } catch (err) {
