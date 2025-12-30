@@ -35,18 +35,23 @@ app.use(express.json());
 // --- MEMORY CACHE ---
 let usersMemoryCache = [];
 
+// Carga inicial con diagnóstico
 if (fs.existsSync(USERS_CACHE_FILE)) {
   try {
-    usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
+    const rawData = fs.readFileSync(USERS_CACHE_FILE, 'utf8');
+    usersMemoryCache = JSON.parse(rawData || '[]');
+    console.log(`✅ [SISTEMA] Caché de usuarios cargada desde disco. Total: ${usersMemoryCache.length} profesores.`);
   } catch (e) {
-    console.error("Error leyendo caché local:", e);
+    console.error("❌ [ERROR] Error leyendo archivo de usuarios local:", e.message);
   }
+} else {
+  console.warn("⚠️ [SISTEMA] No existe archivo 'users_cache.json'. Se creará tras la primera sincronización.");
 }
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
   const targetUrl = `${EXTERNAL_API_BASE}/api/export/users`;
-  console.log(`[SYNC] Iniciando sincronización desde: ${targetUrl}`);
+  console.log(`🔄 [SYNC] Conectando con Prisma para actualizar usuarios...`);
 
   try {
     const response = await fetch(targetUrl, { 
@@ -55,9 +60,7 @@ const syncUsers = async () => {
     });
 
     if (!response.ok) {
-        console.warn(`[SYNC] Falló la petición (${response.status}). Verificando respuesta...`);
-        const text = await response.text();
-        console.warn(`[SYNC] Respuesta servidor: ${text.substring(0, 100)}`);
+        console.warn(`⚠️ [SYNC] Falló la petición (${response.status}). Manteniendo caché anterior.`);
         return;
     }
 
@@ -65,24 +68,23 @@ const syncUsers = async () => {
 
     if (Array.isArray(externalUsers)) {
       // Mapear datos externos a formato interno
-      // La API externa devuelve: ID, Nombre, ClassId, Rol
       const mappedUsers = externalUsers.map(u => ({
         name: u.nombre || u.name || 'Desconocido',
-        // Si no viene email, generamos uno dummy o usamos el ID si parece email
-        email: u.email || (u.id && u.id.includes('@') ? u.id : `${u.nombre?.replace(/\s+/g, '.').toLowerCase()}@colegiolahispanidad.es`),
+        // Normalizamos emails a minúsculas para evitar errores
+        email: (u.email || (u.id && u.id.includes('@') ? u.id : `${u.nombre?.replace(/\s+/g, '.').toLowerCase()}@colegiolahispanidad.es`)).toLowerCase(),
         role: (u.role === 'TUTOR' || u.rol === 'TUTOR') ? 'TEACHER' : (u.role === 'ADMIN' ? 'ADMIN' : 'TEACHER'),
         originalId: u.id
       }));
 
       usersMemoryCache = mappedUsers;
       fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(mappedUsers, null, 2));
-      console.log(`[SYNC] Éxito: ${mappedUsers.length} usuarios sincronizados.`);
+      console.log(`✅ [SYNC] Sincronización completada. Usuarios activos: ${mappedUsers.length}`);
     } else {
-      console.warn('[SYNC] La respuesta no es un array válido.');
+      console.warn('⚠️ [SYNC] La respuesta de Prisma no es una lista válida.');
     }
 
   } catch (err) {
-    console.error(`[SYNC] Error de conexión: ${err.message}`);
+    console.error(`❌ [SYNC] Error de conexión: ${err.message}`);
   }
 };
 
@@ -116,7 +118,7 @@ app.post('/api/auth/google', async (req, res) => {
   if (!token) return res.status(400).json({ success: false, message: 'Falta el token.' });
 
   try {
-    // 1. Validar el token con Google para estar seguros de que no es falso
+    // 1. Validar el token con Google
     const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
     
     if (!googleRes.ok) {
@@ -124,22 +126,32 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     const payload = await googleRes.json();
-    const email = payload.email;
+    const googleEmail = payload.email.toLowerCase(); // Normalizamos el email de Google
 
-    if (!email) return res.status(400).json({ success: false, message: 'El token no contiene email.' });
+    console.log(`🔐 [AUTH GOOGLE] Intento de acceso: ${googleEmail}`);
 
-    // 2. SEGURIDAD: Comprobar si este email está en nuestra lista "usersMemoryCache" (la que viene de Prisma)
-    const existingUser = usersMemoryCache.find(u => u.email.toLowerCase() === email.toLowerCase());
+    if (!googleEmail) return res.status(400).json({ success: false, message: 'El token no contiene email.' });
+
+    // 2. SEGURIDAD: Comprobar si este email está en nuestra lista sincronizada
+    // Buscamos coincidencia exacta de email
+    const existingUser = usersMemoryCache.find(u => u.email === googleEmail);
 
     if (existingUser) {
-        console.log(`[AUTH GOOGLE] Acceso Permitido: ${existingUser.name} (${existingUser.role})`);
-        // Devolvemos el usuario con el rol que tiene en Prisma, no el de Google.
+        console.log(`✅ [AUTH GOOGLE] Acceso PERMITIDO: ${existingUser.name} (${existingUser.role})`);
         return res.json({
             success: true,
             user: existingUser 
         });
     } else {
-        console.warn(`[AUTH GOOGLE] Acceso Denegado: ${email} es válido en Google pero no está activo en Prisma.`);
+        console.warn(`⛔ [AUTH GOOGLE] Acceso DENEGADO: ${googleEmail}`);
+        console.warn(`   Motivo: El email es válido en Google pero NO está en la lista de ${usersMemoryCache.length} profesores de Prisma.`);
+        
+        // Debug extra: Ver si existe un usuario similar (para detectar errores de tecleo en Prisma)
+        const similar = usersMemoryCache.find(u => u.name.toLowerCase().includes(googleEmail.split('@')[0]) || googleEmail.includes(u.name.split(' ')[0].toLowerCase()));
+        if (similar) {
+            console.warn(`   ¿Quizás es este usuario en Prisma?: ${similar.name} (${similar.email})`);
+        }
+
         return res.status(403).json({ 
             success: false, 
             message: 'Acceso denegado: Tu cuenta de Google no corresponde a un profesor activo en PrismaEdu.' 
@@ -147,7 +159,7 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
   } catch (e) {
-      console.error('[AUTH GOOGLE ERROR]', e);
+      console.error('❌ [AUTH GOOGLE ERROR]', e);
       res.status(500).json({ success: false, message: 'Error interno verificando Google.' });
   }
 });
@@ -160,7 +172,7 @@ app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
   const cleanEmail = email ? email.trim().toLowerCase() : '';
 
-  console.log(`[AUTH] Login Proxy: ${cleanEmail}`);
+  console.log(`🔑 [AUTH PASS] Login tradicional: ${cleanEmail}`);
 
   const targetUrl = `${EXTERNAL_API_BASE}/api/auth/external-check`;
   
@@ -180,7 +192,7 @@ app.post('/api/proxy/login', async (req, res) => {
     const responseText = await response.text();
 
     if (responseText.includes('<!DOCTYPE html>') || responseText.includes('challenge')) {
-         console.error(`[AUTH ERROR] WAF/Cloudflare bloqueó la petición.`);
+         console.error(`❌ [AUTH ERROR] WAF/Cloudflare bloqueó la petición.`);
          return res.status(403).json({ success: false, message: 'Bloqueo de seguridad (WAF).' });
     }
 
@@ -213,7 +225,7 @@ app.post('/api/proxy/login', async (req, res) => {
         finalUser.role = 'TEACHER'; 
     }
     
-    console.log(`[AUTH SUCCESS] ${finalUser.email} (${finalUser.role})`);
+    console.log(`✅ [AUTH SUCCESS] ${finalUser.email} (${finalUser.role})`);
 
     return res.json({
       success: true,
@@ -221,12 +233,14 @@ app.post('/api/proxy/login', async (req, res) => {
     });
 
   } catch (err) {
-    console.error('[AUTH CRITICAL]', err.message);
+    console.error('❌ [AUTH CRITICAL]', err.message);
     res.status(503).json({ success: false, message: 'Error de conexión con servidor de autenticación.' });
   }
 });
 
 app.get('/api/teachers', (req, res) => {
+  // Debug: Ver quién consulta la lista
+  // console.log(`[API] Solicitud de lista de profesores. Enviando ${usersMemoryCache.length} registros.`);
   res.json(usersMemoryCache);
 });
 
@@ -294,6 +308,6 @@ app.use(express.static(__dirname));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
 server.listen(PORT, () => {
-  console.log(`Servidor de Reservas corriendo en puerto ${PORT}`);
-  console.log(`Autenticación apuntando a: ${EXTERNAL_API_BASE}`);
+  console.log(`🚀 Servidor de Reservas corriendo en puerto ${PORT}`);
+  console.log(`📡 Autenticación apuntando a: ${EXTERNAL_API_BASE}`);
 });
