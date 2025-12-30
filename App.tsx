@@ -11,28 +11,36 @@ const App: React.FC = () => {
 
   // Check for existing session in localStorage
   useEffect(() => {
-    const savedUser = localStorage.getItem('hispanidad_user');
-    if (savedUser) {
-      try {
+    try {
+      const savedUser = localStorage.getItem('hispanidad_user');
+      
+      // FIX CRÍTICO: Si localStorage contiene la cadena "undefined" o "null", JSON.parse fallará.
+      // Verificamos explícitamente que sea una cadena válida antes de parsear.
+      if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
         const parsed = JSON.parse(savedUser);
+        
         // Validamos que el objeto tenga lo mínimo necesario
         if (parsed && parsed.email && parsed.role && parsed.name) {
             setUser(parsed);
         } else {
-            // Si está corrupto (ej. falta name), limpiamos para forzar login limpio
-            console.warn("Datos de sesión inválidos, cerrando sesión.");
-            localStorage.removeItem('hispanidad_user');
-            setUser(null);
+            throw new Error("Datos de usuario incompletos");
         }
-      } catch (e) {
-        localStorage.removeItem('hispanidad_user');
-        setUser(null);
+      } else {
+         // Si es "undefined" o null, limpiamos silenciosamente
+         if (savedUser) localStorage.removeItem('hispanidad_user');
       }
+    } catch (e) {
+      // Si hay cualquier error parseando (JSON corrupto), borramos todo para recuperar la app
+      console.warn("Datos de sesión corruptos detectados. Limpiando localStorage.");
+      localStorage.removeItem('hispanidad_user');
+      setUser(null);
     }
   }, []);
 
   const handleLogin = (newUser: User) => {
+    if (!newUser) return; // Protección extra
     setUser(newUser);
+    // Aseguramos que nunca guardamos "undefined" como string
     localStorage.setItem('hispanidad_user', JSON.stringify(newUser));
   };
 
