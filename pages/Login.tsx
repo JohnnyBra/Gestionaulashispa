@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { loginExternal, loginGoogle } from '../services/storageService';
-import { AlertCircle, Mail, ArrowRight, Lock, Loader2 } from 'lucide-react';
+import { AlertCircle, Mail, ArrowRight, Lock, Loader2, ArrowLeft } from 'lucide-react';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -105,7 +105,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row w-full bg-slate-50 lg:bg-white overflow-hidden">
+    <div className="min-h-screen flex flex-col lg:flex-row w-full bg-slate-50 lg:bg-white overflow-hidden relative">
+      
+      {/* Botón Volver a Prisma (Flotante) */}
+      <div className="absolute top-4 right-4 lg:top-8 lg:right-8 z-50">
+        <a 
+            href="https://prisma.bibliohispa.es" 
+            className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-md text-slate-600 hover:text-brand-600 border border-slate-200 rounded-full shadow-sm hover:shadow-md transition-all text-sm font-bold group"
+        >
+            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <span>Volver a Prisma</span>
+        </a>
+      </div>
+
       <div className="w-full h-[30vh] lg:h-auto lg:w-1/2 bg-slate-900 relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 z-0"></div>
         <div className="relative z-10 animate-fade-in text-center lg:text-left">
