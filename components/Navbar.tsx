@@ -1,6 +1,6 @@
 import React from 'react';
 import { User, Role } from '../types';
-import { LogOut, Shield } from 'lucide-react';
+import { LogOut, Shield, LayoutGrid } from 'lucide-react';
 
 interface NavbarProps {
   user: User | null;
@@ -31,6 +31,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout }) => {
               {user && (
                 <div className="flex items-center gap-2 md:gap-3 animate-fade-in">
                   
+                  {/* Link a Prisma (Portal Matriz) */}
+                  <a 
+                    href="https://prisma.bibliohispa.es" 
+                    className="flex items-center gap-2 px-3 py-1.5 md:px-4 md:py-2 bg-slate-800/50 hover:bg-slate-700 text-slate-300 hover:text-white rounded-lg md:rounded-xl transition-all border border-slate-700 hover:border-slate-600 font-semibold text-xs md:text-sm mr-1 md:mr-2"
+                    title="Ir al Portal Prisma"
+                  >
+                    <LayoutGrid className="h-4 w-4" />
+                    <span className="hidden sm:inline">Prisma</span>
+                  </a>
+
                   {/* User Badge - Compact on Mobile */}
                   <div className="flex items-center bg-slate-800/50 border border-slate-700 rounded-full pl-1 pr-1 md:pr-4 py-1">
                      <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center ${user.role === Role.ADMIN ? 'bg-amber-500/20 text-amber-400' : 'bg-brand-500/20 text-brand-400'} ${!user.role ? 'mr-0' : 'md:mr-3'}`}>

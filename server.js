@@ -82,6 +82,8 @@ const syncUsers = async () => {
       // LOG DEBUG: Ver estructura exacta del primer usuario para diagnosticar fallos
       if (externalUsers.length > 0) {
         console.log("🔍 [DEBUG API SAMPLE]", JSON.stringify(externalUsers[0], null, 2));
+      } else {
+        console.log("⚠️ [DEBUG API] La respuesta es un array vacío.");
       }
 
       for (const u of externalUsers) {
@@ -119,9 +121,11 @@ const syncUsers = async () => {
       console.log(`✅ [SYNC] Completado. Usuarios importados: ${allowedUsers.length}`);
       
       if (allowedUsers.length === 0 && externalUsers.length > 0) {
-          console.warn("⚠️ [ATENCIÓN] Se descargaron usuarios pero se filtraron todos. Revisa el mapeo de roles o campos de email.");
+          console.warn("⚠️ [ATENCIÓN] Se descargaron usuarios pero se filtraron todos. Revisa los logs de debug y el mapeo de roles.");
       }
-    } 
+    } else {
+      console.warn("⚠️ [SYNC] La respuesta de la API no es un array:", typeof externalUsers);
+    }
 
   } catch (err) {
     console.error(`❌ [SYNC] Error de conexión: ${err.message}`);
