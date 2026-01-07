@@ -38,7 +38,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   // Form State
   const [course, setCourse] = useState('');
   const [subject, setSubject] = useState('');
-  const [justification, setJustification] = useState(''); // Nuevo campo para justificación general
+  const [justification, setJustification] = useState('');
   const [selectedTeacherEmail, setSelectedTeacherEmail] = useState(user.email);
   const [blockReason, setBlockReason] = useState('');
   const [isBlocking, setIsBlocking] = useState(false);
@@ -50,11 +50,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   
   // LOGICA PARA OBTENER Y FILTRAR CLASES
   const courses = useMemo(() => {
-    // Si no se han cargado clases de Prisma, usar fallbacks
     let baseList: string[] = [];
     
     if (importedClasses.length > 0) {
-        // Filtramos por nombre para intentar adivinar la etapa si el objeto no tiene stage explícito
         const allNames = importedClasses.map(c => c.name);
         
         if (stage === Stage.PRIMARY) {
@@ -63,23 +61,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
             baseList = allNames.filter(n => n.toUpperCase().includes('ESO') || n.toUpperCase().includes('BAC') || n.toUpperCase().includes('SEC'));
         }
 
-        // Fallback si el filtro falla completamente (ej. nombres raros)
         if (baseList.length === 0) {
              baseList = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
         }
-
     } else {
         baseList = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
     }
 
-    // APLICAR RESTRICCIONES DE CARRO (Solo 3º y 4º ESO)
     if (stage === Stage.SECONDARY && currentResource === 'CART') {
         return baseList.filter(c => c.includes('3º') || c.includes('4º'));
     }
     
-    // Ordenar alfabéticamente para limpieza
     return baseList.sort();
-
   }, [stage, currentResource, importedClasses]);
 
   const roomName = stage === Stage.PRIMARY 
@@ -90,7 +83,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     ? { primary: 'blue', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', gradient: 'from-blue-600 to-indigo-600' }
     : { primary: 'emerald', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-600 to-teal-600' };
 
-  // Reset resource to ROOM when stage changes or for Primary
   useEffect(() => {
     if (stage === Stage.PRIMARY) {
         setCurrentResource('ROOM');
@@ -101,7 +93,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     const init = async () => {
       setLoading(true);
       try {
-        // Cargar Bookings, Profesores y Clases
         const [bData, tData, cData] = await Promise.all([
             getBookings(), 
             getTeachers(),
@@ -125,13 +116,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
-        // Filter by stage AND resource (default to ROOM if undefined in old data)
         const bookingResource = b.resource || 'ROOM';
         const matchContext = b.stage === stage && bookingResource === currentResource;
-        
         const matchTeacher = !teacherFilter || b.teacherName.toLowerCase().includes(teacherFilter.toLowerCase());
         const matchCourse = !courseFilter || b.course?.toLowerCase().includes(courseFilter.toLowerCase());
-        
         return matchContext && matchTeacher && matchCourse;
     });
   }, [bookings, teacherFilter, courseFilter, stage, currentResource]);
@@ -144,13 +132,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
     
-    // Si la reserva existente tiene un curso, lo usamos, si no, usamos el primero de la lista filtrada
     const defaultCourse = courses[0] || '';
     setCourse(existing?.course || defaultCourse);
     setSubject(existing?.subject || '');
-    setJustification(existing?.justification || ''); // Cargar justificación
+    setJustification(existing?.justification || '');
     
-    // Gestión inteligente del selector de profesor para ADMIN
     if (existing) {
         setSelectedTeacherEmail(existing.teacherEmail);
     } else if (user.role === Role.ADMIN && teachers.length > 0) {
@@ -174,12 +160,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     const baseBooking = {
       slotId: selectedSlot.slot.id,
       stage,
-      resource: currentResource, // Guardamos si es Aula o Carro
+      resource: currentResource,
       teacherEmail: isBlocking ? 'admin@colegiolahispanidad.es' : teacherObj.email,
       teacherName: isBlocking ? 'ADMINISTRADOR' : teacherObj.name,
       course: isBlocking ? undefined : course,
       subject: isBlocking ? undefined : subject,
-      justification: isBlocking ? blockReason : justification, // Guardamos la justificación
+      justification: isBlocking ? blockReason : justification,
       isBlocked: isBlocking,
       createdAt: Date.now(),
       logs: [{
@@ -226,58 +212,77 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const weekDays = getWeekDays(currentDate);
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-4 py-8 flex flex-col h-[calc(100vh-80px)]">
-      {/* Header & Filters */}
-      <div className="flex-none flex flex-col gap-4 mb-6">
-          <div className="flex flex-col md:flex-row justify-between items-center glass-panel p-4 rounded-3xl gap-4">
-            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                <div className="flex items-center space-x-4 self-start sm:self-center">
-                    <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl"><ArrowLeft className="h-5 w-5"/></button>
-                    <div><h2 className={`text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2></div>
+    <div className="max-w-screen-2xl mx-auto px-2 md:px-4 py-4 md:py-8 flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)]">
+      
+      {/* Header & Controls Container */}
+      <div className="flex-none flex flex-col gap-3 mb-4">
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-panel p-3 md:p-4 rounded-3xl gap-3">
+            
+            {/* Top Row: Back Btn + Title + Resource Toggle (on mobile wraps) */}
+            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full lg:w-auto">
+                
+                {/* Title Section */}
+                <div className="flex items-center space-x-3 w-full md:w-auto">
+                    <button onClick={onBack} className="p-2.5 hover:bg-slate-100 rounded-xl md:rounded-2xl bg-white border border-slate-100 shadow-sm shrink-0">
+                        <ArrowLeft className="h-5 w-5"/>
+                    </button>
+                    <div>
+                        <h2 className={`text-lg md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient} leading-tight`}>{roomName}</h2>
+                        <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{stage === Stage.PRIMARY ? 'Etapa Primaria' : 'Etapa Secundaria'}</p>
+                    </div>
                 </div>
 
-                {/* Resource Toggle for Secondary */}
+                {/* Resource Toggle (Secundaria) - Mobile Optimized */}
                 {stage === Stage.SECONDARY && (
-                    <div className="flex bg-slate-100/80 p-1 rounded-xl">
-                        <button 
-                            onClick={() => setCurrentResource('ROOM')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            <Monitor className="w-4 h-4" />
-                            <span className="hidden sm:inline">Aula Info</span>
-                        </button>
-                        <button 
-                            onClick={() => setCurrentResource('CART')}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            <Laptop className="w-4 h-4" />
-                            <span className="hidden sm:inline">Carro Portátiles</span>
-                        </button>
+                    <div className="w-full md:w-auto mt-1 md:mt-0">
+                        <div className="flex bg-slate-100/80 p-1 rounded-xl w-full">
+                            <button 
+                                onClick={() => setCurrentResource('ROOM')}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Monitor className="w-4 h-4 shrink-0" />
+                                <span>Aula</span>
+                            </button>
+                            <button 
+                                onClick={() => setCurrentResource('CART')}
+                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Laptop className="w-4 h-4 shrink-0" />
+                                <span>Carro</span>
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>
 
-            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+            {/* Bottom Row/Right Section: Date Nav & Admin Tools */}
+            <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
+                
+                {/* Admin Tools */}
                 {user.role === Role.ADMIN && (
                     <div className="flex gap-2">
-                        <button onClick={() => setIsHistoryOpen(true)} className="p-3 bg-slate-100 rounded-xl"><History/></button>
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-3 rounded-xl ${showFilters ? 'bg-slate-800 text-white' : 'bg-slate-100'}`}><Filter/></button>
+                        <button onClick={() => setIsHistoryOpen(true)} className="p-2.5 bg-white border border-slate-100 rounded-xl shadow-sm text-slate-600"><History className="w-5 h-5"/></button>
+                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2.5 rounded-xl shadow-sm border ${showFilters ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-100 text-slate-600'}`}><Filter className="w-5 h-5"/></button>
                     </div>
                 )}
-                <div className="flex items-center space-x-4 bg-slate-50 p-1.5 rounded-2xl border border-slate-200">
-                    <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2.5"><ChevronLeft/></button>
-                    <div className="px-4 text-center">
-                        <span className="block text-sm font-bold text-slate-800 capitalize">{format(weekDays[0], 'MMMM', { locale: es })}</span>
-                        <span className="text-[10px] font-bold text-slate-400">{format(weekDays[0], 'yyyy')}</span>
+                
+                {/* Date Navigator */}
+                <div className="flex flex-1 lg:flex-none items-center justify-between lg:justify-center space-x-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                    <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm border border-slate-100"><ChevronLeft className="w-5 h-5 text-slate-600"/></button>
+                    <div className="px-2 text-center flex flex-col justify-center">
+                        <span className="block text-xs md:text-sm font-bold text-slate-800 capitalize truncate leading-tight">{format(weekDays[0], 'MMMM', { locale: es })}</span>
+                        <span className="text-[10px] font-bold text-slate-400 leading-tight">{format(weekDays[0], 'yyyy')}</span>
                     </div>
-                    <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2.5"><ChevronRight/></button>
+                    <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm border border-slate-100"><ChevronRight className="w-5 h-5 text-slate-600"/></button>
                 </div>
             </div>
           </div>
+
+          {/* Filters Panel */}
           {user.role === Role.ADMIN && showFilters && (
-             <div className="glass-panel p-4 rounded-2xl animate-slide-up flex flex-col md:flex-row gap-4">
-                 <input type="text" placeholder="Filtrar profesor..." value={teacherFilter} onChange={e => setTeacherFilter(e.target.value)} className="flex-1 p-2 border rounded-xl outline-none"/>
-                 <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)} className="flex-1 p-2 border rounded-xl outline-none">
+             <div className="glass-panel p-3 rounded-2xl animate-slide-up flex flex-col md:flex-row gap-3">
+                 <input type="text" placeholder="Filtrar profesor..." value={teacherFilter} onChange={e => setTeacherFilter(e.target.value)} className="flex-1 p-2.5 border rounded-xl outline-none text-sm"/>
+                 <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)} className="flex-1 p-2.5 border rounded-xl outline-none text-sm bg-white">
                     <option value="">Todos los cursos</option>
                     {courses.map(c => <option key={c} value={c}>{c}</option>)}
                  </select>
@@ -285,40 +290,49 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           )}
       </div>
 
-      {/* Grid */}
-      <div className="flex-1 glass-panel rounded-[2.5rem] overflow-hidden shadow-xl flex flex-col">
+      {/* Grid Container */}
+      <div className="flex-1 glass-panel rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl flex flex-col border-slate-200/60">
         <div className="overflow-auto flex-1">
-            <div className="min-w-[900px]">
-              <div className="grid grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 bg-white">
-                <div className="p-5 border-r"></div>
+            <div className="min-w-[700px] md:min-w-[900px]"> {/* Adjusted min-width for mobile scroll */}
+              
+              {/* Table Header */}
+              <div className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 bg-white shadow-sm">
+                <div className="p-2 md:p-5 border-r border-slate-100"></div>
                 {weekDays.slice(0, 5).map(day => (
-                    <div key={day.toISOString()} className="p-4 text-center border-r">
-                        <div className="text-2xl font-black">{format(day, 'd')}</div>
-                        <div className="text-xs font-bold uppercase text-slate-400">{format(day, 'EEE', { locale: es })}</div>
+                    <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-100">
+                        <div className="text-lg md:text-2xl font-black text-slate-800">{format(day, 'd')}</div>
+                        <div className="text-[10px] md:text-xs font-bold uppercase text-slate-400">{format(day, 'EEE', { locale: es })}</div>
                     </div>
                 ))}
               </div>
+
+              {/* Slots */}
               {slots.map(slot => (
-                <div key={slot.id} className="grid grid-cols-[100px_repeat(5,1fr)] border-t">
-                  <div className="p-4 flex flex-col items-center justify-center text-xs font-bold text-slate-500 bg-slate-50 border-r">
+                <div key={slot.id} className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] border-t border-slate-100">
+                  
+                  {/* Time Label */}
+                  <div className="p-1 md:p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-500 bg-slate-50/50 border-r border-slate-100">
                     <span>{slot.start}</span>
+                    <span className="text-slate-300 hidden md:inline">-</span>
                     <span className="text-slate-400">{slot.end}</span>
                   </div>
+                  
+                  {/* Days */}
                   {weekDays.slice(0, 5).map(day => {
                     const booking = filteredBookings.find(b => b.date === formatDate(day) && b.slotId === slot.id);
                     const isHoliday = !isBookableDay(day);
                     return (
-                        <div key={day.toISOString()} className="min-h-[120px] p-2 border-r relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
+                        <div key={day.toISOString()} className="min-h-[90px] md:min-h-[120px] p-1 md:p-2 border-r border-slate-100 relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
-                                <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase rotate-[-10deg]">No Lectivo</div>
+                                <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6 tracking-wider">No Lectivo</div>
                              ) : booking ? (
-                                <div className={`h-full rounded-xl p-3 border shadow-sm ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
-                                    <p className="text-xs font-black truncate">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
-                                    <p className="text-[10px] opacity-80 truncate">{booking.isBlocked ? booking.justification : booking.subject}</p>
-                                    <p className="mt-auto text-[9px] font-bold border-t border-current/10 pt-1">{booking.teacherName}</p>
+                                <div className={`h-full rounded-lg md:rounded-xl p-1.5 md:p-3 border shadow-sm flex flex-col ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
+                                    <p className="text-[10px] md:text-xs font-black truncate leading-tight">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
+                                    <p className="text-[9px] md:text-[10px] opacity-90 truncate leading-tight mt-0.5">{booking.isBlocked ? booking.justification : booking.subject}</p>
+                                    <p className="mt-auto text-[8px] md:text-[9px] font-bold border-t border-current/10 pt-1 truncate">{booking.teacherName.split(' ')[0]}</p>
                                 </div>
                              ) : (
-                                <div className="h-full border-2 border-dashed border-slate-100 rounded-xl group-hover:bg-slate-50 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                <div className="h-full border border-dashed border-slate-100 rounded-lg md:rounded-xl group-hover:bg-slate-50/80 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
                                     <span className="text-xl text-slate-300">+</span>
                                 </div>
                              )}
@@ -336,19 +350,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={existingBooking ? 'Detalles' : 'Nueva Reserva'}>
         {existingBooking ? (
             <div className="space-y-4">
-                <div className="p-4 bg-slate-50 rounded-xl">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase">Responsable</p>
-                    <p className="font-bold">{existingBooking.teacherName}</p>
+                <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Responsable</p>
+                    <p className="font-bold text-slate-900">{existingBooking.teacherName}</p>
                     <p className="text-xs text-slate-500">{existingBooking.teacherEmail}</p>
-                    <div className="mt-2 text-[10px] bg-slate-200 inline-block px-2 py-0.5 rounded text-slate-600 font-bold">
+                    <div className="mt-2 text-[10px] bg-white border border-slate-200 inline-block px-2 py-0.5 rounded-md text-slate-600 font-bold uppercase tracking-wider">
                         {existingBooking.resource === 'CART' ? 'Carro Portátiles' : 'Aula Informática'}
                     </div>
                 </div>
                 {!existingBooking.isBlocked && (
                     <>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Curso</p><p className="text-sm font-bold">{existingBooking.course}</p></div>
-                            <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Asignatura</p><p className="text-sm font-bold">{existingBooking.subject}</p></div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Curso</p><p className="text-sm font-bold text-slate-800">{existingBooking.course}</p></div>
+                            <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Asignatura</p><p className="text-sm font-bold text-slate-800">{existingBooking.subject}</p></div>
                         </div>
                         <div className="p-3 border rounded-xl bg-slate-50">
                             <p className="text-[10px] font-bold uppercase text-slate-500">Justificación / Actividad</p>
@@ -357,39 +371,36 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     </>
                 )}
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (
-                    <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100">Eliminar Reserva</button>
+                    <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="w-full py-3.5 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100 hover:bg-red-100 transition-colors">Eliminar Reserva</button>
                 )}
             </div>
         ) : (
             <form onSubmit={handleSaveBooking} className="space-y-4">
                 {user.role === Role.ADMIN && (
                     <div className="flex gap-2">
-                        <button type="button" onClick={() => setIsBlocking(!isBlocking)} className={`flex-1 p-3 rounded-xl border font-bold text-xs ${isBlocking ? 'bg-slate-800 text-white' : 'bg-white'}`}>{isBlocking ? 'MODO BLOQUEO ACTIVO' : 'ACTIVAR BLOQUEO'}</button>
-                        <button type="button" onClick={() => setIsRecurring(!isRecurring)} className={`flex-1 p-3 rounded-xl border font-bold text-xs ${isRecurring ? 'bg-blue-600 text-white' : 'bg-white'}`}>{isRecurring ? 'RECURRENCIA ACTIVA' : 'RECURRENCIA'}</button>
+                        <button type="button" onClick={() => setIsBlocking(!isBlocking)} className={`flex-1 p-3 rounded-xl border font-bold text-[10px] uppercase tracking-wider ${isBlocking ? 'bg-slate-800 text-white border-slate-800' : 'bg-white text-slate-600'}`}>{isBlocking ? 'Modo Bloqueo' : 'Bloquear'}</button>
+                        <button type="button" onClick={() => setIsRecurring(!isRecurring)} className={`flex-1 p-3 rounded-xl border font-bold text-[10px] uppercase tracking-wider ${isRecurring ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-blue-600 border-blue-100'}`}>{isRecurring ? 'Recurrencia ON' : 'Recurrencia'}</button>
                     </div>
                 )}
                 
-                {/* Info del recurso actual */}
                 <div className="text-center text-xs font-bold text-slate-400 bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200">
                     Reservando en: <span className="text-slate-700 uppercase">{currentResource === 'CART' ? 'Carro de Portátiles' : 'Aula Estándar'}</span>
                 </div>
 
                 {!isBlocking ? (
                     <>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profesor Responsable</label>
-                            {user.role === Role.ADMIN ? (
-                                <select value={selectedTeacherEmail} onChange={e => setSelectedTeacherEmail(e.target.value)} className="w-full p-3 bg-slate-50 border rounded-xl font-bold">
-                                    {teachers.map(t => <option key={t.email} value={t.email}>{t.name} ({t.email})</option>)}
+                        {user.role === Role.ADMIN && (
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profesor Responsable</label>
+                                <select value={selectedTeacherEmail} onChange={e => setSelectedTeacherEmail(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500/20">
+                                    {teachers.map(t => <option key={t.email} value={t.email}>{t.name}</option>)}
                                 </select>
-                            ) : (
-                                <input type="text" value={user.name} disabled className="w-full p-3 bg-slate-100 border rounded-xl font-bold text-slate-500"/>
-                            )}
-                        </div>
-                        <div className="grid grid-cols-2 gap-4">
+                            </div>
+                        )}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Curso</label>
-                                <select value={course} onChange={e => setCourse(e.target.value)} className="w-full p-3 border rounded-xl font-bold">
+                                <select value={course} onChange={e => setCourse(e.target.value)} className="w-full p-3 border border-slate-200 rounded-xl font-bold text-sm bg-white outline-none focus:ring-2 focus:ring-brand-500/20">
                                     {courses.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
                                 {stage === Stage.SECONDARY && currentResource === 'CART' && (
@@ -398,13 +409,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignatura</label>
-                                <input type="text" required value={subject} onChange={e => setSubject(e.target.value)} placeholder="Ej: Matemáticas" className="w-full p-3 border rounded-xl font-bold"/>
+                                <input type="text" required value={subject} onChange={e => setSubject(e.target.value)} placeholder="Ej: Matemáticas" className="w-full p-3 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500/20"/>
                             </div>
                         </div>
-                        {/* Nuevo campo de justificación */}
                         <div>
                             <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Justificación / Actividad <span className="text-red-500">*</span></label>
-                            <textarea required value={justification} onChange={e => setJustification(e.target.value)} placeholder="Describa brevemente la actividad..." className="w-full p-3 border rounded-xl font-bold text-sm" rows={2}/>
+                            <textarea required value={justification} onChange={e => setJustification(e.target.value)} placeholder="Describa brevemente la actividad..." className="w-full p-3 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500/20" rows={2}/>
                         </div>
                     </>
                 ) : (
@@ -414,12 +424,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 {isRecurring && user.role === Role.ADMIN && (
                     <div className="p-3 bg-blue-50 border border-blue-100 rounded-xl">
                         <label className="block text-[10px] font-bold text-blue-600 uppercase mb-1">Fecha fin de recurrencia</label>
-                        <input type="date" required value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} className="w-full p-2 border rounded-lg font-bold"/>
+                        <input type="date" required value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} className="w-full p-2 border rounded-lg font-bold bg-white text-sm"/>
                     </div>
                 )}
 
-                <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold shadow-lg flex items-center justify-center">
-                    {isSubmitting ? <Loader2 className="animate-spin"/> : 'Confirmar Reserva'}
+                <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-slate-900 text-white rounded-xl font-bold shadow-lg flex items-center justify-center active:scale-95 transition-transform">
+                    {isSubmitting ? <Loader2 className="animate-spin w-5 h-5"/> : 'Confirmar Reserva'}
                 </button>
             </form>
         )}

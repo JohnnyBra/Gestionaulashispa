@@ -7,7 +7,6 @@ interface LoginProps {
   onLogin: (user: User) => void;
 }
 
-// Declaración global para TS ya que usamos script externo
 declare global {
   interface Window {
     google: any;
@@ -21,19 +20,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [loading, setLoading] = useState(false);
 
   // IMPORTANTE: Sustituye esto por tu Client ID real de Google Cloud Console
-  // Si no tienes uno, el botón de Google no cargará o dará error.
   const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID_AQUI"; 
-  
-  // Verificación simple para saber si Google está habilitado
   const isGoogleEnabled = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "TU_GOOGLE_CLIENT_ID_AQUI";
 
   useEffect(() => {
-    // Si no hay client ID válido, no intentamos inicializar Google para evitar errores 403 y de consola
-    if (!isGoogleEnabled) {
-      return;
-    }
+    if (!isGoogleEnabled) return;
 
-    // Inicializar Google Auth
     if (window.google) {
       try {
         window.google.accounts.id.initialize({
@@ -41,7 +33,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           callback: handleGoogleResponse
         });
 
-        // Renderizar botón solo si existe el contenedor
         const buttonDiv = document.getElementById("googleButtonDiv");
         if (buttonDiv) {
           window.google.accounts.id.renderButton(
@@ -84,9 +75,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     try {
       const result = await loginExternal({ email, password });
       
-      // Validación robusta de la respuesta
       if (result && result.success) {
-        // Aseguramos que tenemos los campos mínimos para que la app no falle
         const safeUser: User = {
             name: result.name || email.split('@')[0] || 'Usuario',
             email: result.email || email,
@@ -107,38 +96,38 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   return (
     <div className="min-h-screen flex flex-col lg:flex-row w-full bg-slate-50 lg:bg-white overflow-hidden relative">
       
-      {/* Botón Volver a Prisma (Flotante) */}
-      <div className="absolute top-4 right-4 lg:top-8 lg:right-8 z-50">
+      {/* Botón Volver a Prisma (Flotante en Desktop, Flujo en Mobile) */}
+      <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center lg:block bg-white lg:bg-transparent border-b lg:border-none border-slate-100">
         <a 
             href="https://prisma.bibliohispa.es" 
-            className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur-md text-slate-600 hover:text-brand-600 border border-slate-200 rounded-full shadow-sm hover:shadow-md transition-all text-sm font-bold group"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 lg:bg-white/80 backdrop-blur-md text-slate-600 hover:text-brand-600 border border-slate-200 rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm font-bold group"
         >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span>Volver a Prisma</span>
         </a>
       </div>
 
-      <div className="w-full h-[30vh] lg:h-auto lg:w-1/2 bg-slate-900 relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
+      <div className="w-full h-[25vh] lg:h-auto lg:w-1/2 bg-slate-900 relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 z-0"></div>
         <div className="relative z-10 animate-fade-in text-center lg:text-left">
-           <div className="flex flex-col lg:flex-row items-center lg:space-x-4 mb-8">
-              <div className="h-16 w-16 bg-white rounded-2xl flex items-center justify-center shadow-lg mb-4 lg:mb-0">
-                <img src="/logo.png" alt="Logo" className="h-10 w-auto" />
+           <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-start lg:space-x-4 mb-4 lg:mb-8">
+              <div className="h-12 w-12 lg:h-16 lg:w-16 bg-white rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg mb-3 lg:mb-0">
+                <img src="/logo.png" alt="Logo" className="h-8 w-auto lg:h-10" />
               </div>
               <div>
-                <h2 className="text-2xl font-bold">La Hispanidad</h2>
-                <p className="text-brand-200 text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
+                <h2 className="text-xl lg:text-2xl font-bold">La Hispanidad</h2>
+                <p className="text-brand-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
               </div>
            </div>
            <h1 className="hidden lg:block text-4xl font-extrabold leading-tight">Acceso Unificado mediante <span className="text-brand-400">PrismaEdu</span></h1>
         </div>
       </div>
 
-      <div className="w-full flex-1 flex items-center justify-center p-8 z-20">
+      <div className="w-full flex-1 flex items-center justify-center p-6 md:p-8 z-20">
          <div className="w-full max-w-md animate-scale-in">
-            <div className="mb-8 text-center lg:text-left">
-               <h2 className="text-3xl font-bold text-slate-900">Iniciar Sesión</h2>
-               <p className="text-slate-500 mt-2">Usa tu cuenta corporativa de la cooperativa.</p>
+            <div className="mb-6 lg:mb-8 text-center lg:text-left">
+               <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Iniciar Sesión</h2>
+               <p className="text-slate-500 mt-2 text-sm md:text-base">Usa tu cuenta corporativa de la cooperativa.</p>
             </div>
 
             {error && (
@@ -148,7 +137,6 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                </div>
             )}
 
-            {/* Google Button Container - Solo se renderiza si está habilitado */}
             {isGoogleEnabled && (
                 <div className="mb-6">
                     <div id="googleButtonDiv" className="w-full h-[44px]"></div>
@@ -172,7 +160,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                        type="email"
                        value={email}
                        onChange={(e) => setEmail(e.target.value)}
-                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
+                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base"
                        placeholder="usuario@colegiolahispanidad.es"
                        required
                      />
@@ -186,7 +174,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                        type="password"
                        value={password}
                        onChange={(e) => setPassword(e.target.value)}
-                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none"
+                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base"
                        placeholder="••••••••"
                        required
                      />
@@ -195,7 +183,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
                <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex items-center justify-center py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg disabled:opacity-70"
+                className="w-full flex items-center justify-center py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg disabled:opacity-70 text-base"
                >
                  {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : 'Entrar'}
                  {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
