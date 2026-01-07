@@ -46,14 +46,14 @@ export interface Booking {
   teacherEmail: string;
   teacherName: string;
   course?: string;
-  subject?: string;
+  subject?: string; // Asignatura
+  justification?: string; // Motivo/Actividad (Ahora general para todos)
   isBlocked: boolean; // For admin blocks
-  justification?: string; // For admin blocks
   logs: ActionLog[]; // History of actions
   createdAt: number;
 }
 
-// Fallbacks en caso de que la API falle, aunque intentaremos cargar desde Prisma
+// Fallbacks en caso de que la API falle
 export const COURSES_PRIMARY = [
   '1ºA Primaria', '1ºB Primaria',
   '2ºA Primaria', '2ºB Primaria',

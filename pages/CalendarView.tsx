@@ -38,6 +38,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   // Form State
   const [course, setCourse] = useState('');
   const [subject, setSubject] = useState('');
+  const [justification, setJustification] = useState(''); // Nuevo campo para justificación general
   const [selectedTeacherEmail, setSelectedTeacherEmail] = useState(user.email);
   const [blockReason, setBlockReason] = useState('');
   const [isBlocking, setIsBlocking] = useState(false);
@@ -54,7 +55,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     
     if (importedClasses.length > 0) {
         // Filtramos por nombre para intentar adivinar la etapa si el objeto no tiene stage explícito
-        // (Asumiendo que el import trae nombres como "1º ESO A", "1º PRIM A", etc)
         const allNames = importedClasses.map(c => c.name);
         
         if (stage === Stage.PRIMARY) {
@@ -72,10 +72,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         baseList = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
     }
 
-    // APLICAR RESTRICCIONES DE CARRO
+    // APLICAR RESTRICCIONES DE CARRO (Solo 3º y 4º ESO)
     if (stage === Stage.SECONDARY && currentResource === 'CART') {
-        // Solo 3º y 4º de ESO para el carro
-        return baseList.filter(c => c.startsWith('3º') || c.startsWith('4º'));
+        return baseList.filter(c => c.includes('3º') || c.includes('4º'));
     }
     
     // Ordenar alfabéticamente para limpieza
@@ -146,10 +145,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setSelectedSlot({ date: day, slot });
     
     // Si la reserva existente tiene un curso, lo usamos, si no, usamos el primero de la lista filtrada
-    // Esto asegura que si estamos en modo carro, por defecto salga un curso válido (3º o 4º)
     const defaultCourse = courses[0] || '';
     setCourse(existing?.course || defaultCourse);
     setSubject(existing?.subject || '');
+    setJustification(existing?.justification || ''); // Cargar justificación
     
     // Gestión inteligente del selector de profesor para ADMIN
     if (existing) {
@@ -180,8 +179,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       teacherName: isBlocking ? 'ADMINISTRADOR' : teacherObj.name,
       course: isBlocking ? undefined : course,
       subject: isBlocking ? undefined : subject,
+      justification: isBlocking ? blockReason : justification, // Guardamos la justificación
       isBlocked: isBlocking,
-      justification: isBlocking ? blockReason : undefined,
       createdAt: Date.now(),
       logs: [{
           action: (isBlocking ? 'BLOCKED' : 'CREATED') as 'BLOCKED' | 'CREATED' | 'DELETED',
@@ -346,10 +345,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     </div>
                 </div>
                 {!existingBooking.isBlocked && (
-                    <div className="grid grid-cols-2 gap-4">
-                        <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Curso</p><p className="text-sm font-bold">{existingBooking.course}</p></div>
-                        <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Asignatura</p><p className="text-sm font-bold">{existingBooking.subject}</p></div>
-                    </div>
+                    <>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Curso</p><p className="text-sm font-bold">{existingBooking.course}</p></div>
+                            <div className="p-3 border rounded-xl"><p className="text-[10px] font-bold uppercase">Asignatura</p><p className="text-sm font-bold">{existingBooking.subject}</p></div>
+                        </div>
+                        <div className="p-3 border rounded-xl bg-slate-50">
+                            <p className="text-[10px] font-bold uppercase text-slate-500">Justificación / Actividad</p>
+                            <p className="text-sm text-slate-700 italic">{existingBooking.justification || 'Sin justificación'}</p>
+                        </div>
+                    </>
                 )}
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (
                     <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100">Eliminar Reserva</button>
@@ -395,6 +400,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignatura</label>
                                 <input type="text" required value={subject} onChange={e => setSubject(e.target.value)} placeholder="Ej: Matemáticas" className="w-full p-3 border rounded-xl font-bold"/>
                             </div>
+                        </div>
+                        {/* Nuevo campo de justificación */}
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Justificación / Actividad <span className="text-red-500">*</span></label>
+                            <textarea required value={justification} onChange={e => setJustification(e.target.value)} placeholder="Describa brevemente la actividad..." className="w-full p-3 border rounded-xl font-bold text-sm" rows={2}/>
                         </div>
                     </>
                 ) : (
