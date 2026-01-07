@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog, ResourceType, ClassGroup } from '../types';
+import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ResourceType, ClassGroup } from '../types';
 import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers, getClasses } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
-import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, History, Filter, Search, XCircle, MoreHorizontal, Repeat, CalendarDays, Laptop, Monitor } from 'lucide-react';
-import { addWeeks, subWeeks, format, isSameDay, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor } from 'lucide-react';
+import { addWeeks, subWeeks, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
 
@@ -26,7 +26,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
-  // Resource State (Room or Laptop Cart)
+  // Resource State
   const [currentResource, setCurrentResource] = useState<ResourceType>('ROOM');
 
   // Admin Tools State
@@ -212,73 +212,80 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const weekDays = getWeekDays(currentDate);
 
   return (
-    <div className="max-w-screen-2xl mx-auto px-2 md:px-4 py-4 md:py-8 flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)]">
+    // CONTENEDOR PRINCIPAL: Aseguramos que no haya scroll en el body, solo en la tabla
+    <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] w-full max-w-full overflow-hidden px-2 md:px-4 py-2 md:py-8">
       
-      {/* Header & Controls Container */}
-      <div className="flex-none flex flex-col gap-3 mb-4">
-          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-panel p-3 md:p-4 rounded-3xl gap-3">
+      {/* --- HEADER (FIJO) --- */}
+      <div className="flex-none flex flex-col gap-3 mb-4 w-full">
+          <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-panel p-3 rounded-2xl md:rounded-3xl gap-3 w-full">
             
-            {/* Top Row: Back Btn + Title + Resource Toggle (on mobile wraps) */}
-            <div className="flex flex-col md:flex-row items-start md:items-center gap-3 w-full lg:w-auto">
-                
-                {/* Title Section */}
-                <div className="flex items-center space-x-3 w-full md:w-auto">
-                    <button onClick={onBack} className="p-2.5 hover:bg-slate-100 rounded-xl md:rounded-2xl bg-white border border-slate-100 shadow-sm shrink-0">
+            {/* ROW 1: Título y Back */}
+            <div className="flex items-center justify-between w-full lg:w-auto">
+                <div className="flex items-center gap-3">
+                    <button onClick={onBack} className="p-2 md:p-2.5 hover:bg-slate-100 rounded-xl bg-white border border-slate-100 shadow-sm shrink-0">
                         <ArrowLeft className="h-5 w-5"/>
                     </button>
                     <div>
-                        <h2 className={`text-lg md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient} leading-tight`}>{roomName}</h2>
-                        <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{stage === Stage.PRIMARY ? 'Etapa Primaria' : 'Etapa Secundaria'}</p>
+                        <h2 className={`text-base md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient} leading-tight truncate max-w-[200px] md:max-w-none`}>{roomName}</h2>
+                        <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{stage === Stage.PRIMARY ? 'Primaria' : 'Secundaria'}</p>
                     </div>
                 </div>
 
-                {/* Resource Toggle (Secundaria) - Mobile Optimized */}
-                {stage === Stage.SECONDARY && (
-                    <div className="w-full md:w-auto mt-1 md:mt-0">
-                        <div className="flex bg-slate-100/80 p-1 rounded-xl w-full">
-                            <button 
-                                onClick={() => setCurrentResource('ROOM')}
-                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <Monitor className="w-4 h-4 shrink-0" />
-                                <span>Aula</span>
-                            </button>
-                            <button 
-                                onClick={() => setCurrentResource('CART')}
-                                className={`flex-1 md:flex-none flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
-                            >
-                                <Laptop className="w-4 h-4 shrink-0" />
-                                <span>Carro</span>
-                            </button>
-                        </div>
+                {/* Admin Tools (Mobile Icon Only) */}
+                {user.role === Role.ADMIN && (
+                    <div className="flex gap-2 lg:hidden">
+                         <button onClick={() => setIsHistoryOpen(true)} className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm"><History className="w-5 h-5 text-slate-600"/></button>
+                         <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl shadow-sm border ${showFilters ? 'bg-slate-800 text-white' : 'bg-white text-slate-600'}`}><Filter className="w-5 h-5"/></button>
                     </div>
                 )}
             </div>
 
-            {/* Bottom Row/Right Section: Date Nav & Admin Tools */}
-            <div className="flex items-center gap-2 w-full lg:w-auto justify-between lg:justify-end">
-                
-                {/* Admin Tools */}
-                {user.role === Role.ADMIN && (
-                    <div className="flex gap-2">
-                        <button onClick={() => setIsHistoryOpen(true)} className="p-2.5 bg-white border border-slate-100 rounded-xl shadow-sm text-slate-600"><History className="w-5 h-5"/></button>
-                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2.5 rounded-xl shadow-sm border ${showFilters ? 'bg-slate-800 text-white border-slate-800' : 'bg-white border-slate-100 text-slate-600'}`}><Filter className="w-5 h-5"/></button>
+            {/* ROW 2: Resource Toggle (Solo Secundaria - ANCHO COMPLETO EN MÓVIL) */}
+            {stage === Stage.SECONDARY && (
+                <div className="w-full lg:w-auto">
+                    <div className="grid grid-cols-2 gap-1 bg-slate-100/80 p-1 rounded-xl w-full">
+                        <button 
+                            onClick={() => setCurrentResource('ROOM')}
+                            className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Monitor className="w-4 h-4 shrink-0" />
+                            <span>Aula Info</span>
+                        </button>
+                        <button 
+                            onClick={() => setCurrentResource('CART')}
+                            className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-lg text-xs md:text-sm font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Laptop className="w-4 h-4 shrink-0" />
+                            <span>Carro</span>
+                        </button>
                     </div>
-                )}
+                </div>
+            )}
+
+            {/* ROW 3: Date Navigator & Admin Tools (Desktop) */}
+            <div className="flex flex-col md:flex-row items-center gap-2 w-full lg:w-auto">
                 
-                {/* Date Navigator */}
-                <div className="flex flex-1 lg:flex-none items-center justify-between lg:justify-center space-x-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
+                {/* Date Navigator (ANCHO COMPLETO EN MÓVIL, centrado) */}
+                <div className="flex items-center justify-between w-full lg:w-auto space-x-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
                     <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm border border-slate-100"><ChevronLeft className="w-5 h-5 text-slate-600"/></button>
-                    <div className="px-2 text-center flex flex-col justify-center">
-                        <span className="block text-xs md:text-sm font-bold text-slate-800 capitalize truncate leading-tight">{format(weekDays[0], 'MMMM', { locale: es })}</span>
+                    <div className="flex-1 px-2 text-center flex flex-col justify-center">
+                        <span className="block text-sm font-bold text-slate-800 capitalize leading-tight">{format(weekDays[0], 'MMMM', { locale: es })}</span>
                         <span className="text-[10px] font-bold text-slate-400 leading-tight">{format(weekDays[0], 'yyyy')}</span>
                     </div>
                     <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm border border-slate-100"><ChevronRight className="w-5 h-5 text-slate-600"/></button>
                 </div>
+
+                {/* Admin Tools (Desktop) */}
+                {user.role === Role.ADMIN && (
+                    <div className="hidden lg:flex gap-2">
+                        <button onClick={() => setIsHistoryOpen(true)} className="p-2.5 bg-white border border-slate-100 rounded-xl shadow-sm text-slate-600"><History className="w-5 h-5"/></button>
+                        <button onClick={() => setShowFilters(!showFilters)} className={`p-2.5 rounded-xl shadow-sm border ${showFilters ? 'bg-slate-800 text-white' : 'bg-white border-slate-100 text-slate-600'}`}><Filter className="w-5 h-5"/></button>
+                    </div>
+                )}
             </div>
           </div>
 
-          {/* Filters Panel */}
+          {/* Filters Panel (Admin) */}
           {user.role === Role.ADMIN && showFilters && (
              <div className="glass-panel p-3 rounded-2xl animate-slide-up flex flex-col md:flex-row gap-3">
                  <input type="text" placeholder="Filtrar profesor..." value={teacherFilter} onChange={e => setTeacherFilter(e.target.value)} className="flex-1 p-2.5 border rounded-xl outline-none text-sm"/>
@@ -290,16 +297,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           )}
       </div>
 
-      {/* Grid Container */}
-      <div className="flex-1 glass-panel rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl flex flex-col border-slate-200/60">
-        <div className="overflow-auto flex-1">
-            <div className="min-w-[700px] md:min-w-[900px]"> {/* Adjusted min-width for mobile scroll */}
+      {/* --- GRID (SCROLLABLE) --- */}
+      {/* flex-1 toma el espacio restante. overflow-hidden evita que este div haga scroll en la página. */}
+      {/* El div interno maneja el scroll horizontal de la tabla. */}
+      <div className="flex-1 glass-panel rounded-[1.5rem] md:rounded-[2.5rem] overflow-hidden shadow-xl flex flex-col border-slate-200/60 w-full relative">
+        <div className="w-full h-full overflow-auto">
+            <div className="min-w-[700px] md:min-w-[900px] h-full pb-2"> 
               
               {/* Table Header */}
-              <div className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 bg-white shadow-sm">
-                <div className="p-2 md:p-5 border-r border-slate-100"></div>
+              <div className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 bg-white shadow-sm border-b border-slate-100">
+                <div className="p-2 md:p-5 border-r border-slate-100 bg-white"></div>
                 {weekDays.slice(0, 5).map(day => (
-                    <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-100">
+                    <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-100 bg-white">
                         <div className="text-lg md:text-2xl font-black text-slate-800">{format(day, 'd')}</div>
                         <div className="text-[10px] md:text-xs font-bold uppercase text-slate-400">{format(day, 'EEE', { locale: es })}</div>
                     </div>
@@ -308,7 +317,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
               {/* Slots */}
               {slots.map(slot => (
-                <div key={slot.id} className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] border-t border-slate-100">
+                <div key={slot.id} className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] border-b border-slate-100 last:border-0">
                   
                   {/* Time Label */}
                   <div className="p-1 md:p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-500 bg-slate-50/50 border-r border-slate-100">
@@ -324,7 +333,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     return (
                         <div key={day.toISOString()} className="min-h-[90px] md:min-h-[120px] p-1 md:p-2 border-r border-slate-100 relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
-                                <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6 tracking-wider">No Lectivo</div>
+                                <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6 tracking-wider select-none">No Lectivo</div>
                              ) : booking ? (
                                 <div className={`h-full rounded-lg md:rounded-xl p-1.5 md:p-3 border shadow-sm flex flex-col ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
                                     <p className="text-[10px] md:text-xs font-black truncate leading-tight">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
@@ -348,6 +357,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={existingBooking ? 'Detalles' : 'Nueva Reserva'}>
+        {/* ... Modal content remains same as previous ... */}
         {existingBooking ? (
             <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
