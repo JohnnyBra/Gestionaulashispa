@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog, ResourceType } from '../types';
-import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers } from '../services/storageService';
+import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog, ResourceType, ClassGroup } from '../types';
+import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers, getClasses } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
@@ -19,6 +19,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [currentDate, setCurrentDate] = useState(new Date());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [teachers, setTeachers] = useState<{name: string, email: string}[]>([]);
+  const [importedClasses, setImportedClasses] = useState<ClassGroup[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date, slot: TimeSlot } | null>(null);
@@ -46,15 +47,41 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
   
-  // Filter courses logic for Laptop Cart
+  // LOGICA PARA OBTENER Y FILTRAR CLASES
   const courses = useMemo(() => {
-    const baseCourses = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
+    // Si no se han cargado clases de Prisma, usar fallbacks
+    let baseList: string[] = [];
+    
+    if (importedClasses.length > 0) {
+        // Filtramos por nombre para intentar adivinar la etapa si el objeto no tiene stage explícito
+        // (Asumiendo que el import trae nombres como "1º ESO A", "1º PRIM A", etc)
+        const allNames = importedClasses.map(c => c.name);
+        
+        if (stage === Stage.PRIMARY) {
+            baseList = allNames.filter(n => n.toUpperCase().includes('PRI') || n.match(/^[1-6]º.*[A-Z]/) && !n.includes('ESO') && !n.includes('BAC'));
+        } else {
+            baseList = allNames.filter(n => n.toUpperCase().includes('ESO') || n.toUpperCase().includes('BAC') || n.toUpperCase().includes('SEC'));
+        }
+
+        // Fallback si el filtro falla completamente (ej. nombres raros)
+        if (baseList.length === 0) {
+             baseList = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
+        }
+
+    } else {
+        baseList = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
+    }
+
+    // APLICAR RESTRICCIONES DE CARRO
     if (stage === Stage.SECONDARY && currentResource === 'CART') {
         // Solo 3º y 4º de ESO para el carro
-        return baseCourses.filter(c => c.startsWith('3º') || c.startsWith('4º'));
+        return baseList.filter(c => c.startsWith('3º') || c.startsWith('4º'));
     }
-    return baseCourses;
-  }, [stage, currentResource]);
+    
+    // Ordenar alfabéticamente para limpieza
+    return baseList.sort();
+
+  }, [stage, currentResource, importedClasses]);
 
   const roomName = stage === Stage.PRIMARY 
     ? 'Aula de Idiomas' 
@@ -75,9 +102,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     const init = async () => {
       setLoading(true);
       try {
-        const [bData, tData] = await Promise.all([getBookings(), getTeachers()]);
+        // Cargar Bookings, Profesores y Clases
+        const [bData, tData, cData] = await Promise.all([
+            getBookings(), 
+            getTeachers(),
+            getClasses()
+        ]);
         setBookings(bData);
         setTeachers(tData);
+        setImportedClasses(cData);
       } catch (err) {
         setError("Error de conexión.");
       } finally {
@@ -113,7 +146,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setSelectedSlot({ date: day, slot });
     
     // Si la reserva existente tiene un curso, lo usamos, si no, usamos el primero de la lista filtrada
-    setCourse(existing?.course || courses[0] || '');
+    // Esto asegura que si estamos en modo carro, por defecto salga un curso válido (3º o 4º)
+    const defaultCourse = courses[0] || '';
+    setCourse(existing?.course || defaultCourse);
     setSubject(existing?.subject || '');
     
     // Gestión inteligente del selector de profesor para ADMIN
@@ -137,7 +172,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
     const teacherObj = teachers.find(t => t.email === selectedTeacherEmail) || { name: user.name, email: user.email };
 
-    // Explicitly type log action to avoid inference as generic string
     const baseBooking = {
       slotId: selectedSlot.slot.id,
       stage,

@@ -1,4 +1,4 @@
-import { Booking, Stage, User, ActionLog } from '../types';
+import { Booking, Stage, User, ActionLog, ClassGroup } from '../types';
 
 export const getBookings = async (): Promise<Booking[]> => {
   const response = await fetch('/api/bookings');
@@ -12,6 +12,12 @@ export const getHistory = async (): Promise<ActionLog[]> => {
 
 export const getTeachers = async (): Promise<{name: string, email: string}[]> => {
   const response = await fetch('/api/teachers');
+  if (!response.ok) return [];
+  return await response.json();
+};
+
+export const getClasses = async (): Promise<ClassGroup[]> => {
+  const response = await fetch('/api/classes');
   if (!response.ok) return [];
   return await response.json();
 };
