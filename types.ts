@@ -14,6 +14,12 @@ export interface User {
   email: string;
   name: string;
   role: Role;
+  classId?: string; // Para tutores
+}
+
+export interface ClassGroup {
+  id: string;
+  name: string;
 }
 
 export interface TimeSlot {
@@ -47,6 +53,7 @@ export interface Booking {
   createdAt: number;
 }
 
+// Fallbacks en caso de que la API falle, aunque intentaremos cargar desde Prisma
 export const COURSES_PRIMARY = [
   '1ºA Primaria', '1ºB Primaria',
   '2ºA Primaria', '2ºB Primaria',
