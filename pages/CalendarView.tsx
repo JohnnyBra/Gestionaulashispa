@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog } from '../types';
+import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ActionLog, ResourceType } from '../types';
 import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
-import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, History, Filter, Search, XCircle, MoreHorizontal, Repeat, CalendarDays } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Lock, User as UserIcon, Book, ArrowLeft, Trash2, Loader2, History, Filter, Search, XCircle, MoreHorizontal, Repeat, CalendarDays, Laptop, Monitor } from 'lucide-react';
 import { addWeeks, subWeeks, format, isSameDay, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
@@ -25,6 +25,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   
+  // Resource State (Room or Laptop Cart)
+  const [currentResource, setCurrentResource] = useState<ResourceType>('ROOM');
+
   // Admin Tools State
   const [teacherFilter, setTeacherFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -42,12 +45,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
-  const courses = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
-  const roomName = stage === Stage.PRIMARY ? 'Aula de Idiomas' : 'Aula de Informática';
+  
+  // Filter courses logic for Laptop Cart
+  const courses = useMemo(() => {
+    const baseCourses = stage === Stage.PRIMARY ? COURSES_PRIMARY : COURSES_SECONDARY;
+    if (stage === Stage.SECONDARY && currentResource === 'CART') {
+        // Solo 3º y 4º de ESO para el carro
+        return baseCourses.filter(c => c.startsWith('3º') || c.startsWith('4º'));
+    }
+    return baseCourses;
+  }, [stage, currentResource]);
+
+  const roomName = stage === Stage.PRIMARY 
+    ? 'Aula de Idiomas' 
+    : (currentResource === 'CART' ? 'Carro de Portátiles' : 'Aula de Informática');
   
   const colors = stage === Stage.PRIMARY 
     ? { primary: 'blue', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', gradient: 'from-blue-600 to-indigo-600' }
     : { primary: 'emerald', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-600 to-teal-600' };
+
+  // Reset resource to ROOM when stage changes or for Primary
+  useEffect(() => {
+    if (stage === Stage.PRIMARY) {
+        setCurrentResource('ROOM');
+    }
+  }, [stage]);
 
   useEffect(() => {
     const init = async () => {
@@ -71,29 +93,33 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const filteredBookings = useMemo(() => {
     return bookings.filter(b => {
+        // Filter by stage AND resource (default to ROOM if undefined in old data)
+        const bookingResource = b.resource || 'ROOM';
+        const matchContext = b.stage === stage && bookingResource === currentResource;
+        
         const matchTeacher = !teacherFilter || b.teacherName.toLowerCase().includes(teacherFilter.toLowerCase());
         const matchCourse = !courseFilter || b.course?.toLowerCase().includes(courseFilter.toLowerCase());
-        return matchTeacher && matchCourse;
+        
+        return matchContext && matchTeacher && matchCourse;
     });
-  }, [bookings, teacherFilter, courseFilter]);
+  }, [bookings, teacherFilter, courseFilter, stage, currentResource]);
 
   const handleSlotClick = (day: Date, slot: TimeSlot) => {
     if (!isBookableDay(day)) return;
     const realDateStr = formatDate(day);
-    const existing = bookings.find(b => b.date === realDateStr && b.slotId === slot.id && b.stage === stage);
+    const existing = filteredBookings.find(b => b.date === realDateStr && b.slotId === slot.id);
     
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
     
-    setCourse(existing?.course || courses[0]);
+    // Si la reserva existente tiene un curso, lo usamos, si no, usamos el primero de la lista filtrada
+    setCourse(existing?.course || courses[0] || '');
     setSubject(existing?.subject || '');
     
     // Gestión inteligente del selector de profesor para ADMIN
     if (existing) {
         setSelectedTeacherEmail(existing.teacherEmail);
     } else if (user.role === Role.ADMIN && teachers.length > 0) {
-        // Si es nueva reserva y somos admin, seleccionamos el primer profe de la lista importada
-        // para evitar que se seleccione el email del admin (que suele no estar en la lista de profes)
         setSelectedTeacherEmail(teachers[0].email);
     } else {
         setSelectedTeacherEmail(user.email);
@@ -115,6 +141,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     const baseBooking = {
       slotId: selectedSlot.slot.id,
       stage,
+      resource: currentResource, // Guardamos si es Aula o Carro
       teacherEmail: isBlocking ? 'admin@colegiolahispanidad.es' : teacherObj.email,
       teacherName: isBlocking ? 'ADMINISTRADOR' : teacherObj.name,
       course: isBlocking ? undefined : course,
@@ -127,7 +154,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           user: user.email,
           userName: user.name,
           timestamp: Date.now(),
-          details: isBlocking ? blockReason : `${course} - ${subject}`
+          details: isBlocking 
+            ? blockReason 
+            : `${course} - ${subject} (${currentResource === 'CART' ? 'Carro' : 'Aula'})`
       }]
     };
 
@@ -168,11 +197,34 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       {/* Header & Filters */}
       <div className="flex-none flex flex-col gap-4 mb-6">
           <div className="flex flex-col md:flex-row justify-between items-center glass-panel p-4 rounded-3xl gap-4">
-            <div className="flex items-center space-x-4">
-              <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl"><ArrowLeft className="h-5 w-5"/></button>
-              <div><h2 className={`text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2></div>
+            <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                <div className="flex items-center space-x-4 self-start sm:self-center">
+                    <button onClick={onBack} className="p-3 hover:bg-slate-100 rounded-2xl"><ArrowLeft className="h-5 w-5"/></button>
+                    <div><h2 className={`text-xl md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient}`}>{roomName}</h2></div>
+                </div>
+
+                {/* Resource Toggle for Secondary */}
+                {stage === Stage.SECONDARY && (
+                    <div className="flex bg-slate-100/80 p-1 rounded-xl">
+                        <button 
+                            onClick={() => setCurrentResource('ROOM')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Monitor className="w-4 h-4" />
+                            <span className="hidden sm:inline">Aula Info</span>
+                        </button>
+                        <button 
+                            onClick={() => setCurrentResource('CART')}
+                            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500 hover:text-slate-700'}`}
+                        >
+                            <Laptop className="w-4 h-4" />
+                            <span className="hidden sm:inline">Carro Portátiles</span>
+                        </button>
+                    </div>
+                )}
             </div>
-            <div className="flex items-center gap-3">
+
+            <div className="flex items-center gap-3 w-full md:w-auto justify-end">
                 {user.role === Role.ADMIN && (
                     <div className="flex gap-2">
                         <button onClick={() => setIsHistoryOpen(true)} className="p-3 bg-slate-100 rounded-xl"><History/></button>
@@ -220,7 +272,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     <span className="text-slate-400">{slot.end}</span>
                   </div>
                   {weekDays.slice(0, 5).map(day => {
-                    const booking = filteredBookings.find(b => b.date === formatDate(day) && b.slotId === slot.id && b.stage === stage);
+                    const booking = filteredBookings.find(b => b.date === formatDate(day) && b.slotId === slot.id);
                     const isHoliday = !isBookableDay(day);
                     return (
                         <div key={day.toISOString()} className="min-h-[120px] p-2 border-r relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
@@ -255,6 +307,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Responsable</p>
                     <p className="font-bold">{existingBooking.teacherName}</p>
                     <p className="text-xs text-slate-500">{existingBooking.teacherEmail}</p>
+                    <div className="mt-2 text-[10px] bg-slate-200 inline-block px-2 py-0.5 rounded text-slate-600 font-bold">
+                        {existingBooking.resource === 'CART' ? 'Carro Portátiles' : 'Aula Informática'}
+                    </div>
                 </div>
                 {!existingBooking.isBlocked && (
                     <div className="grid grid-cols-2 gap-4">
@@ -274,6 +329,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         <button type="button" onClick={() => setIsRecurring(!isRecurring)} className={`flex-1 p-3 rounded-xl border font-bold text-xs ${isRecurring ? 'bg-blue-600 text-white' : 'bg-white'}`}>{isRecurring ? 'RECURRENCIA ACTIVA' : 'RECURRENCIA'}</button>
                     </div>
                 )}
+                
+                {/* Info del recurso actual */}
+                <div className="text-center text-xs font-bold text-slate-400 bg-slate-50 p-2 rounded-lg border border-dashed border-slate-200">
+                    Reservando en: <span className="text-slate-700 uppercase">{currentResource === 'CART' ? 'Carro de Portátiles' : 'Aula Estándar'}</span>
+                </div>
 
                 {!isBlocking ? (
                     <>
@@ -293,6 +353,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <select value={course} onChange={e => setCourse(e.target.value)} className="w-full p-3 border rounded-xl font-bold">
                                     {courses.map(c => <option key={c} value={c}>{c}</option>)}
                                 </select>
+                                {stage === Stage.SECONDARY && currentResource === 'CART' && (
+                                    <p className="text-[10px] text-amber-600 mt-1 font-bold">* Limitado a 3º y 4º ESO</p>
+                                )}
                             </div>
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Asignatura</label>

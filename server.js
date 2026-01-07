@@ -264,7 +264,17 @@ app.post('/api/bookings', (req, res) => {
     let bookings = readBookings();
     
     for (const item of incoming) {
-       if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage)) {
+       // Conflicto si: misma fecha + misma hora + misma etapa + MISMO RECURSO (Aula vs Carro)
+       // Si el campo resource no existe (datos antiguos), asumimos 'ROOM'
+       const itemResource = item.resource || 'ROOM';
+
+       if (bookings.some(b => {
+         const bookingResource = b.resource || 'ROOM';
+         return b.date === item.date && 
+                b.slotId === item.slotId && 
+                b.stage === item.stage &&
+                bookingResource === itemResource;
+       })) {
          return res.status(409).json({ error: 'Conflict' });
        }
     }

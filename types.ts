@@ -8,6 +8,8 @@ export enum Role {
   ADMIN = 'ADMIN'
 }
 
+export type ResourceType = 'ROOM' | 'CART';
+
 export interface User {
   email: string;
   name: string;
@@ -34,6 +36,7 @@ export interface Booking {
   date: string; // YYYY-MM-DD
   slotId: string;
   stage: Stage;
+  resource: ResourceType; // Diferencia entre Aula y Carro
   teacherEmail: string;
   teacherName: string;
   course?: string;
