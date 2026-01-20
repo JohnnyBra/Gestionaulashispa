@@ -1,85 +1,85 @@
 # Gestión de Reservas - Cooperativa de Enseñanza La Hispanidad
 
-Aplicación web para la gestión de reservas de aulas (Informática e Idiomas).
+Aplicación web progresiva (PWA) para la gestión de reservas de espacios (Aulas de Informática, Idiomas, Carros de portátiles, etc.).
 
-## Instalación Automática en Servidor (Ubuntu/Debian)
+## Requisitos Previos
 
-Sigue estos pasos para desplegar la aplicación en tu servidor VPS.
+Antes de empezar, asegúrate de tener instalado **Node.js** (versión 18 o superior) y **Git** en tu servidor.
 
-### 1. Preparación
-Conéctate a tu servidor por SSH y asegúrate de estar en una carpeta limpia (o en tu carpeta de usuario home).
-
-### 2. Crear y ejecutar el instalador
-Copia y pega el siguiente bloque de comandos en tu terminal. Esto creará el script de instalación y le dará permisos:
+Si estás en un servidor Ubuntu/Debian nuevo, ejecuta esto primero:
 
 ```bash
-nano install.sh
+curl -fsSL https://deb.nodesource.com/setup_18.x | sudo -E bash -
+sudo apt-get install -y nodejs git build-essential
 ```
 
-Pega dentro el contenido del archivo `install.sh` de este repositorio. Guarda con `Ctrl+O` y sal con `Ctrl+X`.
+---
 
-Después, ejecuta:
+## Instalación Desde Cero
+
+Sigue estos pasos para desplegar la aplicación por primera vez:
+
+1.  **Clona el repositorio** (Sustituye la URL por la de tu repositorio):
+    ```bash
+    git clone https://github.com/TU_USUARIO/TU_REPOSITORIO.git reservas
+    ```
+
+2.  **Entra en la carpeta**:
+    ```bash
+    cd reservas
+    ```
+
+3.  **Dale permisos de ejecución al instalador**:
+    ```bash
+    chmod +x install.sh
+    ```
+
+4.  **Ejecuta el instalador**:
+    ```bash
+    ./install.sh
+    ```
+
+El script te guiará preguntando el **puerto** (por defecto 3001) y configurará todo automáticamente (dependencias, construcción y arranque con PM2).
+
+---
+
+## Actualización
+
+Cuando hagas cambios en el código y los subas a GitHub, solo tienes que entrar en el servidor y volver a ejecutar el script. Él detectará que ya está instalada y solo actualizará:
 
 ```bash
-chmod +x install.sh
-sudo ./install.sh
+cd reservas
+./install.sh
 ```
 
-### 3. Sigue las instrucciones
-El script te pedirá:
-1. La **URL de tu repositorio de GitHub**.
-2. El **Puerto** donde quieres que funcione la web. **Por defecto usará el 3001** para evitar conflictos con otras aplicaciones en el puerto 3000.
+El script se encargará de:
+1. Descargar los cambios (`git pull`).
+2. Actualizar librerías (`npm install`).
+3. Reconstruir la web (`npm run build`).
+4. Reiniciar el servidor sin caídas.
 
-## Configuración de Cloudflare Tunnel
+---
 
-Si tienes otro servicio en el puerto 3000, esta aplicación correrá por defecto en el **3001** (o el que hayas elegido en la instalación).
+## Configuración Técnica
 
-Debes actualizar la configuración de tu `cloudflared` (en `config.yml` o en el panel Zero Trust):
-
+### Cloudflare Tunnel (Recomendado)
+Si usas Cloudflare Tunnel para exponer la web:
 1. Servicio: `HTTP`
-2. URL: `localhost:3001` (o el puerto que hayas configurado).
+2. URL: `localhost:3001` (o el puerto que hayas elegido).
 
-Si usas el panel web de Cloudflare Zero Trust:
-1. Ve a **Access** > **Tunnels**.
-2. Configura el **Public Hostname**.
-3. Cambia el destino del servicio a `http://localhost:3001`.
+### Comandos Útiles
 
-## Mantenimiento
+- **Ver estado del servidor:**
+  ```bash
+  pm2 status
+  ```
 
-### Actualizar la web
-Si haces cambios en el código y los subes a GitHub:
+- **Ver logs (errores/actividad):**
+  ```bash
+  pm2 logs hispanidad-reservas
+  ```
 
-```bash
-cd nombre-de-tu-repo
-git pull
-npm install
-npm run build
-pm2 restart hispanidad-reservas
-```
-
-### Cambiar el puerto manualmente
-Si necesitas cambiar el puerto una vez instalada la aplicación:
-
-```bash
-# Ejemplo para cambiar al puerto 4000
-pm2 delete hispanidad-reservas
-PORT=4000 pm2 start npm --name "hispanidad-reservas" -- start
-pm2 save
-```
-
-### Ver estado
-Para ver si la aplicación está corriendo:
-```bash
-pm2 status
-```
-
-Para ver los logs (errores o accesos):
-```bash
-pm2 logs hispanidad-reservas
-```
-
-## Desarrollo Local
-
-1. Clonar repositorio.
-2. `npm install`
-3. `npm start` (Por defecto usa el puerto 3001 si no se especifica otro).
+- **Detener el servidor:**
+  ```bash
+  pm2 stop hispanidad-reservas
+  ```
