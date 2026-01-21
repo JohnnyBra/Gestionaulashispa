@@ -14,35 +14,21 @@ const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 
 // --- CONFIGURACIÓN EXTERNA ---
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
+// Forzamos el valor por defecto si no viene en el env
 const API_SECRET = process.env.API_SECRET || 'ojosyculos'; 
 
-// User Agent de navegador real (Chrome Windows)
-const STANDARD_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36';
+// User Agent personalizado para evitar bloqueos anti-bot genéricos
+const SERVER_USER_AGENT = 'Hispanidad-Reservas-Server/1.0';
 
-// Cabeceras para Login (POST) - Aquí SI enviamos secretos en header por seguridad si el body falla
-const getAuthHeaders = () => {
-  return {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    'User-Agent': STANDARD_USER_AGENT,
-    'api_secret': API_SECRET,
-    'x-api-secret': API_SECRET,
-    'Referer': `${EXTERNAL_API_BASE}/`
-  };
-};
-
-// Cabeceras para Sincronización (GET) - SIN cabeceras custom para evitar WAF/Bloqueos 403
-// La autenticación va SOLO por Query Param (?secret=...)
-const getSyncHeaders = () => {
-  return {
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8',
-    'User-Agent': STANDARD_USER_AGENT,
-    'Referer': `${EXTERNAL_API_BASE}/`,
-    'Upgrade-Insecure-Requests': '1',
-    'Accept-Language': 'es-ES,es;q=0.9',
-    'Connection': 'keep-alive'
-  };
-};
+// Helper para headers comunes
+const getCommonHeaders = () => ({
+  'User-Agent': SERVER_USER_AGENT,
+  'Accept': 'application/json',
+  'Cache-Control': 'no-cache',
+  'api_secret': API_SECRET,
+  'x-api-secret': API_SECRET,
+  'Authorization': `Bearer ${API_SECRET}` // Intento extra por si usa Bearer
+});
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -79,24 +65,25 @@ loadCache();
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
-  // Solo query param para autenticación en GET
+  // Enviamos secreto también en URL por si el servidor ignora headers en GET
   const targetUrl = `${EXTERNAL_API_BASE}/api/export/users?secret=${API_SECRET}`;
-  console.log(`🔄 [SYNC] Conectando con: ${EXTERNAL_API_BASE} (users)...`);
+  console.log(`🔄 [SYNC] Solicitando Usuarios a: ${EXTERNAL_API_BASE}`);
 
   try {
     const response = await fetch(targetUrl, { 
         method: 'GET', 
-        headers: getSyncHeaders() 
+        headers: getCommonHeaders()
     });
 
     if (!response.ok) {
-        // Leemos el texto para debug
         const errText = await response.text();
-        console.error(`❌ [SYNC] Error HTTP ${response.status} en Usuarios. Respuesta: ${errText.substring(0, 150)}...`);
+        console.error(`❌ [SYNC] Error HTTP ${response.status} Usuarios. Respuesta: ${errText.substring(0, 100)}`);
+        // Si falla, no borramos la caché antigua para mantener servicio
         return;
     }
 
     let data = await response.json();
+    // Soporte para estructura { data: [...] } o [...] directo
     let externalUsers = Array.isArray(data) ? data : (data.data || []);
 
     if (externalUsers.length > 0) {
@@ -106,12 +93,14 @@ const syncUsers = async () => {
         const rawRole = (u.role || u.rol || 'TUTOR').toString().toUpperCase().trim();
         let appRole = ROLE_MAP[rawRole];
         
+        // Si no mapea, inferimos por palabras clave o asumimos profesor por defecto al venir de endpoint de usuarios
         if (!appRole) {
             if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
             else appRole = 'TEACHER'; 
         }
 
         let finalEmail = u.email || u.correo || u.mail || u.id;
+        // Si el email no parece email y tenemos ID, construimos uno falso para que funcione el sistema
         if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
             finalEmail = `${u.id}@colegiolahispanidad.es`;
         }
@@ -128,16 +117,18 @@ const syncUsers = async () => {
       }
       
       if (allowedUsers.length > 0) {
+          // Ordenar alfabéticamente
           allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
+          
           usersMemoryCache = allowedUsers;
           fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-          console.log(`✅ [SYNC] Sincronización ÉXITO: ${allowedUsers.length} usuarios.`);
+          console.log(`✅ [SYNC] ÉXITO: ${allowedUsers.length} usuarios sincronizados.`);
       } else {
-          console.warn(`⚠️ [SYNC] JSON recibido pero sin usuarios válidos.`);
+          console.warn(`⚠️ [SYNC] JSON válido pero lista de usuarios vacía.`);
       }
     }
   } catch (err) { 
-      console.error(`❌ [SYNC] Excepción Usuarios: ${err.message}`); 
+      console.error(`❌ [SYNC] Excepción Red Usuarios: ${err.message}`); 
   }
 };
 
@@ -147,7 +138,7 @@ const syncClasses = async () => {
     try {
       const response = await fetch(targetUrl, { 
           method: 'GET', 
-          headers: getSyncHeaders() 
+          headers: getCommonHeaders()
       });
 
       if (!response.ok) {
@@ -176,8 +167,8 @@ const runSync = () => {
     syncClasses(); 
 };
 
-// Arrancar sync tras 2 segundos para dar tiempo al server a iniciar
-setTimeout(runSync, 2000);
+// Iniciar sincronización tras arranque
+setTimeout(runSync, 3000);
 // Repetir cada hora
 setInterval(runSync, 60 * 60 * 1000);
 
@@ -185,26 +176,19 @@ setInterval(runSync, 60 * 60 * 1000);
 
 app.get('/api/admin/force-sync', (req, res) => {
     runSync();
-    res.json({ success: true, message: 'Sync forzada ejecutándose...' });
+    res.json({ success: true, message: 'Sync iniciada.' });
 });
 
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
   if (!token) return res.status(400).json({ success: false });
-  
   try {
     const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
     if (!googleRes.ok) return res.status(401).json({ success: false });
-    
     const payload = await googleRes.json();
-    const googleEmail = payload.email.toLowerCase();
-    
-    const user = usersMemoryCache.find(u => u.email === googleEmail);
-    if (user) {
-        return res.json({ success: true, ...user });
-    } else {
-        return res.status(403).json({ success: false, message: 'Usuario no encontrado en la lista oficial.' });
-    }
+    const user = usersMemoryCache.find(u => u.email === payload.email.toLowerCase());
+    if (user) return res.json({ success: true, ...user });
+    return res.status(403).json({ success: false, message: 'Usuario no registrado.' });
   } catch (e) { res.status(500).json({ success: false }); }
 });
 
@@ -215,7 +199,7 @@ app.post('/api/proxy/login', async (req, res) => {
   try {
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
       method: 'POST',
-      headers: getAuthHeaders(), // Headers específicos para POST/Login
+      headers: { ...getCommonHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: cleanEmail, email: cleanEmail, password })
     });
     
@@ -240,59 +224,42 @@ app.post('/api/proxy/login', async (req, res) => {
         email: (extUser.email || extUser.correo || cleanEmail).toLowerCase() 
     });
   } catch (err) { 
-      console.error("❌ Login error:", err);
       res.status(503).json({ success: false, message: 'Error de conexión' }); 
   }
 });
 
 app.get('/api/teachers', (req, res) => {
-    // Ordenar siempre antes de enviar
     const sorted = [...usersMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
     res.json(sorted);
 });
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => {
   if (!fs.existsSync(DATA_FILE)) return res.json([]);
-  try {
-      res.json(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'));
-  } catch(e) { res.json([]); }
+  try { res.json(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]')); } catch(e) { res.json([]); }
 });
 
 app.post('/api/bookings', (req, res) => {
   try {
     const incoming = Array.isArray(req.body) ? req.body : [req.body];
     let bookings = [];
-    if (fs.existsSync(DATA_FILE)) {
-        try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-    }
+    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
     
     for (const item of incoming) {
        const incomingResource = item.resource || 'ROOM';
-       if (bookings.some(b => {
-           const bookingResource = b.resource || 'ROOM';
-           return b.date === item.date && 
-                  b.slotId === item.slotId && 
-                  b.stage === item.stage &&
-                  bookingResource === incomingResource;
-       })) {
+       if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
          return res.status(409).json({ error: 'Conflict' });
        }
     }
-    
     bookings.push(...incoming);
     fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
     
-    incoming.forEach(b => { 
-        if(b.logs && b.logs.length > 0) {
-            let history = [];
-            if (fs.existsSync(HISTORY_FILE)) {
-                try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-            }
-            history.push(b.logs[0]);
-            if (history.length > 1000) history = history.slice(-1000);
-            fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
-        }
-    });
+    if (incoming[0]?.logs?.[0]) {
+        let history = [];
+        if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
+        history.push(incoming[0].logs[0]);
+        if (history.length > 1000) history = history.slice(-1000);
+        fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+    }
     
     io.emit('server:bookings_updated', bookings);
     res.status(201).json({ success: true });
@@ -301,9 +268,7 @@ app.post('/api/bookings', (req, res) => {
 
 app.delete('/api/bookings/:id', (req, res) => {
   let bookings = [];
-  if (fs.existsSync(DATA_FILE)) {
-      try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-  }
+  if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
   
   const target = bookings.find(b => b.id === req.params.id);
   if (!target) return res.status(404).json({error: 'Not found'});
@@ -313,16 +278,8 @@ app.delete('/api/bookings/:id', (req, res) => {
   
   if (req.body.user) {
       let history = [];
-      if (fs.existsSync(HISTORY_FILE)) {
-          try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-      }
-      history.push({
-        action: 'DELETED', 
-        user: req.body.user.email, 
-        userName: req.body.user.name,
-        timestamp: Date.now(), 
-        details: `Eliminada reserva de ${target.teacherName}: ${target.date}`
-      });
+      if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
+      history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
       fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
   }
   
@@ -332,10 +289,7 @@ app.delete('/api/bookings/:id', (req, res) => {
 
 app.get('/api/history', (req, res) => {
   if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
-  try {
-    const h = JSON.parse(fs.readFileSync(HISTORY_FILE));
-    res.json(h.sort((a,b) => b.timestamp - a.timestamp));
-  } catch(e) { res.json([]); }
+  try { res.json(JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]').sort((a,b) => b.timestamp - a.timestamp)); } catch(e) { res.json([]); }
 });
 
 app.use(express.static(__dirname));
