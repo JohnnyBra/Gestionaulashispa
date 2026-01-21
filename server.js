@@ -49,21 +49,49 @@ let usersMemoryCache = [];
 let classesMemoryCache = [];
 
 /**
- * CONFIGURACIÓN DE ROLES
+ * CONFIGURACIÓN DE ROLES AMPLIA
+ * Incluye variantes masculinas/femeninas y abreviaturas comunes.
  */
 const ROLE_MAP = {
+  // ADMINISTRADORES
   'ADMIN': 'ADMIN',
   'ADMINISTRADOR': 'ADMIN',
+  'ADMINISTRADORA': 'ADMIN',
   'DIRECCION': 'ADMIN',
   'DIRECTOR': 'ADMIN',
+  'DIRECTORA': 'ADMIN',
   'JEFATURA': 'ADMIN',
+  'JEFE DE ESTUDIOS': 'ADMIN',
+  'JEFA DE ESTUDIOS': 'ADMIN',
   'COORDINADOR': 'ADMIN',
+  'COORDINADORA': 'ADMIN',
+  'SECRETARIA': 'ADMIN',
+  'SECRETARIO': 'ADMIN',
+  'TIC': 'ADMIN',
+  'RDI': 'ADMIN',
+
+  // DOCENTES
   'TUTOR': 'TEACHER',
+  'TUTORA': 'TEACHER',
+  'TUTORIA': 'TEACHER',
   'PROFESOR': 'TEACHER',
+  'PROFESORA': 'TEACHER',
   'DOCENTE': 'TEACHER',
   'TEACHER': 'TEACHER',
   'MAESTRO': 'TEACHER',
-  'USER': 'TEACHER'
+  'MAESTRA': 'TEACHER',
+  'USER': 'TEACHER',
+  'USUARIO': 'TEACHER',
+  'ORIENTADOR': 'TEACHER',
+  'ORIENTADORA': 'TEACHER',
+  'ORIENTACION': 'TEACHER',
+  'PT': 'TEACHER', // Pedagogía Terapéutica
+  'AL': 'TEACHER', // Audición y Lenguaje
+  'ESPECIALISTA': 'TEACHER',
+  'RELIGION': 'TEACHER',
+  'AT': 'TEACHER',
+  'MONITOR': 'TEACHER',
+  'MONITORA': 'TEACHER'
 };
 
 // Carga inicial de Caché
@@ -113,8 +141,16 @@ const syncUsers = async () => {
       const allowedUsers = [];
       
       for (const u of externalUsers) {
+        // Normalización muy agresiva del rol para evitar errores de tipeo o género
         const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
-        const appRole = ROLE_MAP[rawRole];
+        // Intentar buscar match exacto o parcial
+        let appRole = ROLE_MAP[rawRole];
+        
+        // Si no encuentra match directo, buscar si contiene alguna palabra clave
+        if (!appRole) {
+             if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR') || rawRole.includes('JEFE')) appRole = 'ADMIN';
+             else if (rawRole.includes('PROFESOR') || rawRole.includes('TUTOR') || rawRole.includes('DOCENTE')) appRole = 'TEACHER';
+        }
 
         if (appRole) {
             let finalEmail = u.email || u.correo || u.mail;
@@ -137,9 +173,12 @@ const syncUsers = async () => {
       }
       
       if (allowedUsers.length > 0) {
+          // Ordenar alfabéticamente por nombre antes de guardar
+          allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
+          
           usersMemoryCache = allowedUsers;
           fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-          console.log(`✅ [SYNC] Usuarios actualizados: ${allowedUsers.length}`);
+          console.log(`✅ [SYNC] Usuarios actualizados y ordenados: ${allowedUsers.length}`);
       } else {
           console.warn(`⚠️ [SYNC] Se recibieron 0 usuarios válidos (Raw: ${externalUsers.length})`);
       }
@@ -262,7 +301,12 @@ app.post('/api/proxy/login', async (req, res) => {
     try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false, message: "Error parsing servidor externo"}); }
     
     const rawRole = (extUser.role || extUser.rol || '').toUpperCase();
-    const appRole = ROLE_MAP[rawRole];
+    // Reutilizamos la lógica del mapa para consistencia
+    let appRole = ROLE_MAP[rawRole];
+    if (!appRole) {
+         if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
+         else if (rawRole.includes('PROFESOR') || rawRole.includes('TUTOR') || rawRole.includes('DOCENTE')) appRole = 'TEACHER';
+    }
     
     if (!appRole) return res.status(403).json({ success: false, message: 'Sin acceso (Rol no autorizado).' });
     
@@ -287,7 +331,12 @@ app.post('/api/proxy/login', async (req, res) => {
   }
 });
 
-app.get('/api/teachers', (req, res) => res.json(usersMemoryCache));
+// Endpoint ordenado para asegurar que el frontend recibe la lista limpia
+app.get('/api/teachers', (req, res) => {
+    // Devolver usuarios ordenados alfabéticamente
+    const sorted = [...usersMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
+    res.json(sorted);
+});
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => res.json(readBookings()));
 app.get('/api/history', (req, res) => {
