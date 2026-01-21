@@ -4,6 +4,7 @@ const path = require('path');
 const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
+const { io: ClientIO } = require('socket.io-client');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -14,6 +15,7 @@ const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 
 // --- CONFIGURACIÓN EXTERNA ---
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
+const EXTERNAL_SOCKET_URL = 'https://prisma.bibliohispa.es';
 // Forzamos el valor por defecto si no viene en el env
 const API_SECRET = process.env.API_SECRET || 'YOUR_API_SECRET'; 
 
@@ -27,7 +29,7 @@ const getCommonHeaders = () => ({
   'Cache-Control': 'no-cache',
   'api_secret': API_SECRET,
   'x-api-secret': API_SECRET,
-  'Authorization': `Bearer ${API_SECRET}` // Intento extra por si usa Bearer
+  'Authorization': `Bearer ${API_SECRET}`
 });
 
 const server = http.createServer(app);
@@ -63,120 +65,129 @@ const loadCache = () => {
 };
 loadCache();
 
-// --- EXTERNAL DATA SYNC ---
-const syncUsers = async () => {
-  // Enviamos secreto también en URL por si el servidor ignora headers en GET
-  const targetUrl = `${EXTERNAL_API_BASE}/api/export/users?secret=${API_SECRET}`;
-  console.log(`🔄 [SYNC] Solicitando Usuarios a: ${EXTERNAL_API_BASE}`);
+// --- EXTERNAL DATA SYNC (VIA SOCKET) ---
+let prismaSocket = null;
 
-  try {
-    const response = await fetch(targetUrl, { 
-        method: 'GET', 
-        headers: getCommonHeaders()
-    });
+const processExternalUsers = (externalUsers) => {
+    if (!Array.isArray(externalUsers)) return;
 
-    if (!response.ok) {
-        const errText = await response.text();
-        console.error(`❌ [SYNC] Error HTTP ${response.status} Usuarios. Respuesta: ${errText.substring(0, 100)}`);
-        // Si falla, no borramos la caché antigua para mantener servicio
-        return;
-    }
+    console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos...`);
 
-    let data = await response.json();
-    // Soporte para estructura { data: [...] } o [...] directo
-    let externalUsers = Array.isArray(data) ? data : (data.data || []);
+    const allowedUsers = [];
 
-    if (externalUsers.length > 0) {
-      const allowedUsers = [];
+    for (const u of externalUsers) {
+      const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
       
-      for (const u of externalUsers) {
-        const rawRole = (u.role || u.rol || 'TUTOR').toString().toUpperCase().trim();
-        let appRole = ROLE_MAP[rawRole];
-        
-        // Si no mapea, inferimos por palabras clave o asumimos profesor por defecto al venir de endpoint de usuarios
-        if (!appRole) {
-            if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
-            else appRole = 'TEACHER'; 
-        }
+      // Strict Whitelist Logic: Only explicitly mapped roles are allowed.
+      let appRole = ROLE_MAP[rawRole];
 
-        let finalEmail = u.email || u.correo || u.mail || u.id;
-        // Si el email no parece email y tenemos ID, construimos uno falso para que funcione el sistema
-        if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
-            finalEmail = `${u.id}@colegiolahispanidad.es`;
-        }
-
-        if (finalEmail) {
-            allowedUsers.push({
-              id: u.id || finalEmail, 
-              name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Docente',
-              email: finalEmail.toLowerCase().trim(),
-              role: appRole,
-              classId: u.classId || u.id_clase || null 
-            });
-        }
+      // Fallback inference only for explicit admin/teacher keywords
+      if (!appRole) {
+          if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
+          else if (rawRole === 'TUTOR') appRole = 'TEACHER';
       }
-      
-      if (allowedUsers.length > 0) {
-          // Ordenar alfabéticamente
-          allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
-          
-          usersMemoryCache = allowedUsers;
-          fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-          console.log(`✅ [SYNC] ÉXITO: ${allowedUsers.length} usuarios sincronizados.`);
-      } else {
-          console.warn(`⚠️ [SYNC] JSON válido pero lista de usuarios vacía.`);
+
+      // If still no role, SKIP THIS USER. Do not default to TEACHER.
+      if (!appRole) continue;
+
+      let finalEmail = u.email || u.correo || u.mail || u.id;
+      // Si el email no parece email y tenemos ID, construimos uno falso para que funcione el sistema
+      if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
+          finalEmail = `${u.id}@colegiolahispanidad.es`;
+      }
+
+      if (finalEmail) {
+          allowedUsers.push({
+            id: u.id || finalEmail,
+            name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Docente',
+            email: finalEmail.toLowerCase().trim(),
+            role: appRole,
+            classId: u.classId || u.id_clase || null
+          });
       }
     }
-  } catch (err) { 
-      console.error(`❌ [SYNC] Excepción Red Usuarios: ${err.message}`); 
-  }
+
+    if (allowedUsers.length > 0) {
+        // Ordenar alfabéticamente
+        allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
+
+        usersMemoryCache = allowedUsers;
+        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
+        console.log(`✅ [SYNC] ÉXITO: ${allowedUsers.length} usuarios sincronizados (filtro aplicado).`);
+    } else {
+        console.warn(`⚠️ [SYNC] Lista de usuarios procesada vacía.`);
+    }
 };
 
-const syncClasses = async () => {
-    const targetUrl = `${EXTERNAL_API_BASE}/api/export/classes?secret=${API_SECRET}`;
+const processExternalClasses = (externalClasses) => {
+    if (!Array.isArray(externalClasses)) return;
     
-    try {
-      const response = await fetch(targetUrl, { 
-          method: 'GET', 
-          headers: getCommonHeaders()
-      });
+    console.log(`🔄 [SYNC] Procesando ${externalClasses.length} clases recibidas...`);
 
-      if (!response.ok) {
-          console.error(`❌ [SYNC] Error HTTP ${response.status} en Clases.`);
-          return;
-      }
-  
-      let data = await response.json();
-      let externalClasses = Array.isArray(data) ? data : (data.data || []);
+    const cleanClasses = externalClasses.map(c => ({
+        id: c.id,
+        name: c.name || c.nombre || 'Sin nombre'
+    })).filter(c => c.name);
 
-      if (externalClasses.length > 0) {
-        const cleanClasses = externalClasses.map(c => ({
-            id: c.id,
-            name: c.name || c.nombre || 'Sin nombre'
-        })).filter(c => c.name);
-
+    if (cleanClasses.length > 0) {
         classesMemoryCache = cleanClasses;
         fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
         console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
-      }
-    } catch (err) { console.error(`❌ [SYNC] Excepción Clases: ${err.message}`); }
+    }
 };
 
-const runSync = () => { 
-    syncUsers(); 
-    syncClasses(); 
+const startPrismaSocket = () => {
+    console.log(`🔄 [SOCKET] Iniciando conexión a ${EXTERNAL_SOCKET_URL}`);
+    prismaSocket = ClientIO(EXTERNAL_SOCKET_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: 5000
+    });
+
+    prismaSocket.on('connect', () => {
+         console.log('✅ [SOCKET] Conectado a Prisma Edu');
+    });
+
+    prismaSocket.on('init_state', (data) => {
+         console.log('📦 [SOCKET] Recibido estado inicial');
+         if (data.users) processExternalUsers(data.users);
+         if (data.classes) processExternalClasses(data.classes);
+    });
+
+    prismaSocket.on('sync_users', (users) => {
+         console.log('🔄 [SOCKET] Actualización de usuarios recibida (Evento sync_users)');
+         processExternalUsers(users);
+    });
+
+    prismaSocket.on('sync_classes', (classes) => {
+         console.log('🔄 [SOCKET] Actualización de clases recibida (Evento sync_classes)');
+         processExternalClasses(classes);
+    });
+
+    prismaSocket.on('disconnect', () => {
+         console.log('⚠️ [SOCKET] Desconectado de Prisma Edu');
+    });
+
+    prismaSocket.on('connect_error', (err) => {
+         console.error(`❌ [SOCKET] Error de conexión: ${err.message}`);
+    });
 };
 
-// Iniciar sincronización tras arranque
-setTimeout(runSync, 3000);
-// Repetir cada hora
-setInterval(runSync, 60 * 60 * 1000);
+// Iniciar sincronización por Socket
+startPrismaSocket();
 
 // --- API ENDPOINTS ---
 
 app.get('/api/admin/force-sync', (req, res) => {
-    runSync();
-    res.json({ success: true, message: 'Sync iniciada.' });
+    if (prismaSocket) {
+        console.log('🔄 [ADMIN] Forzando reconexión de socket...');
+        prismaSocket.disconnect();
+        prismaSocket.connect();
+        res.json({ success: true, message: 'Reconexión de socket iniciada.' });
+    } else {
+        startPrismaSocket();
+        res.json({ success: true, message: 'Socket iniciado.' });
+    }
 });
 
 app.post('/api/auth/google', async (req, res) => {
