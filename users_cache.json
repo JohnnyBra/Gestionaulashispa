@@ -1,0 +1,401 @@
+[
+  {
+    "id": "admin",
+    "name": "Administrador",
+    "email": "admin@colegiolahispanidad.es",
+    "role": "ADMIN",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_1_435",
+    "name": "Adrián Álvarez Bayo",
+    "email": "adrian.alvarez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_36_329",
+    "name": "Adrián Leiva Gómez",
+    "email": "adrian.leiva@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_11_324",
+    "name": "Alicia Borrero García",
+    "email": "alicia.borrero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_26_734",
+    "name": "Ana Garrido Fargas",
+    "email": "ana.garrido@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_50_330",
+    "name": "Ana María Palma Morgado",
+    "email": "ana.palma@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_24"
+  },
+  {
+    "id": "user_1768993489907_imp_7_352",
+    "name": "Antonio Bermejo Macías",
+    "email": "antonio.bermejo@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_14"
+  },
+  {
+    "id": "user_1768993489907_imp_20_963",
+    "name": "Antonio Díaz Rodríguez",
+    "email": "antonio.diaz@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_18"
+  },
+  {
+    "id": "user_1768993489907_imp_30_356",
+    "name": "Antonio Jesús González Calleja",
+    "email": "antoniojesus.gonzalez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_13"
+  },
+  {
+    "id": "user_1768993489908_imp_60_20",
+    "name": "Antonio Soto Sáenz",
+    "email": "antonio.soto@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_17_419",
+    "name": "Asunción María Cordero González",
+    "email": "asun.cordero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_1"
+  },
+  {
+    "id": "user_1768993489907_imp_24_913",
+    "name": "Beatriz García Luque",
+    "email": "beatriz.garcia@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_9"
+  },
+  {
+    "id": "user_1768993489907_imp_18_878",
+    "name": "Belén De la Cámara García",
+    "email": "belen.delacamara@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_5"
+  },
+  {
+    "id": "user_1768993489907_imp_27_273",
+    "name": "Belén Gómez Moreno",
+    "email": "belen.gomez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_4_487",
+    "name": "Carlos Barrero García",
+    "email": "carlos.barrero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_52_517",
+    "name": "Carlos Pereira Rivera",
+    "email": "carlos.pereira@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_47_176",
+    "name": "Celia Ortega Jiménez",
+    "email": "celia.ortega@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_17"
+  },
+  {
+    "id": "user_1768950451081_83",
+    "name": "Cristina",
+    "email": "direccion@colegiolahispanidad.es",
+    "role": "ADMIN",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_3_934",
+    "name": "Cristina Báez Garrido",
+    "email": "cristina.baez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_31_810",
+    "name": "Cristina González Irissarry",
+    "email": "cristina.gonzalez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_62_850",
+    "name": "Diego Vázquez Martagón",
+    "email": "diego.vazquez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_0_440",
+    "name": "Esther Alaminos García",
+    "email": "esther.jimenez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_2"
+  },
+  {
+    "id": "user_1768993489907_imp_32_569",
+    "name": "Esther Jiménez Cruz",
+    "email": "esther.jimenez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_2"
+  },
+  {
+    "id": "user_1768993489907_imp_37_220",
+    "name": "Eva María Macías García",
+    "email": "eva.macias@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_7"
+  },
+  {
+    "id": "user_1768993489907_imp_39_401",
+    "name": "Francisco Márquez Arroyo",
+    "email": "paco.marquez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_22"
+  },
+  {
+    "id": "user_1768993489907_imp_38_136",
+    "name": "Isabel María Manga Gómez",
+    "email": "isabel.manga@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_61_436",
+    "name": "Isabel María Trinidad Fernández",
+    "email": "isabel.trinidad@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_1"
+  },
+  {
+    "id": "teacher_class_16",
+    "name": "Javier Barrero García",
+    "email": "javier.barrero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_16"
+  },
+  {
+    "id": "user_1768993489908_imp_49_18",
+    "name": "Juan Francisco Palacios Lanzas",
+    "email": "juafranciscopalacios@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_23_493",
+    "name": "Leandro Joaquín Flores Pérez",
+    "email": "leandro.flores@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_21"
+  },
+  {
+    "id": "user_1768993489907_imp_14_548",
+    "name": "Lidia María Calvo Lagares",
+    "email": "lidia@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_54_213",
+    "name": "Lorena Quintero Domínguez",
+    "email": "lorena.quintero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_15"
+  },
+  {
+    "id": "user_1768993489908_imp_55_485",
+    "name": "Luís Quintero Pichardo",
+    "email": "luis.quintero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_53_848",
+    "name": "Manuel Pozo Cano",
+    "email": "manuel.pozo@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_26"
+  },
+  {
+    "id": "user_1768993489908_imp_42_325",
+    "name": "María Davinia Morales López",
+    "email": "davinia.morales@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_8"
+  },
+  {
+    "id": "user_1768993489907_imp_29_481",
+    "name": "María del Carmen Gómez Rodríguez",
+    "email": "carmen.gomez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_45_375",
+    "name": "María del Pilar Oliveira Asensi",
+    "email": "mariadelpilar.oliveira@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_43_470",
+    "name": "María del Rocío Moreno Cruz",
+    "email": "rocio.moreno@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_6_112",
+    "name": "María Eugenia Beltrán Becerril",
+    "email": "mariaeugenia.beltran@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_20"
+  },
+  {
+    "id": "user_1768993489907_imp_15_761",
+    "name": "María Flores Carrillo López",
+    "email": "flor.carrillo@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_21_524",
+    "name": "María José Domínguez Baena",
+    "email": "mariajose.dominguez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_57_195",
+    "name": "María Luz Romero Béjar",
+    "email": "mariluz.romero@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_6"
+  },
+  {
+    "id": "user_1768993489908_imp_51_670",
+    "name": "María Nieves Parra Martín",
+    "email": "nieves.parra@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_16_748",
+    "name": "María Rosario Chávez González",
+    "email": "rosariochavez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_25"
+  },
+  {
+    "id": "user_1768993489907_imp_25_14",
+    "name": "Marta García Valle",
+    "email": "marta.garcia@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_41_74",
+    "name": "Marta Mendoza Alvarado",
+    "email": "marta.mendoza@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_10_859",
+    "name": "Mercedes Blanco Castaño",
+    "email": "mercedes.blanco@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_46_529",
+    "name": "Pedro Oliveira Asensi",
+    "email": "pedro.oliveira@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_13_26",
+    "name": "Ramón Calles Rodríguez",
+    "email": "ramon.calles@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_19"
+  },
+  {
+    "id": "user_1768993489908_imp_56_102",
+    "name": "Raúl Domingo Rodríguez Parrado",
+    "email": "raul.rodriguez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_10"
+  },
+  {
+    "id": "user_1768993489907_imp_2_395",
+    "name": "Rocío Arias Márquez",
+    "email": "rocio.arias@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_23"
+  },
+  {
+    "id": "user_1768993489908_imp_63_409",
+    "name": "Rocío Vázquez Ortiz",
+    "email": "rocio.vazquez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_22_27",
+    "name": "Rosario Domínguez Díaz",
+    "email": "chary.dominguez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489907_imp_35_742",
+    "name": "Selene Lazo Pérez",
+    "email": "selene.lazo@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1768993489908_imp_58_81",
+    "name": "Sergio Sánchez Ledesma",
+    "email": "sergio.sanchez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_11"
+  },
+  {
+    "id": "user_1768993489907_imp_8_523",
+    "name": "Sonia Betanzos Cordero",
+    "email": "sonia.betanzos@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": "class_12"
+  },
+  {
+    "id": "user_1768993489907_imp_28_457",
+    "name": "Virginia Isabel Gómez Palomeque",
+    "email": "virginia.gomez@colegiolahispanidad.es",
+    "role": "TEACHER",
+    "classId": null
+  }
+]
