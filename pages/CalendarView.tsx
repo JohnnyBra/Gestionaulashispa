@@ -99,7 +99,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
             getClasses()
         ]);
         setBookings(bData);
-        setTeachers(tData);
+        // Ordenar alfabéticamente por si acaso el backend no lo hizo
+        setTeachers(tData.sort((a,b) => a.name.localeCompare(b.name)));
         setImportedClasses(cData);
       } catch (err) {
         setError("Error de conexión.");
@@ -140,6 +141,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     if (existing) {
         setSelectedTeacherEmail(existing.teacherEmail);
     } else if (user.role === Role.ADMIN && teachers.length > 0) {
+        // Por defecto al primer profesor de la lista si somos admin
         setSelectedTeacherEmail(teachers[0].email);
     } else {
         setSelectedTeacherEmail(user.email);
@@ -357,7 +359,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={existingBooking ? 'Detalles' : 'Nueva Reserva'}>
-        {/* ... Modal content remains same as previous ... */}
         {existingBooking ? (
             <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
@@ -403,6 +404,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                             <div>
                                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Profesor Responsable</label>
                                 <select value={selectedTeacherEmail} onChange={e => setSelectedTeacherEmail(e.target.value)} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-sm outline-none focus:ring-2 focus:ring-brand-500/20">
+                                    {teachers.length === 0 && <option>Cargando lista...</option>}
                                     {teachers.map(t => <option key={t.email} value={t.email}>{t.name}</option>)}
                                 </select>
                             </div>
