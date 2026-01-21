@@ -19,7 +19,7 @@ const API_SECRET = process.env.API_SECRET || 'ojosyculos';
 const PROXY_HEADERS = {
   'Content-Type': 'application/json',
   'Accept': 'application/json, text/plain, */*',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'User-Agent': 'Mozilla/5.0 (ReservaEspaciosBot)',
   'api_secret': API_SECRET
 };
 
@@ -41,12 +41,17 @@ let classesMemoryCache = [];
  */
 const ROLE_MAP = {
   'ADMIN': 'ADMIN',
+  'ADMINISTRADOR': 'ADMIN',
   'DIRECCION': 'ADMIN',
+  'DIRECTOR': 'ADMIN',
   'JEFATURA': 'ADMIN',
+  'COORDINADOR': 'ADMIN',
   'TUTOR': 'TEACHER',
   'PROFESOR': 'TEACHER',
   'DOCENTE': 'TEACHER',
-  'TEACHER': 'TEACHER'
+  'TEACHER': 'TEACHER',
+  'MAESTRO': 'TEACHER',
+  'USER': 'TEACHER'
 };
 
 // Carga inicial de Caché
@@ -54,40 +59,60 @@ const loadCache = () => {
   if (fs.existsSync(USERS_CACHE_FILE)) {
     try {
       usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [SISTEMA] Usuarios cargados: ${usersMemoryCache.length}`);
-    } catch (e) { console.error("Error usuarios cache", e); }
+      console.log(`✅ [CACHE] Usuarios cargados en memoria: ${usersMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché usuarios:", e); }
   }
   if (fs.existsSync(CLASSES_CACHE_FILE)) {
     try {
       classesMemoryCache = JSON.parse(fs.readFileSync(CLASSES_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [SISTEMA] Clases cargadas: ${classesMemoryCache.length}`);
-    } catch (e) { console.error("Error clases cache", e); }
+      console.log(`✅ [CACHE] Clases cargadas en memoria: ${classesMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché clases:", e); }
   }
 };
 loadCache();
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
-  const targetUrl = `${EXTERNAL_API_BASE}/api/export/users`;
-  console.log(`🔄 [SYNC] Sincronizando usuarios...`);
+  // Añadimos el secreto también en query string por si el servidor ignora headers en GET
+  const targetUrl = `${EXTERNAL_API_BASE}/api/export/users?secret=${API_SECRET}`;
+  console.log(`🔄 [SYNC] Iniciando sincronización de usuarios con ${EXTERNAL_API_BASE}...`);
 
   try {
     const response = await fetch(targetUrl, { method: 'GET', headers: PROXY_HEADERS });
-    if (!response.ok) return;
+    
+    if (!response.ok) {
+        console.error(`❌ [SYNC] Error HTTP ${response.status}: ${response.statusText}`);
+        const text = await response.text();
+        console.error(`❌ [SYNC] Respuesta servidor: ${text.substring(0, 100)}...`);
+        return;
+    }
 
-    const externalUsers = await response.json();
+    let externalUsers = await response.json();
+
+    // Soporte para respuestas envueltas en { data: [...] }
+    if (!Array.isArray(externalUsers) && externalUsers.data && Array.isArray(externalUsers.data)) {
+        externalUsers = externalUsers.data;
+    }
+
     if (Array.isArray(externalUsers)) {
+      console.log(`📡 [SYNC] Datos recibidos: ${externalUsers.length} registros raw.`);
+      
       const allowedUsers = [];
+      let skippedCount = 0;
+
       for (const u of externalUsers) {
-        const rawRole = (u.role || u.rol || '').toUpperCase().trim();
+        const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
         const appRole = ROLE_MAP[rawRole];
 
         if (appRole) {
             let finalEmail = u.email || u.correo || u.mail;
+            
+            // Generar email dummy si no existe pero hay ID (para compatibilidad)
             if (!finalEmail && u.id) {
                 if (u.id.toString().includes('@')) finalEmail = u.id;
                 else finalEmail = `${u.id}@colegiolahispanidad.es`;
             }
+
             if (finalEmail) {
                 allowedUsers.push({
                   id: u.id || finalEmail, 
@@ -96,27 +121,52 @@ const syncUsers = async () => {
                   role: appRole,
                   classId: u.classId || null 
                 });
+            } else {
+                // Usuario con rol válido pero sin email ni ID
+                skippedCount++;
+            }
+        } else {
+            // Rol no mapeado
+            skippedCount++;
+            if (skippedCount <= 3) { // Loguear solo los primeros para no saturar
+                console.warn(`⚠️ [SYNC] Usuario omitido por rol desconocido: "${rawRole}" (${u.name || 'Sin nombre'})`);
             }
         }
       }
-      usersMemoryCache = allowedUsers;
-      fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-      console.log(`✅ [SYNC] Usuarios actualizados: ${allowedUsers.length}`);
-    } 
-  } catch (err) { console.error(`❌ [SYNC] Error usuarios: ${err.message}`); }
+      
+      if (allowedUsers.length > 0) {
+          usersMemoryCache = allowedUsers;
+          fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
+          console.log(`✅ [SYNC] Sincronización exitosa. ${allowedUsers.length} usuarios válidos importados.`);
+      } else {
+          console.warn(`⚠️ [SYNC] Se recibieron datos pero ningún usuario pasó el filtro.`);
+      }
+    } else {
+      console.error(`❌ [SYNC] Formato de respuesta inválido (se esperaba un array).`);
+    }
+  } catch (err) { 
+      console.error(`❌ [SYNC] Excepción crítica al sincronizar usuarios: ${err.message}`); 
+  }
 };
 
 const syncClasses = async () => {
-    const targetUrl = `${EXTERNAL_API_BASE}/api/export/classes`;
+    const targetUrl = `${EXTERNAL_API_BASE}/api/export/classes?secret=${API_SECRET}`;
     console.log(`🔄 [SYNC] Sincronizando clases...`);
   
     try {
       const response = await fetch(targetUrl, { method: 'GET', headers: PROXY_HEADERS });
-      if (!response.ok) return;
+      if (!response.ok) {
+          console.error(`❌ [SYNC] Error HTTP Clases: ${response.status}`);
+          return;
+      }
   
-      const externalClasses = await response.json();
+      let externalClasses = await response.json();
+      
+      if (!Array.isArray(externalClasses) && externalClasses.data && Array.isArray(externalClasses.data)) {
+        externalClasses = externalClasses.data;
+      }
+
       if (Array.isArray(externalClasses)) {
-        // Mapeamos a un formato simple
         const cleanClasses = externalClasses.map(c => ({
             id: c.id,
             name: c.name || c.nombre || 'Sin nombre'
@@ -130,22 +180,36 @@ const syncClasses = async () => {
 };
 
 // Sincronizar al iniciar y cada hora
-const runSync = () => { syncUsers(); syncClasses(); };
-runSync();
+const runSync = () => { 
+    console.log("⏰ [CRON] Ejecutando tarea de sincronización...");
+    syncUsers(); 
+    syncClasses(); 
+};
+
+// Ejecutar tras 2 segundos para dar tiempo al servidor a levantar
+setTimeout(runSync, 2000);
+// Repetir cada hora
 setInterval(runSync, 60 * 60 * 1000);
 
 // --- HELPERS ---
 const readBookings = () => {
   if (!fs.existsSync(DATA_FILE)) return [];
-  return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
+  try {
+      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
+  } catch(e) { return []; }
 };
 
 const appendToHistory = (actionLog) => {
   let history = [];
   if (fs.existsSync(HISTORY_FILE)) {
-    history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]');
+    try {
+        history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]');
+    } catch(e) {}
   }
   history.push(actionLog);
+  // Mantener solo los últimos 1000 logs para no saturar disco
+  if (history.length > 1000) history = history.slice(-1000);
+  
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 };
 
@@ -159,11 +223,18 @@ app.post('/api/auth/google', async (req, res) => {
     if (!googleRes.ok) return res.status(401).json({ success: false, message: 'Token Google inválido' });
     const payload = await googleRes.json();
     const googleEmail = payload.email.toLowerCase();
+    
+    // Buscar en caché
     const user = usersMemoryCache.find(u => u.email === googleEmail);
     if (user) {
         return res.json({ success: true, role: user.role, name: user.name, id: user.id, email: user.email });
     } else {
-        return res.status(403).json({ success: false, message: 'Acceso exclusivo para Docentes y Dirección.' });
+        // Fallback: Si es un email del dominio, dejar pasar como TEACHER si no está en lista (opcional, por seguridad ahora denegamos)
+        // return res.status(403).json({ success: false, message: 'Acceso exclusivo para personal autorizado.' });
+        
+        // DEBUG: Permitir ver el error
+        console.warn(`⚠️ Login Google rechazado: ${googleEmail} no está en la lista de usuarios sincronizados.`);
+        return res.status(403).json({ success: false, message: `Usuario ${googleEmail} no encontrado en la base de datos de personal.` });
     }
   } catch (e) { res.status(500).json({ success: false, message: 'Error interno' }); }
 });
@@ -171,19 +242,28 @@ app.post('/api/auth/google', async (req, res) => {
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
   const cleanEmail = email ? email.trim().toLowerCase() : '';
+  
   try {
+    // Intentar login contra Prisma
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
       method: 'POST',
       headers: PROXY_HEADERS,
       body: JSON.stringify({ username: cleanEmail, email: cleanEmail, password })
     });
+    
     const text = await response.text();
-    if (!response.ok) return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+    if (!response.ok) {
+        console.warn(`⚠️ Login fallido para ${cleanEmail}: ${response.status}`);
+        return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+    }
+    
     let extUser;
-    try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false}); }
+    try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false, message: "Error respuesta servidor externo"}); }
+    
     const rawRole = (extUser.role || extUser.rol || '').toUpperCase();
     const appRole = ROLE_MAP[rawRole];
-    if (!appRole) return res.status(403).json({ success: false, message: 'Sin acceso.' });
+    
+    if (!appRole) return res.status(403).json({ success: false, message: 'Sin acceso (Rol no autorizado).' });
     
     let finalEmail = extUser.email || extUser.correo || extUser.mail;
     if (!finalEmail && extUser.id) {
@@ -200,7 +280,10 @@ app.post('/api/proxy/login', async (req, res) => {
         id: extUser.id || finalEmail,
         email: finalEmail 
     });
-  } catch (err) { res.status(503).json({ success: false, message: 'Error de conexión' }); }
+  } catch (err) { 
+      console.error("Login error:", err);
+      res.status(503).json({ success: false, message: 'Error de conexión con servidor de autenticación' }); 
+  }
 });
 
 app.get('/api/teachers', (req, res) => res.json(usersMemoryCache));
@@ -208,8 +291,10 @@ app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => res.json(readBookings()));
 app.get('/api/history', (req, res) => {
   if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
-  const h = JSON.parse(fs.readFileSync(HISTORY_FILE));
-  res.json(h.sort((a,b) => b.timestamp - a.timestamp));
+  try {
+    const h = JSON.parse(fs.readFileSync(HISTORY_FILE));
+    res.json(h.sort((a,b) => b.timestamp - a.timestamp));
+  } catch(e) { res.json([]); }
 });
 
 app.post('/api/bookings', (req, res) => {
@@ -218,8 +303,6 @@ app.post('/api/bookings', (req, res) => {
     let bookings = readBookings();
     
     for (const item of incoming) {
-       // Conflicto: misma fecha, hora, etapa Y mismo recurso
-       // Si el recurso no viene definido (reservas viejas), asumimos ROOM
        const incomingResource = item.resource || 'ROOM';
 
        if (bookings.some(b => {
@@ -244,12 +327,17 @@ app.delete('/api/bookings/:id', (req, res) => {
   let bookings = readBookings();
   const target = bookings.find(b => b.id === req.params.id);
   if (!target) return res.status(404).json({error: 'Not found'});
+  
   bookings = bookings.filter(b => b.id !== req.params.id);
   fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-  appendToHistory({
-    action: 'DELETED', user: req.body.user.email, userName: req.body.user.name,
-    timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}: ${target.date}`
-  });
+  
+  if (req.body.user) {
+      appendToHistory({
+        action: 'DELETED', user: req.body.user.email, userName: req.body.user.name,
+        timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}: ${target.date}`
+      });
+  }
+  
   io.emit('server:bookings_updated', bookings);
   res.json({ success: true });
 });
