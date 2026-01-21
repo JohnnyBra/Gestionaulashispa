@@ -16,23 +16,19 @@ const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 const API_SECRET = process.env.API_SECRET || 'ojosyculos'; 
 
-// User Agent de Chrome estándar para evitar bloqueos de WAF/Firewall
+// User Agent estándar para evitar bloqueos
 const STANDARD_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
 
-// Helper para cabeceras dinámicas
 const getHeaders = (method = 'GET') => {
   const headers = {
     'Accept': 'application/json, text/plain, */*',
     'User-Agent': STANDARD_USER_AGENT,
     'api_secret': API_SECRET,
-    'x-api-secret': API_SECRET // Enviar en ambos formatos por compatibilidad
+    'x-api-secret': API_SECRET
   };
-  
-  // Solo añadir Content-Type si hay cuerpo (POST/PUT)
   if (method === 'POST' || method === 'PUT') {
     headers['Content-Type'] = 'application/json';
   }
-  
   return headers;
 };
 
@@ -48,348 +44,175 @@ app.use(express.json());
 let usersMemoryCache = [];
 let classesMemoryCache = [];
 
-/**
- * CONFIGURACIÓN DE ROLES AMPLIA
- * Incluye variantes masculinas/femeninas y abreviaturas comunes.
- */
 const ROLE_MAP = {
-  // ADMINISTRADORES
-  'ADMIN': 'ADMIN',
-  'ADMINISTRADOR': 'ADMIN',
-  'ADMINISTRADORA': 'ADMIN',
-  'DIRECCION': 'ADMIN',
-  'DIRECTOR': 'ADMIN',
-  'DIRECTORA': 'ADMIN',
-  'JEFATURA': 'ADMIN',
-  'JEFE DE ESTUDIOS': 'ADMIN',
-  'JEFA DE ESTUDIOS': 'ADMIN',
-  'COORDINADOR': 'ADMIN',
-  'COORDINADORA': 'ADMIN',
-  'SECRETARIA': 'ADMIN',
-  'SECRETARIO': 'ADMIN',
-  'TIC': 'ADMIN',
-  'RDI': 'ADMIN',
-
-  // DOCENTES
-  'TUTOR': 'TEACHER',
-  'TUTORA': 'TEACHER',
-  'TUTORIA': 'TEACHER',
-  'PROFESOR': 'TEACHER',
-  'PROFESORA': 'TEACHER',
-  'DOCENTE': 'TEACHER',
-  'TEACHER': 'TEACHER',
-  'MAESTRO': 'TEACHER',
-  'MAESTRA': 'TEACHER',
-  'USER': 'TEACHER',
-  'USUARIO': 'TEACHER',
-  'ORIENTADOR': 'TEACHER',
-  'ORIENTADORA': 'TEACHER',
-  'ORIENTACION': 'TEACHER',
-  'PT': 'TEACHER', // Pedagogía Terapéutica
-  'AL': 'TEACHER', // Audición y Lenguaje
-  'ESPECIALISTA': 'TEACHER',
-  'RELIGION': 'TEACHER',
-  'AT': 'TEACHER',
-  'MONITOR': 'TEACHER',
-  'MONITORA': 'TEACHER'
+  'ADMIN': 'ADMIN', 'ADMINISTRADOR': 'ADMIN', 'DIRECCION': 'ADMIN', 'DIRECTOR': 'ADMIN', 'JEFATURA': 'ADMIN',
+  'TUTOR': 'TEACHER', 'PROFESOR': 'TEACHER', 'DOCENTE': 'TEACHER', 'MAESTRO': 'TEACHER', 'USER': 'TEACHER', 'ORIENTADOR': 'TEACHER'
 };
 
-// Carga inicial de Caché
 const loadCache = () => {
   if (fs.existsSync(USERS_CACHE_FILE)) {
     try {
       usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [CACHE] Usuarios cargados en memoria: ${usersMemoryCache.length}`);
-    } catch (e) { console.error("Error lectura caché usuarios:", e); }
+      console.log(`✅ [CACHE] Usuarios cargados: ${usersMemoryCache.length}`);
+    } catch (e) { console.error("Error caché usuarios:", e); }
   }
   if (fs.existsSync(CLASSES_CACHE_FILE)) {
     try {
       classesMemoryCache = JSON.parse(fs.readFileSync(CLASSES_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [CACHE] Clases cargadas en memoria: ${classesMemoryCache.length}`);
-    } catch (e) { console.error("Error lectura caché clases:", e); }
+      console.log(`✅ [CACHE] Clases cargadas: ${classesMemoryCache.length}`);
+    } catch (e) { console.error("Error caché clases:", e); }
   }
 };
 loadCache();
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
-  // URL con secreto como query param (fallback)
   const targetUrl = `${EXTERNAL_API_BASE}/api/export/users?secret=${API_SECRET}`;
-  console.log(`🔄 [SYNC] Sincronizando usuarios desde: ${EXTERNAL_API_BASE}`);
+  console.log(`🔄 [SYNC] Sincronizando usuarios (Tutores) desde Prisma...`);
 
   try {
-    // IMPORTANTE: GET request sin Content-Type header
-    const response = await fetch(targetUrl, { 
-        method: 'GET', 
-        headers: getHeaders('GET') 
-    });
-    
+    const response = await fetch(targetUrl, { method: 'GET', headers: getHeaders('GET') });
     if (!response.ok) {
-        const text = await response.text();
-        console.error(`❌ [SYNC] Fallo HTTP ${response.status}: ${text.substring(0, 200)}`);
+        console.error(`❌ [SYNC] Error HTTP ${response.status}`);
         return;
     }
 
-    let externalUsers = await response.json();
+    let data = await response.json();
+    let externalUsers = Array.isArray(data) ? data : (data.data || []);
 
-    // Normalizar respuesta { data: [] } vs []
-    if (!Array.isArray(externalUsers) && externalUsers.data && Array.isArray(externalUsers.data)) {
-        externalUsers = externalUsers.data;
-    }
-
-    if (Array.isArray(externalUsers)) {
+    if (externalUsers.length > 0) {
       const allowedUsers = [];
       
       for (const u of externalUsers) {
-        // Normalización muy agresiva del rol para evitar errores de tipeo o género
-        const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
-        // Intentar buscar match exacto o parcial
+        // NORMALIZACIÓN DE ROL: 
+        // Si el endpoint es de "export/users" (tutores), asignamos TEACHER por defecto si no viene el campo.
+        const rawRole = (u.role || u.rol || 'TUTOR').toString().toUpperCase().trim();
         let appRole = ROLE_MAP[rawRole];
         
-        // Si no encuentra match directo, buscar si contiene alguna palabra clave
         if (!appRole) {
-             if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR') || rawRole.includes('JEFE')) appRole = 'ADMIN';
-             else if (rawRole.includes('PROFESOR') || rawRole.includes('TUTOR') || rawRole.includes('DOCENTE')) appRole = 'TEACHER';
+            if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
+            else appRole = 'TEACHER'; // Por defecto tratamos como profesor si viene de esta ruta
         }
 
-        if (appRole) {
-            let finalEmail = u.email || u.correo || u.mail;
-            
-            if (!finalEmail && u.id) {
-                if (u.id.toString().includes('@')) finalEmail = u.id;
-                else finalEmail = `${u.id}@colegiolahispanidad.es`;
-            }
+        let finalEmail = u.email || u.correo || u.mail || u.id;
+        if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
+            finalEmail = `${u.id}@colegiolahispanidad.es`;
+        }
 
-            if (finalEmail) {
-                allowedUsers.push({
-                  id: u.id || finalEmail, 
-                  name: u.name || u.nombre || 'Docente',
-                  email: finalEmail.toLowerCase().trim(),
-                  role: appRole,
-                  classId: u.classId || null 
-                });
-            }
+        if (finalEmail) {
+            allowedUsers.push({
+              id: u.id || finalEmail, 
+              name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Docente',
+              email: finalEmail.toLowerCase().trim(),
+              role: appRole,
+              classId: u.classId || u.id_clase || null 
+            });
         }
       }
       
       if (allowedUsers.length > 0) {
-          // Ordenar alfabéticamente por nombre antes de guardar
           allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
-          
           usersMemoryCache = allowedUsers;
           fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-          console.log(`✅ [SYNC] Usuarios actualizados y ordenados: ${allowedUsers.length}`);
-      } else {
-          console.warn(`⚠️ [SYNC] Se recibieron 0 usuarios válidos (Raw: ${externalUsers.length})`);
+          console.log(`✅ [SYNC] ${allowedUsers.length} tutores listos en caché.`);
       }
     }
-  } catch (err) { 
-      console.error(`❌ [SYNC] Error de red Usuarios: ${err.message}`); 
-  }
+  } catch (err) { console.error(`❌ [SYNC] Error usuarios: ${err.message}`); }
 };
 
 const syncClasses = async () => {
     const targetUrl = `${EXTERNAL_API_BASE}/api/export/classes?secret=${API_SECRET}`;
-    
     try {
-      const response = await fetch(targetUrl, { 
-          method: 'GET', 
-          headers: getHeaders('GET') 
-      });
-
-      if (!response.ok) {
-          console.error(`❌ [SYNC] Fallo HTTP Clases ${response.status}`);
-          return;
+      const response = await fetch(targetUrl, { method: 'GET', headers: getHeaders('GET') });
+      if (!response.ok) return;
+      let data = await response.json();
+      let externalClasses = Array.isArray(data) ? data : (data.data || []);
+      if (externalClasses.length > 0) {
+        classesMemoryCache = externalClasses.map(c => ({ id: c.id, name: c.name || c.nombre || 'Clase' }));
+        fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(classesMemoryCache, null, 2));
       }
-  
-      let externalClasses = await response.json();
-      
-      if (!Array.isArray(externalClasses) && externalClasses.data && Array.isArray(externalClasses.data)) {
-        externalClasses = externalClasses.data;
-      }
-
-      if (Array.isArray(externalClasses)) {
-        const cleanClasses = externalClasses.map(c => ({
-            id: c.id,
-            name: c.name || c.nombre || 'Sin nombre'
-        })).filter(c => c.name);
-
-        classesMemoryCache = cleanClasses;
-        fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
-        console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
-      }
-    } catch (err) { console.error(`❌ [SYNC] Error de red Clases: ${err.message}`); }
+    } catch (err) { console.error(`❌ [SYNC] Error clases: ${err.message}`); }
 };
 
-// Sincronizar al iniciar y cada hora
-const runSync = () => { 
-    syncUsers(); 
-    syncClasses(); 
-};
-
+const runSync = () => { syncUsers(); syncClasses(); };
 setTimeout(runSync, 2000);
 setInterval(runSync, 60 * 60 * 1000);
 
-// --- HELPERS ---
-const readBookings = () => {
-  if (!fs.existsSync(DATA_FILE)) return [];
-  try {
-      return JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
-  } catch(e) { return []; }
-};
-
-const appendToHistory = (actionLog) => {
-  let history = [];
-  if (fs.existsSync(HISTORY_FILE)) {
-    try {
-        history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]');
-    } catch(e) {}
-  }
-  history.push(actionLog);
-  if (history.length > 1000) history = history.slice(-1000);
-  fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
-};
-
 // --- API ENDPOINTS ---
-
-// Endpoint de prueba para forzar sincronización manualmente
-app.get('/api/admin/force-sync', (req, res) => {
-    runSync();
-    res.json({ success: true, message: 'Sincronización iniciada en segundo plano. Revisa logs.' });
-});
+app.get('/api/admin/force-sync', (req, res) => { runSync(); res.json({ success: true }); });
 
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
-  if (!token) return res.status(400).json({ success: false, message: 'Falta token' });
   try {
     const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
-    if (!googleRes.ok) return res.status(401).json({ success: false, message: 'Token Google inválido' });
     const payload = await googleRes.json();
-    const googleEmail = payload.email.toLowerCase();
-    
-    const user = usersMemoryCache.find(u => u.email === googleEmail);
-    if (user) {
-        return res.json({ success: true, role: user.role, name: user.name, id: user.id, email: user.email });
-    } else {
-        console.warn(`⚠️ Login Google rechazado: ${googleEmail} no encontrado en lista.`);
-        return res.status(403).json({ success: false, message: `Usuario ${googleEmail} no autorizado.` });
-    }
-  } catch (e) { res.status(500).json({ success: false, message: 'Error interno' }); }
+    const user = usersMemoryCache.find(u => u.email === payload.email.toLowerCase());
+    if (user) return res.json({ success: true, ...user });
+    res.status(403).json({ success: false, message: 'Usuario no autorizado' });
+  } catch (e) { res.status(500).json({ success: false }); }
 });
 
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
-  const cleanEmail = email ? email.trim().toLowerCase() : '';
-  
+  const cleanEmail = email.trim().toLowerCase();
   try {
-    console.log(`🔑 Intentando login externo para: ${cleanEmail}`);
-    
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
-      method: 'POST',
-      headers: getHeaders('POST'), // Usa headers correctos para POST
+      method: 'POST', headers: getHeaders('POST'),
       body: JSON.stringify({ username: cleanEmail, email: cleanEmail, password })
     });
-    
-    const text = await response.text();
-    
-    if (!response.ok) {
-        console.warn(`⚠️ Login fallido Prisma [${response.status}]: ${text.substring(0, 100)}`);
-        return res.status(401).json({ success: false, message: 'Credenciales inválidas o error en servidor central.' });
-    }
-    
-    let extUser;
-    try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false, message: "Error parsing servidor externo"}); }
-    
-    const rawRole = (extUser.role || extUser.rol || '').toUpperCase();
-    // Reutilizamos la lógica del mapa para consistencia
-    let appRole = ROLE_MAP[rawRole];
-    if (!appRole) {
-         if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
-         else if (rawRole.includes('PROFESOR') || rawRole.includes('TUTOR') || rawRole.includes('DOCENTE')) appRole = 'TEACHER';
-    }
-    
-    if (!appRole) return res.status(403).json({ success: false, message: 'Sin acceso (Rol no autorizado).' });
-    
-    let finalEmail = extUser.email || extUser.correo || extUser.mail;
-    if (!finalEmail && extUser.id) {
-        if (extUser.id.toString().includes('@')) finalEmail = extUser.id;
-        else finalEmail = `${extUser.id}@colegiolahispanidad.es`;
-    }
-    if (!finalEmail) finalEmail = cleanEmail;
-    finalEmail = finalEmail.toLowerCase().trim();
+    if (!response.ok) return res.status(401).json({ success: false });
+    const extUser = await response.json();
+    const rawRole = (extUser.role || extUser.rol || 'TUTOR').toUpperCase();
+    let appRole = ROLE_MAP[rawRole] || (rawRole.includes('ADMIN') ? 'ADMIN' : 'TEACHER');
     
     return res.json({
-        success: true,
-        role: appRole,
-        name: extUser.name || extUser.nombre || 'Usuario',
-        id: extUser.id || finalEmail,
-        email: finalEmail 
+        success: true, role: appRole,
+        name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
+        email: (extUser.email || extUser.correo || cleanEmail).toLowerCase()
     });
-  } catch (err) { 
-      console.error("❌ Excepción Login:", err);
-      res.status(503).json({ success: false, message: 'Error de conexión con servidor de autenticación' }); 
-  }
+  } catch (err) { res.status(503).json({ success: false }); }
 });
 
-// Endpoint ordenado para asegurar que el frontend recibe la lista limpia
-app.get('/api/teachers', (req, res) => {
-    // Devolver usuarios ordenados alfabéticamente
-    const sorted = [...usersMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
-    res.json(sorted);
-});
+app.get('/api/teachers', (req, res) => res.json(usersMemoryCache));
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
-app.get('/api/bookings', (req, res) => res.json(readBookings()));
-app.get('/api/history', (req, res) => {
-  if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
-  try {
-    const h = JSON.parse(fs.readFileSync(HISTORY_FILE));
-    res.json(h.sort((a,b) => b.timestamp - a.timestamp));
-  } catch(e) { res.json([]); }
+app.get('/api/bookings', (req, res) => {
+  if (!fs.existsSync(DATA_FILE)) return res.json([]);
+  res.json(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'));
 });
 
 app.post('/api/bookings', (req, res) => {
   try {
     const incoming = Array.isArray(req.body) ? req.body : [req.body];
-    let bookings = readBookings();
-    
-    for (const item of incoming) {
-       const incomingResource = item.resource || 'ROOM';
-
-       if (bookings.some(b => {
-           const bookingResource = b.resource || 'ROOM';
-           return b.date === item.date && 
-                  b.slotId === item.slotId && 
-                  b.stage === item.stage &&
-                  bookingResource === incomingResource;
-       })) {
-         return res.status(409).json({ error: 'Conflict' });
-       }
-    }
+    let bookings = [];
+    if (fs.existsSync(DATA_FILE)) bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
     bookings.push(...incoming);
     fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-    incoming.forEach(b => { if(b.logs?.length) appendToHistory(b.logs[0]); });
+    incoming.forEach(b => { 
+        if(b.logs?.[0]) {
+            let history = [];
+            if (fs.existsSync(HISTORY_FILE)) history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]');
+            history.push(b.logs[0]);
+            if (history.length > 1000) history = history.slice(-1000);
+            fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+        }
+    });
     io.emit('server:bookings_updated', bookings);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 
 app.delete('/api/bookings/:id', (req, res) => {
-  let bookings = readBookings();
-  const target = bookings.find(b => b.id === req.params.id);
-  if (!target) return res.status(404).json({error: 'Not found'});
-  
+  if (!fs.existsSync(DATA_FILE)) return res.status(404).json({error: 'Not found'});
+  let bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
   bookings = bookings.filter(b => b.id !== req.params.id);
   fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-  
-  if (req.body.user) {
-      appendToHistory({
-        action: 'DELETED', user: req.body.user.email, userName: req.body.user.name,
-        timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}: ${target.date}`
-      });
-  }
-  
   io.emit('server:bookings_updated', bookings);
   res.json({ success: true });
+});
+
+app.get('/api/history', (req, res) => {
+    if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
+    res.json(JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]').sort((a,b) => b.timestamp - a.timestamp));
 });
 
 app.use(express.static(__dirname));
