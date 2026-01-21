@@ -16,11 +16,24 @@ const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 const API_SECRET = process.env.API_SECRET || 'ojosyculos'; 
 
-const PROXY_HEADERS = {
-  'Content-Type': 'application/json',
-  'Accept': 'application/json, text/plain, */*',
-  'User-Agent': 'Mozilla/5.0 (ReservaEspaciosBot)',
-  'api_secret': API_SECRET
+// User Agent de Chrome estándar para evitar bloqueos de WAF/Firewall
+const STANDARD_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36';
+
+// Helper para cabeceras dinámicas
+const getHeaders = (method = 'GET') => {
+  const headers = {
+    'Accept': 'application/json, text/plain, */*',
+    'User-Agent': STANDARD_USER_AGENT,
+    'api_secret': API_SECRET,
+    'x-api-secret': API_SECRET // Enviar en ambos formatos por compatibilidad
+  };
+  
+  // Solo añadir Content-Type si hay cuerpo (POST/PUT)
+  if (method === 'POST' || method === 'PUT') {
+    headers['Content-Type'] = 'application/json';
+  }
+  
+  return headers;
 };
 
 const server = http.createServer(app);
@@ -37,7 +50,6 @@ let classesMemoryCache = [];
 
 /**
  * CONFIGURACIÓN DE ROLES
- * Mapea los roles de Prisma a los roles de la App de Reservas.
  */
 const ROLE_MAP = {
   'ADMIN': 'ADMIN',
@@ -73,33 +85,33 @@ loadCache();
 
 // --- EXTERNAL DATA SYNC ---
 const syncUsers = async () => {
-  // Añadimos el secreto también en query string por si el servidor ignora headers en GET
+  // URL con secreto como query param (fallback)
   const targetUrl = `${EXTERNAL_API_BASE}/api/export/users?secret=${API_SECRET}`;
-  console.log(`🔄 [SYNC] Iniciando sincronización de usuarios con ${EXTERNAL_API_BASE}...`);
+  console.log(`🔄 [SYNC] Sincronizando usuarios desde: ${EXTERNAL_API_BASE}`);
 
   try {
-    const response = await fetch(targetUrl, { method: 'GET', headers: PROXY_HEADERS });
+    // IMPORTANTE: GET request sin Content-Type header
+    const response = await fetch(targetUrl, { 
+        method: 'GET', 
+        headers: getHeaders('GET') 
+    });
     
     if (!response.ok) {
-        console.error(`❌ [SYNC] Error HTTP ${response.status}: ${response.statusText}`);
         const text = await response.text();
-        console.error(`❌ [SYNC] Respuesta servidor: ${text.substring(0, 100)}...`);
+        console.error(`❌ [SYNC] Fallo HTTP ${response.status}: ${text.substring(0, 200)}`);
         return;
     }
 
     let externalUsers = await response.json();
 
-    // Soporte para respuestas envueltas en { data: [...] }
+    // Normalizar respuesta { data: [] } vs []
     if (!Array.isArray(externalUsers) && externalUsers.data && Array.isArray(externalUsers.data)) {
         externalUsers = externalUsers.data;
     }
 
     if (Array.isArray(externalUsers)) {
-      console.log(`📡 [SYNC] Datos recibidos: ${externalUsers.length} registros raw.`);
-      
       const allowedUsers = [];
-      let skippedCount = 0;
-
+      
       for (const u of externalUsers) {
         const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
         const appRole = ROLE_MAP[rawRole];
@@ -107,7 +119,6 @@ const syncUsers = async () => {
         if (appRole) {
             let finalEmail = u.email || u.correo || u.mail;
             
-            // Generar email dummy si no existe pero hay ID (para compatibilidad)
             if (!finalEmail && u.id) {
                 if (u.id.toString().includes('@')) finalEmail = u.id;
                 else finalEmail = `${u.id}@colegiolahispanidad.es`;
@@ -121,15 +132,6 @@ const syncUsers = async () => {
                   role: appRole,
                   classId: u.classId || null 
                 });
-            } else {
-                // Usuario con rol válido pero sin email ni ID
-                skippedCount++;
-            }
-        } else {
-            // Rol no mapeado
-            skippedCount++;
-            if (skippedCount <= 3) { // Loguear solo los primeros para no saturar
-                console.warn(`⚠️ [SYNC] Usuario omitido por rol desconocido: "${rawRole}" (${u.name || 'Sin nombre'})`);
             }
         }
       }
@@ -137,26 +139,27 @@ const syncUsers = async () => {
       if (allowedUsers.length > 0) {
           usersMemoryCache = allowedUsers;
           fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-          console.log(`✅ [SYNC] Sincronización exitosa. ${allowedUsers.length} usuarios válidos importados.`);
+          console.log(`✅ [SYNC] Usuarios actualizados: ${allowedUsers.length}`);
       } else {
-          console.warn(`⚠️ [SYNC] Se recibieron datos pero ningún usuario pasó el filtro.`);
+          console.warn(`⚠️ [SYNC] Se recibieron 0 usuarios válidos (Raw: ${externalUsers.length})`);
       }
-    } else {
-      console.error(`❌ [SYNC] Formato de respuesta inválido (se esperaba un array).`);
     }
   } catch (err) { 
-      console.error(`❌ [SYNC] Excepción crítica al sincronizar usuarios: ${err.message}`); 
+      console.error(`❌ [SYNC] Error de red Usuarios: ${err.message}`); 
   }
 };
 
 const syncClasses = async () => {
     const targetUrl = `${EXTERNAL_API_BASE}/api/export/classes?secret=${API_SECRET}`;
-    console.log(`🔄 [SYNC] Sincronizando clases...`);
-  
+    
     try {
-      const response = await fetch(targetUrl, { method: 'GET', headers: PROXY_HEADERS });
+      const response = await fetch(targetUrl, { 
+          method: 'GET', 
+          headers: getHeaders('GET') 
+      });
+
       if (!response.ok) {
-          console.error(`❌ [SYNC] Error HTTP Clases: ${response.status}`);
+          console.error(`❌ [SYNC] Fallo HTTP Clases ${response.status}`);
           return;
       }
   
@@ -176,19 +179,16 @@ const syncClasses = async () => {
         fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
         console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
       }
-    } catch (err) { console.error(`❌ [SYNC] Error clases: ${err.message}`); }
+    } catch (err) { console.error(`❌ [SYNC] Error de red Clases: ${err.message}`); }
 };
 
 // Sincronizar al iniciar y cada hora
 const runSync = () => { 
-    console.log("⏰ [CRON] Ejecutando tarea de sincronización...");
     syncUsers(); 
     syncClasses(); 
 };
 
-// Ejecutar tras 2 segundos para dar tiempo al servidor a levantar
 setTimeout(runSync, 2000);
-// Repetir cada hora
 setInterval(runSync, 60 * 60 * 1000);
 
 // --- HELPERS ---
@@ -207,13 +207,17 @@ const appendToHistory = (actionLog) => {
     } catch(e) {}
   }
   history.push(actionLog);
-  // Mantener solo los últimos 1000 logs para no saturar disco
   if (history.length > 1000) history = history.slice(-1000);
-  
   fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
 };
 
 // --- API ENDPOINTS ---
+
+// Endpoint de prueba para forzar sincronización manualmente
+app.get('/api/admin/force-sync', (req, res) => {
+    runSync();
+    res.json({ success: true, message: 'Sincronización iniciada en segundo plano. Revisa logs.' });
+});
 
 app.post('/api/auth/google', async (req, res) => {
   const { token } = req.body;
@@ -224,17 +228,12 @@ app.post('/api/auth/google', async (req, res) => {
     const payload = await googleRes.json();
     const googleEmail = payload.email.toLowerCase();
     
-    // Buscar en caché
     const user = usersMemoryCache.find(u => u.email === googleEmail);
     if (user) {
         return res.json({ success: true, role: user.role, name: user.name, id: user.id, email: user.email });
     } else {
-        // Fallback: Si es un email del dominio, dejar pasar como TEACHER si no está en lista (opcional, por seguridad ahora denegamos)
-        // return res.status(403).json({ success: false, message: 'Acceso exclusivo para personal autorizado.' });
-        
-        // DEBUG: Permitir ver el error
-        console.warn(`⚠️ Login Google rechazado: ${googleEmail} no está en la lista de usuarios sincronizados.`);
-        return res.status(403).json({ success: false, message: `Usuario ${googleEmail} no encontrado en la base de datos de personal.` });
+        console.warn(`⚠️ Login Google rechazado: ${googleEmail} no encontrado en lista.`);
+        return res.status(403).json({ success: false, message: `Usuario ${googleEmail} no autorizado.` });
     }
   } catch (e) { res.status(500).json({ success: false, message: 'Error interno' }); }
 });
@@ -244,21 +243,23 @@ app.post('/api/proxy/login', async (req, res) => {
   const cleanEmail = email ? email.trim().toLowerCase() : '';
   
   try {
-    // Intentar login contra Prisma
+    console.log(`🔑 Intentando login externo para: ${cleanEmail}`);
+    
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
       method: 'POST',
-      headers: PROXY_HEADERS,
+      headers: getHeaders('POST'), // Usa headers correctos para POST
       body: JSON.stringify({ username: cleanEmail, email: cleanEmail, password })
     });
     
     const text = await response.text();
+    
     if (!response.ok) {
-        console.warn(`⚠️ Login fallido para ${cleanEmail}: ${response.status}`);
-        return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+        console.warn(`⚠️ Login fallido Prisma [${response.status}]: ${text.substring(0, 100)}`);
+        return res.status(401).json({ success: false, message: 'Credenciales inválidas o error en servidor central.' });
     }
     
     let extUser;
-    try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false, message: "Error respuesta servidor externo"}); }
+    try { extUser = JSON.parse(text); } catch(e) { return res.status(500).json({success:false, message: "Error parsing servidor externo"}); }
     
     const rawRole = (extUser.role || extUser.rol || '').toUpperCase();
     const appRole = ROLE_MAP[rawRole];
@@ -281,7 +282,7 @@ app.post('/api/proxy/login', async (req, res) => {
         email: finalEmail 
     });
   } catch (err) { 
-      console.error("Login error:", err);
+      console.error("❌ Excepción Login:", err);
       res.status(503).json({ success: false, message: 'Error de conexión con servidor de autenticación' }); 
   }
 });
