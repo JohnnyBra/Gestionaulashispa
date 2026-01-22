@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ResourceType, ClassGroup } from '../types';
+import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ResourceType, ClassGroup, SeatingPlan } from '../types';
 import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers, getClasses } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
-import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor } from 'lucide-react';
+import { StudentOrganizer } from '../components/StudentOrganizer';
+import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor, FileSpreadsheet, Users } from 'lucide-react';
 import { addWeeks, subWeeks, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface CalendarViewProps {
   stage: Stage;
@@ -24,6 +27,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [selectedSlot, setSelectedSlot] = useState<{ date: Date, slot: TimeSlot } | null>(null);
   const [existingBooking, setExistingBooking] = useState<Booking | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [showStudentOrganizer, setShowStudentOrganizer] = useState(false);
   const [currentResource, setCurrentResource] = useState<ResourceType>('ROOM');
   const [teacherFilter, setTeacherFilter] = useState('');
   const [courseFilter, setCourseFilter] = useState('');
@@ -101,7 +105,25 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setSelectedTeacherEmail(existing?.teacherEmail || (user.role === Role.ADMIN && teachers.length > 0 ? teachers[0].email : user.email));
     setBlockReason(existing?.justification || '');
     setIsBlocking(existing?.isBlocked || false);
+    setShowStudentOrganizer(false);
     setIsModalOpen(true);
+  };
+
+  const handleUpdateSeatingPlan = async (bookingId: string, seatingPlan: SeatingPlan) => {
+      try {
+          await fetch(`/api/bookings/${bookingId}`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ seatingPlan })
+          });
+          // Update local state if needed, but socket should handle it.
+          // Force close modal or show success?
+          // Let's rely on socket update.
+          setIsModalOpen(false);
+      } catch (e) {
+          console.error("Error updating seating plan", e);
+          alert("Error al guardar la asignación.");
+      }
   };
 
   const handleSaveBooking = async (e: React.FormEvent) => {
@@ -135,6 +157,109 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const weekDays = getWeekDays(currentDate);
 
+  const printDailyReport = () => {
+      const doc = new jsPDF();
+      const dateStr = formatDate(currentDate); // Using Monday of current week? Or do we want a specific day?
+      // "imprimir un registro de esa hora o un registro diario ordenado por horas"
+      // Assuming Admin wants to print the CURRENT VIEWED week days or maybe select a day.
+      // Ideally, we'd prompt for date, but let's just print the currently visible MONDAY-FRIDAY bookings if "Daily" implies one sheet per day or summary?
+      // "registro diario ordenado por horas" -> A daily log.
+      // Let's just pick TODAY (real time) or the Monday of the view?
+      // Let's assume we want to print the report for the FIRST DAY visible in the calendar (Monday) or iterate all 5?
+      // Let's implement printing the "Current Date" (Monday) as a start, or ask user?
+      // Let's generate a report for the *entire week* currently viewed, separated by pages?
+      // Or just a button "Imprimir Registro Diario" that prints TODAY's bookings (based on system time) or maybe prompts?
+      // For simplicity: Print the bookings of the currently selected week.
+
+      // Let's refine: "registro de esa hora" -> handled in single booking view.
+      // "registro diario" -> All bookings of a specific day.
+      // I'll make it print the bookings for the visible week days (5 pages).
+
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+
+      logoImg.onload = () => {
+          generateDailyPDF(doc, logoImg);
+      };
+      logoImg.onerror = () => {
+          generateDailyPDF(doc, null);
+      };
+  };
+
+  const generateDailyPDF = (doc: jsPDF, logo: HTMLImageElement | null) => {
+      weekDays.slice(0, 5).forEach((day, index) => {
+          if (index > 0) doc.addPage();
+
+          const dayStr = formatDate(day);
+          const dailyBookings = filteredBookings.filter(b => b.date === dayStr).sort((a,b) => a.slotId.localeCompare(b.slotId));
+
+          const pageWidth = doc.internal.pageSize.width;
+          if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
+
+          doc.setFontSize(16);
+          doc.text(`REGISTRO DIARIO - ${format(day, 'dd/MM/yyyy')}`, 20, 20);
+          doc.setFontSize(12);
+          doc.text(roomName, 20, 30);
+
+          const tableData = dailyBookings.map(b => {
+              const slot = slots.find(s => s.slotId === b.slotId) || { label: b.slotId };
+              // We need "all data": Clase, Profesor, Horario, Asignatura, Justificación
+              return [
+                 slots.find(s => s.id === b.slotId)?.label || b.slotId,
+                 b.course || '-',
+                 b.teacherName,
+                 b.subject || '-',
+                 b.justification || '-'
+              ];
+          });
+
+          if (dailyBookings.length === 0) {
+              doc.text("No hay reservas para este día.", 20, 50);
+          } else {
+              autoTable(doc, {
+                  startY: 40,
+                  head: [['Horario', 'Clase', 'Profesor', 'Asignatura', 'Actividad']],
+                  body: tableData,
+                  theme: 'grid',
+                  headStyles: { fillColor: [50, 50, 50] }
+              });
+          }
+      });
+      doc.save(`registro_semanal_${formatDate(weekDays[0])}.pdf`);
+  };
+
+  const printBlankTemplate = () => {
+      // Reusing logic via a temporary component instance or just duplicating?
+      // Duplicating logic here for global "Blank Template" not tied to a specific booking.
+      const doc = new jsPDF();
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+      const render = (logo: any) => {
+        const pageWidth = doc.internal.pageSize.width;
+        if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
+        doc.setFontSize(16);
+        doc.text('REGISTRO DE USO TIC', 20, 20);
+        doc.setFontSize(11);
+        doc.text('Clase: ___________________________', 20, 35);
+        doc.text('Profesor: ________________________', 20, 45);
+        doc.text('Horario: _________________________', 110, 35);
+        doc.text('Fecha: ___________________________', 110, 45);
+        doc.text('Asignatura: ______________________', 20, 55);
+        doc.text('Actividad: _______________________', 20, 65);
+        const tableData = Array.from({ length: 30 }, (_, i) => [ (i+1).toString(), '', '']);
+        autoTable(doc, {
+            startY: 75,
+            head: [['Nº', 'Alumno', 'Clase']],
+            body: tableData,
+            theme: 'grid',
+            styles: { minCellHeight: 8 }
+        });
+        doc.save('plantilla_registro_tic.pdf');
+      };
+      logoImg.onload = () => render(logoImg);
+      logoImg.onerror = () => render(null);
+  };
+
   return (
     <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] w-full max-w-full overflow-hidden px-2 md:px-4 py-2 md:py-8">
       <div className="flex-none flex flex-col gap-3 mb-4 w-full">
@@ -148,9 +273,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     </div>
                 </div>
                 {user.role === Role.ADMIN && (
-                    <div className="flex gap-2 lg:hidden">
-                         <button onClick={() => setIsHistoryOpen(true)} className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm"><History className="w-5 h-5"/></button>
-                         <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border ${showFilters ? 'bg-slate-800 text-white' : 'bg-white'}`}><Filter className="w-5 h-5"/></button>
+                    <div className="flex gap-2">
+                         <button onClick={() => setIsHistoryOpen(true)} className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm lg:hidden"><History className="w-5 h-5"/></button>
+                         <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'bg-white'}`}><Filter className="w-5 h-5"/></button>
+
+                         {/* Admin Print Buttons */}
+                         <button onClick={printDailyReport} title="Imprimir Registro Semanal" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5"/></button>
+                         <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-green-600 hover:bg-green-50"><Monitor className="w-5 h-5"/></button>
                     </div>
                 )}
             </div>
@@ -221,8 +350,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       
-      <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} title={existingBooking ? 'Detalles' : 'Nueva Reserva'}>
-        {existingBooking ? (
+      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setShowStudentOrganizer(false); }} title={showStudentOrganizer ? '' : (existingBooking ? 'Detalles' : 'Nueva Reserva')}>
+        {showStudentOrganizer && existingBooking ? (
+            <StudentOrganizer
+                booking={existingBooking}
+                classes={importedClasses}
+                onClose={() => setShowStudentOrganizer(false)}
+                onUpdateBooking={handleUpdateSeatingPlan}
+                isAdmin={user.role === Role.ADMIN}
+            />
+        ) : existingBooking ? (
             <div className="space-y-4">
                 <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
                     <p className="text-[10px] font-bold text-slate-400 uppercase">Responsable</p>
@@ -239,6 +376,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                             <p className="text-[10px] font-bold uppercase text-slate-400">Actividad</p>
                             <p className="text-sm font-bold">{existingBooking.justification}</p>
                         </div>
+
+                        {(user.role === Role.ADMIN || user.id === existingBooking.teacherEmail || user.email === existingBooking.teacherEmail) && (
+                            <button
+                                onClick={() => setShowStudentOrganizer(true)}
+                                className="w-full py-3 bg-blue-50 text-blue-600 rounded-xl font-bold border border-blue-100 flex items-center justify-center gap-2"
+                            >
+                                <Users size={20}/> Organizar Alumnado
+                            </button>
+                        )}
                     </>
                 )}
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (

@@ -5,7 +5,8 @@ export enum Stage {
 
 export enum Role {
   TEACHER = 'TEACHER',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  STUDENT = 'STUDENT'
 }
 
 export type ResourceType = 'ROOM' | 'CART';
@@ -16,6 +17,16 @@ export interface User {
   role: Role;
   classId?: string; // Para tutores
 }
+
+export interface Student {
+  id: string;
+  name: string;
+  email: string;
+  role: Role;
+  classId?: string;
+}
+
+export type SeatingPlan = { [computerId: number]: Student[] };
 
 export interface ClassGroup {
   id: string;
@@ -51,6 +62,7 @@ export interface Booking {
   isBlocked: boolean; // For admin blocks
   logs: ActionLog[]; // History of actions
   createdAt: number;
+  seatingPlan?: SeatingPlan; // Optional seating plan
 }
 
 // Fallbacks en caso de que la API falle
