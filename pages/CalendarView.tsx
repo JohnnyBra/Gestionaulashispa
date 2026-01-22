@@ -33,6 +33,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [courseFilter, setCourseFilter] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Form State
   const [course, setCourse] = useState('');
@@ -157,36 +158,24 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const weekDays = getWeekDays(currentDate);
 
-  const printDailyReport = () => {
+  const handlePrintClick = () => {
+      setShowPrintModal(true);
+  };
+
+  const printWeeklyReport = () => {
       const doc = new jsPDF();
-      const dateStr = formatDate(currentDate); // Using Monday of current week? Or do we want a specific day?
-      // "imprimir un registro de esa hora o un registro diario ordenado por horas"
-      // Assuming Admin wants to print the CURRENT VIEWED week days or maybe select a day.
-      // Ideally, we'd prompt for date, but let's just print the currently visible MONDAY-FRIDAY bookings if "Daily" implies one sheet per day or summary?
-      // "registro diario ordenado por horas" -> A daily log.
-      // Let's just pick TODAY (real time) or the Monday of the view?
-      // Let's assume we want to print the report for the FIRST DAY visible in the calendar (Monday) or iterate all 5?
-      // Let's implement printing the "Current Date" (Monday) as a start, or ask user?
-      // Let's generate a report for the *entire week* currently viewed, separated by pages?
-      // Or just a button "Imprimir Registro Diario" that prints TODAY's bookings (based on system time) or maybe prompts?
-      // For simplicity: Print the bookings of the currently selected week.
-
-      // Let's refine: "registro de esa hora" -> handled in single booking view.
-      // "registro diario" -> All bookings of a specific day.
-      // I'll make it print the bookings for the visible week days (5 pages).
-
       const logoImg = new Image();
       logoImg.src = '/logo.png';
 
       logoImg.onload = () => {
-          generateDailyPDF(doc, logoImg);
+          generateWeeklyPDF(doc, logoImg);
       };
       logoImg.onerror = () => {
-          generateDailyPDF(doc, null);
+          generateWeeklyPDF(doc, null);
       };
   };
 
-  const generateDailyPDF = (doc: jsPDF, logo: HTMLImageElement | null) => {
+  const generateWeeklyPDF = (doc: jsPDF, logo: HTMLImageElement | null) => {
       weekDays.slice(0, 5).forEach((day, index) => {
           if (index > 0) doc.addPage();
 
@@ -197,13 +186,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
 
           doc.setFontSize(16);
-          doc.text(`REGISTRO DIARIO - ${format(day, 'dd/MM/yyyy')}`, 20, 20);
+          doc.text(`REGISTRO SEMANAL - ${format(day, 'dd/MM/yyyy')}`, 20, 20);
           doc.setFontSize(12);
           doc.text(roomName, 20, 30);
 
           const tableData = dailyBookings.map(b => {
               const slot = slots.find(s => s.slotId === b.slotId) || { label: b.slotId };
-              // We need "all data": Clase, Profesor, Horario, Asignatura, Justificación
               return [
                  slots.find(s => s.id === b.slotId)?.label || b.slotId,
                  b.course || '-',
@@ -226,6 +214,86 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           }
       });
       doc.save(`registro_semanal_${formatDate(weekDays[0])}.pdf`);
+      setShowPrintModal(false);
+  };
+
+  const printDetailedDayReport = (targetDate: Date) => {
+      const doc = new jsPDF();
+      const logoImg = new Image();
+      logoImg.src = '/logo.png';
+
+      const dayStr = formatDate(targetDate);
+      const dailyBookings = filteredBookings.filter(b => b.date === dayStr).sort((a,b) => a.slotId.localeCompare(b.slotId));
+
+      const render = (logo: any) => {
+          const pageWidth = doc.internal.pageSize.width;
+
+          if (dailyBookings.length === 0) {
+              if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
+              doc.setFontSize(16);
+              doc.text(`REGISTRO DETALLADO - ${format(targetDate, 'dd/MM/yyyy')}`, 20, 20);
+              doc.setFontSize(12);
+              doc.text("No hay reservas para este día.", 20, 40);
+          } else {
+             dailyBookings.forEach((booking, index) => {
+                 if (index > 0) doc.addPage();
+
+                 if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
+                 doc.setFontSize(16);
+                 doc.text(`REGISTRO DETALLADO - ${format(targetDate, 'dd/MM/yyyy')}`, 20, 20);
+                 doc.setFontSize(10);
+                 doc.text(roomName, 20, 28);
+
+                 const slot = slots.find(s => s.slotId === booking.slotId) || { label: booking.slotId };
+
+                 // Header info block
+                 doc.setFillColor(240, 240, 240);
+                 doc.rect(20, 32, pageWidth - 40, 25, 'F');
+
+                 doc.setFontSize(11);
+                 doc.setTextColor(0);
+                 doc.text(`Horario: ${slot?.label}`, 25, 40);
+                 doc.text(`Clase: ${booking.course || '-'}`, 100, 40);
+                 doc.text(`Profesor: ${booking.teacherName}`, 25, 48);
+                 doc.text(`Asignatura: ${booking.subject || '-'}`, 100, 48);
+                 doc.text(`Actividad: ${booking.justification || '-'}`, 25, 54);
+
+                 // Students Table
+                 const seatingPlan = booking.seatingPlan || {};
+                 const tableData: any[] = [];
+
+                 for (let i = 1; i <= 25; i++) { // Max 25 computers
+                     const students = seatingPlan[i] || [];
+                     if (students.length > 0) {
+                         tableData.push([
+                             `PC ${i}`,
+                             students.map((s: any) => s.name).join(' / '),
+                             ''
+                         ]);
+                     }
+                 }
+
+                 if (tableData.length === 0) {
+                     doc.text("(Sin asignación de alumnos)", 20, 65);
+                 } else {
+                     autoTable(doc, {
+                        startY: 60,
+                        head: [['PC', 'Alumno/s', 'Observaciones']],
+                        body: tableData,
+                        theme: 'grid',
+                        headStyles: { fillColor: [70, 70, 70] },
+                        styles: { fontSize: 10 }
+                     });
+                 }
+             });
+          }
+
+          doc.save(`registro_detallado_${dayStr}.pdf`);
+          setShowPrintModal(false);
+      };
+
+      logoImg.onload = () => render(logoImg);
+      logoImg.onerror = () => render(null);
   };
 
   const printBlankTemplate = () => {
@@ -246,10 +314,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         doc.text('Fecha: ___________________________', 110, 45);
         doc.text('Asignatura: ______________________', 20, 55);
         doc.text('Actividad: _______________________', 20, 65);
-        const tableData = Array.from({ length: 30 }, (_, i) => [ (i+1).toString(), '', '']);
+        const tableData = Array.from({ length: 25 }, (_, i) => [ `PC ${i+1}`, '', '']);
         autoTable(doc, {
             startY: 75,
-            head: [['Nº', 'Alumno', 'Clase']],
+            head: [['PC', 'Alumno/s', 'Observaciones']],
             body: tableData,
             theme: 'grid',
             styles: { minCellHeight: 8 }
@@ -278,7 +346,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                          <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'bg-white'}`}><Filter className="w-5 h-5"/></button>
 
                          {/* Admin Print Buttons */}
-                         <button onClick={printDailyReport} title="Imprimir Registro Semanal" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5"/></button>
+                         <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5"/></button>
                          <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-green-600 hover:bg-green-50"><Monitor className="w-5 h-5"/></button>
                     </div>
                 )}
@@ -350,7 +418,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
       <HistoryModal isOpen={isHistoryOpen} onClose={() => setIsHistoryOpen(false)} />
       
-      <Modal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setShowStudentOrganizer(false); }} title={showStudentOrganizer ? '' : (existingBooking ? 'Detalles' : 'Nueva Reserva')}>
+      <Modal
+        isOpen={isModalOpen}
+        onClose={() => { setIsModalOpen(false); setShowStudentOrganizer(false); }}
+        title={showStudentOrganizer ? '' : (existingBooking ? 'Detalles' : 'Nueva Reserva')}
+        size={showStudentOrganizer ? 'full' : 'lg'}
+      >
         {showStudentOrganizer && existingBooking ? (
             <StudentOrganizer
                 booking={existingBooking}
@@ -427,6 +500,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 </button>
             </form>
         )}
+      </Modal>
+
+      <Modal isOpen={showPrintModal} onClose={() => setShowPrintModal(false)} title="Imprimir Informes" size="md">
+        <div className="space-y-4">
+            <button onClick={printWeeklyReport} className="w-full p-4 text-left border rounded-xl hover:bg-slate-50 flex flex-col gap-1">
+                <span className="font-bold text-lg text-slate-800">Informe Semanal</span>
+                <span className="text-sm text-slate-500">Resumen de todas las reservas de la semana actual.</span>
+            </button>
+            <div className="border-t border-slate-100 my-2"></div>
+            <div className="space-y-2">
+                 <p className="text-sm font-bold text-slate-400 uppercase">Informe Detallado por Día</p>
+                 <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                     {weekDays.slice(0, 5).map(day => (
+                         <button
+                            key={day.toISOString()}
+                            onClick={() => printDetailedDayReport(day)}
+                            className="p-2 border rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-300"
+                         >
+                            {format(day, 'EEEE d', { locale: es })}
+                         </button>
+                     ))}
+                 </div>
+                 <p className="text-xs text-slate-400 italic">Genera un PDF con el listado de alumnos por ordenador.</p>
+            </div>
+        </div>
       </Modal>
     </div>
   );
