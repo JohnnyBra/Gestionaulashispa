@@ -11,6 +11,7 @@ const PORT = process.env.PORT || 3001;
 const DATA_FILE = path.join(__dirname, 'bookings.json');
 const HISTORY_FILE = path.join(__dirname, 'history.json');
 const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
+const STUDENTS_CACHE_FILE = path.join(__dirname, 'students_cache.json');
 const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 
 // --- CONFIGURACIÓN EXTERNA ---
@@ -42,11 +43,13 @@ app.use(express.json());
 
 // --- MEMORY CACHE ---
 let usersMemoryCache = [];
+let studentsMemoryCache = [];
 let classesMemoryCache = [];
 
 const ROLE_MAP = {
   'ADMIN': 'ADMIN', 'ADMINISTRADOR': 'ADMIN', 'DIRECCION': 'ADMIN', 'DIRECTOR': 'ADMIN', 'JEFATURA': 'ADMIN',
-  'TUTOR': 'TEACHER', 'PROFESOR': 'TEACHER', 'DOCENTE': 'TEACHER', 'MAESTRO': 'TEACHER', 'USER': 'TEACHER', 'ORIENTADOR': 'TEACHER'
+  'TUTOR': 'TEACHER', 'PROFESOR': 'TEACHER', 'DOCENTE': 'TEACHER', 'MAESTRO': 'TEACHER', 'USER': 'TEACHER', 'ORIENTADOR': 'TEACHER',
+  'ALUMNO': 'STUDENT', 'ESTUDIANTE': 'STUDENT', 'STUDENT': 'STUDENT'
 };
 
 const loadCache = () => {
@@ -55,6 +58,12 @@ const loadCache = () => {
       usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
       console.log(`✅ [CACHE] Usuarios cargados: ${usersMemoryCache.length}`);
     } catch (e) { console.error("Error lectura caché usuarios:", e); }
+  }
+  if (fs.existsSync(STUDENTS_CACHE_FILE)) {
+    try {
+      studentsMemoryCache = JSON.parse(fs.readFileSync(STUDENTS_CACHE_FILE, 'utf8') || '[]');
+      console.log(`✅ [CACHE] Alumnos cargados: ${studentsMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché alumnos:", e); }
   }
   if (fs.existsSync(CLASSES_CACHE_FILE)) {
     try {
@@ -73,7 +82,8 @@ const processExternalUsers = (externalUsers) => {
 
     console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos...`);
 
-    const allowedUsers = [];
+    const allowedTeachers = [];
+    const allowedStudents = [];
 
     for (const u of externalUsers) {
       const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
@@ -81,13 +91,14 @@ const processExternalUsers = (externalUsers) => {
       // Strict Whitelist Logic: Only explicitly mapped roles are allowed.
       let appRole = ROLE_MAP[rawRole];
 
-      // Fallback inference only for explicit admin/teacher keywords
+      // Fallback inference
       if (!appRole) {
           if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
           else if (rawRole === 'TUTOR') appRole = 'TEACHER';
+          else if (rawRole.includes('ALUMNO')) appRole = 'STUDENT';
       }
 
-      // If still no role, SKIP THIS USER. Do not default to TEACHER.
+      // If still no role, SKIP THIS USER.
       if (!appRole) continue;
 
       let finalEmail = u.email || u.correo || u.mail || u.id;
@@ -97,25 +108,34 @@ const processExternalUsers = (externalUsers) => {
       }
 
       if (finalEmail) {
-          allowedUsers.push({
+          const userObj = {
             id: u.id || finalEmail,
-            name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Docente',
+            name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Usuario',
             email: finalEmail.toLowerCase().trim(),
             role: appRole,
             classId: u.classId || u.id_clase || null
-          });
+          };
+
+          if (appRole === 'STUDENT') {
+              allowedStudents.push(userObj);
+          } else {
+              allowedTeachers.push(userObj);
+          }
       }
     }
 
-    if (allowedUsers.length > 0) {
-        // Ordenar alfabéticamente
-        allowedUsers.sort((a, b) => a.name.localeCompare(b.name));
+    if (allowedTeachers.length > 0) {
+        allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
+        usersMemoryCache = allowedTeachers;
+        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
+        console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
+    }
 
-        usersMemoryCache = allowedUsers;
-        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedUsers, null, 2));
-        console.log(`✅ [SYNC] ÉXITO: ${allowedUsers.length} usuarios sincronizados (filtro aplicado).`);
-    } else {
-        console.warn(`⚠️ [SYNC] Lista de usuarios procesada vacía.`);
+    if (allowedStudents.length > 0) {
+        allowedStudents.sort((a, b) => a.name.localeCompare(b.name));
+        studentsMemoryCache = allowedStudents;
+        fs.writeFileSync(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2));
+        console.log(`✅ [SYNC] ÉXITO: ${allowedStudents.length} alumnos sincronizados.`);
     }
 };
 
@@ -243,6 +263,10 @@ app.get('/api/teachers', (req, res) => {
     const sorted = [...usersMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
     res.json(sorted);
 });
+app.get('/api/students', (req, res) => {
+    const sorted = [...studentsMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
+    res.json(sorted);
+});
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => {
   if (!fs.existsSync(DATA_FILE)) return res.json([]);
@@ -274,6 +298,23 @@ app.post('/api/bookings', (req, res) => {
     
     io.emit('server:bookings_updated', bookings);
     res.status(201).json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Error' }); }
+});
+
+app.put('/api/bookings/:id', (req, res) => {
+  try {
+    let bookings = [];
+    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
+
+    const index = bookings.findIndex(b => b.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Not found' });
+
+    // Update fields (preserving ID and potentially other immutable fields if needed)
+    bookings[index] = { ...bookings[index], ...req.body, id: req.params.id };
+
+    fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
+    io.emit('server:bookings_updated', bookings);
+    res.json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 

@@ -119,13 +119,6 @@
     "classId": "class_17"
   },
   {
-    "id": "user_1768950451081_83",
-    "name": "Cristina",
-    "email": "direccion@colegiolahispanidad.es",
-    "role": "ADMIN",
-    "classId": null
-  },
-  {
     "id": "user_1768993489907_imp_3_934",
     "name": "Cristina Báez Garrido",
     "email": "cristina.baez@colegiolahispanidad.es",
@@ -144,6 +137,13 @@
     "name": "Diego Vázquez Martagón",
     "email": "diego.vazquez@colegiolahispanidad.es",
     "role": "TEACHER",
+    "classId": null
+  },
+  {
+    "id": "user_1769080887225_426",
+    "name": "Dirección",
+    "email": "direccion@colegiolahispanidad.es",
+    "role": "ADMIN",
     "classId": null
   },
   {
