@@ -1,0 +1,16 @@
+
+> hispanidad-reservas@1.0.0 start
+> node server.js
+
+✅ [CACHE] Usuarios cargados: 57
+✅ [CACHE] Clases cargadas: 26
+🔄 [SOCKET] Iniciando conexión a https://prisma.bibliohispa.es
+🚀 Servidor listo en puerto 3001
+✅ [SOCKET] Conectado a Prisma Edu
+📦 [SOCKET] Recibido estado inicial
+🔄 [SYNC] Procesando 204 usuarios recibidos...
+✅ [SYNC] ÉXITO: 57 usuarios (profesores/admin) sincronizados.
+✅ [SYNC] ÉXITO: 73 alumnos sincronizados.
+🔄 [SYNC] Procesando 26 clases recibidas...
+✅ [SYNC] Clases actualizadas: 26
+Terminated
