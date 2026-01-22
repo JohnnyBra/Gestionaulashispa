@@ -230,10 +230,16 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     <p className="text-xs text-slate-500">{existingBooking.teacherEmail}</p>
                 </div>
                 {!existingBooking.isBlocked && (
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Curso</p><p className="text-sm font-bold">{existingBooking.course}</p></div>
-                        <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Asignatura</p><p className="text-sm font-bold">{existingBooking.subject}</p></div>
-                    </div>
+                    <>
+                        <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Curso</p><p className="text-sm font-bold">{existingBooking.course}</p></div>
+                            <div className="p-3 border rounded-xl bg-white"><p className="text-[10px] font-bold uppercase text-slate-400">Asignatura</p><p className="text-sm font-bold">{existingBooking.subject}</p></div>
+                        </div>
+                        <div className="p-3 border rounded-xl bg-white">
+                            <p className="text-[10px] font-bold uppercase text-slate-400">Actividad</p>
+                            <p className="text-sm font-bold">{existingBooking.justification}</p>
+                        </div>
+                    </>
                 )}
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (
                     <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100">Eliminar</button>
