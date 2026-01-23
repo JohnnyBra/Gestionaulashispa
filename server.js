@@ -1,5 +1,6 @@
 const express = require('express');
 const fs = require('fs');
+const fsp = require('fs').promises;
 const path = require('path');
 const cors = require('cors');
 const http = require('http');
@@ -52,30 +53,40 @@ const ROLE_MAP = {
   'ALUMNO': 'STUDENT', 'ESTUDIANTE': 'STUDENT', 'STUDENT': 'STUDENT'
 };
 
-const loadCache = () => {
-  if (fs.existsSync(USERS_CACHE_FILE)) {
+const loadCache = async () => {
     try {
-      usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [CACHE] Usuarios cargados: ${usersMemoryCache.length}`);
-    } catch (e) { console.error("Error lectura caché usuarios:", e); }
-  }
-  if (fs.existsSync(STUDENTS_CACHE_FILE)) {
+        const usersData = await fsp.readFile(USERS_CACHE_FILE, 'utf8');
+        usersMemoryCache = JSON.parse(usersData || '[]');
+        console.log(`✅ [CACHE] Usuarios cargados: ${usersMemoryCache.length}`);
+    } catch (e) {
+        if (e.code !== 'ENOENT') {
+            console.error("Error lectura caché usuarios:", e);
+        }
+    }
     try {
-      studentsMemoryCache = JSON.parse(fs.readFileSync(STUDENTS_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [CACHE] Alumnos cargados: ${studentsMemoryCache.length}`);
-    } catch (e) { console.error("Error lectura caché alumnos:", e); }
-  }
-  if (fs.existsSync(CLASSES_CACHE_FILE)) {
+        const studentsData = await fsp.readFile(STUDENTS_CACHE_FILE, 'utf8');
+        studentsMemoryCache = JSON.parse(studentsData || '[]');
+        console.log(`✅ [CACHE] Alumnos cargados: ${studentsMemoryCache.length}`);
+    } catch (e) {
+        if (e.code !== 'ENOENT') {
+            console.error("Error lectura caché alumnos:", e);
+        }
+    }
     try {
-      classesMemoryCache = JSON.parse(fs.readFileSync(CLASSES_CACHE_FILE, 'utf8') || '[]');
-      console.log(`✅ [CACHE] Clases cargadas: ${classesMemoryCache.length}`);
-    } catch (e) { console.error("Error lectura caché clases:", e); }
-  }
+        const classesData = await fsp.readFile(CLASSES_CACHE_FILE, 'utf8');
+        classesMemoryCache = JSON.parse(classesData || '[]');
+        console.log(`✅ [CACHE] Clases cargadas: ${classesMemoryCache.length}`);
+    } catch (e) {
+        if (e.code !== 'ENOENT') {
+            console.error("Error lectura caché clases:", e);
+        }
+    }
 };
-loadCache();
+const startServer = async () => {
+    await loadCache();
 
-// --- EXTERNAL DATA SYNC (VIA SOCKET) ---
-let prismaSocket = null;
+    // --- EXTERNAL DATA SYNC (VIA SOCKET) ---
+    let prismaSocket = null;
 
 const processExternalUsers = (externalUsers) => {
     if (!Array.isArray(externalUsers)) return;
@@ -127,14 +138,18 @@ const processExternalUsers = (externalUsers) => {
     if (allowedTeachers.length > 0) {
         allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
         usersMemoryCache = allowedTeachers;
-        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
+        fsp.writeFile(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2)).catch(err => {
+            console.error('Error writing users cache file:', err);
+        });
         console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
     }
 
     if (allowedStudents.length > 0) {
         allowedStudents.sort((a, b) => a.name.localeCompare(b.name));
         studentsMemoryCache = allowedStudents;
-        fs.writeFileSync(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2));
+        fsp.writeFile(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2)).catch(err => {
+            console.error('Error writing students cache file:', err);
+        });
         console.log(`✅ [SYNC] ÉXITO: ${allowedStudents.length} alumnos sincronizados.`);
     }
 };
@@ -151,7 +166,9 @@ const processExternalClasses = (externalClasses) => {
 
     if (cleanClasses.length > 0) {
         classesMemoryCache = cleanClasses;
-        fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
+        fsp.writeFile(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2)).catch(err => {
+            console.error('Error writing classes cache file:', err);
+        });
         console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
     }
 };
@@ -268,83 +285,136 @@ app.get('/api/students', (req, res) => {
     res.json(sorted);
 });
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
-app.get('/api/bookings', (req, res) => {
-  if (!fs.existsSync(DATA_FILE)) return res.json([]);
-  try { res.json(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]')); } catch(e) { res.json([]); }
-});
-
-app.post('/api/bookings', (req, res) => {
-  try {
-    const incoming = Array.isArray(req.body) ? req.body : [req.body];
-    let bookings = [];
-    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-    
-    for (const item of incoming) {
-       const incomingResource = item.resource || 'ROOM';
-       if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
-         return res.status(409).json({ error: 'Conflict' });
-       }
+app.get('/api/bookings', async (req, res) => {
+    try {
+        const data = await fsp.readFile(DATA_FILE, 'utf8');
+        res.json(JSON.parse(data || '[]'));
+    } catch (e) {
+        if (e.code === 'ENOENT') {
+            return res.json([]);
+        }
+        res.status(500).json({ error: 'Error' });
     }
-    bookings.push(...incoming);
-    fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-    
-    if (incoming[0]?.logs?.[0]) {
-        let history = [];
-        if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-        history.push(incoming[0].logs[0]);
-        if (history.length > 1000) history = history.slice(-1000);
-        fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+});
+
+app.post('/api/bookings', async (req, res) => {
+    try {
+        const incoming = Array.isArray(req.body) ? req.body : [req.body];
+        let bookings = [];
+        try {
+            const data = await fsp.readFile(DATA_FILE, 'utf8');
+            bookings = JSON.parse(data || '[]');
+        } catch (e) {
+            if (e.code !== 'ENOENT') throw e;
+        }
+
+        for (const item of incoming) {
+            const incomingResource = item.resource || 'ROOM';
+            if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
+                return res.status(409).json({ error: 'Conflict' });
+            }
+        }
+        bookings.push(...incoming);
+        await fsp.writeFile(DATA_FILE, JSON.stringify(bookings, null, 2));
+
+        if (incoming[0]?.logs?.[0]) {
+            let history = [];
+            try {
+                const historyData = await fsp.readFile(HISTORY_FILE, 'utf8');
+                history = JSON.parse(historyData || '[]');
+            } catch (e) {
+                if (e.code !== 'ENOENT') throw e;
+            }
+            history.push(incoming[0].logs[0]);
+            if (history.length > 1000) history = history.slice(-1000);
+            await fsp.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
+        }
+
+        io.emit('server:bookings_updated', bookings);
+        res.status(201).json({ success: true });
+    } catch (e) {
+        console.error('Error processing booking:', e);
+        res.status(500).json({ error: 'Error' });
     }
-    
-    io.emit('server:bookings_updated', bookings);
-    res.status(201).json({ success: true });
-  } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 
-app.put('/api/bookings/:id', (req, res) => {
-  try {
-    let bookings = [];
-    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
+app.put('/api/bookings/:id', async (req, res) => {
+    try {
+        let bookings = [];
+        try {
+            const data = await fsp.readFile(DATA_FILE, 'utf8');
+            bookings = JSON.parse(data || '[]');
+        } catch (e) {
+            if (e.code !== 'ENOENT') throw e;
+        }
 
-    const index = bookings.findIndex(b => b.id === req.params.id);
-    if (index === -1) return res.status(404).json({ error: 'Not found' });
+        const index = bookings.findIndex(b => b.id === req.params.id);
+        if (index === -1) return res.status(404).json({ error: 'Not found' });
 
-    // Update fields (preserving ID and potentially other immutable fields if needed)
-    bookings[index] = { ...bookings[index], ...req.body, id: req.params.id };
+        // Update fields (preserving ID and potentially other immutable fields if needed)
+        bookings[index] = { ...bookings[index], ...req.body, id: req.params.id };
 
-    fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-    io.emit('server:bookings_updated', bookings);
-    res.json({ success: true });
-  } catch (e) { res.status(500).json({ error: 'Error' }); }
+        await fsp.writeFile(DATA_FILE, JSON.stringify(bookings, null, 2));
+        io.emit('server:bookings_updated', bookings);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error updating booking:', e);
+        res.status(500).json({ error: 'Error' });
+    }
 });
 
-app.delete('/api/bookings/:id', (req, res) => {
-  let bookings = [];
-  if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-  
-  const target = bookings.find(b => b.id === req.params.id);
-  if (!target) return res.status(404).json({error: 'Not found'});
-  
-  bookings = bookings.filter(b => b.id !== req.params.id);
-  fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-  
-  if (req.body.user) {
-      let history = [];
-      if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-      history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
-      fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
-  }
-  
-  io.emit('server:bookings_updated', bookings);
-  res.json({ success: true });
+app.delete('/api/bookings/:id', async (req, res) => {
+    try {
+        let bookings = [];
+        try {
+            const data = await fsp.readFile(DATA_FILE, 'utf8');
+            bookings = JSON.parse(data || '[]');
+        } catch (e) {
+            if (e.code !== 'ENOENT') throw e;
+        }
+
+        const target = bookings.find(b => b.id === req.params.id);
+        if (!target) return res.status(404).json({ error: 'Not found' });
+
+        bookings = bookings.filter(b => b.id !== req.params.id);
+        await fsp.writeFile(DATA_FILE, JSON.stringify(bookings, null, 2));
+
+        if (req.body.user) {
+            let history = [];
+            try {
+                const historyData = await fsp.readFile(HISTORY_FILE, 'utf8');
+                history = JSON.parse(historyData || '[]');
+            } catch (e) {
+                if (e.code !== 'ENOENT') throw e;
+            }
+            history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
+            await fsp.writeFile(HISTORY_FILE, JSON.stringify(history, null, 2));
+        }
+
+        io.emit('server:bookings_updated', bookings);
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Error deleting booking:', e);
+        res.status(500).json({ error: 'Error' });
+    }
 });
 
-app.get('/api/history', (req, res) => {
-  if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
-  try { res.json(JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]').sort((a,b) => b.timestamp - a.timestamp)); } catch(e) { res.json([]); }
+app.get('/api/history', async (req, res) => {
+    try {
+        const data = await fsp.readFile(HISTORY_FILE, 'utf8');
+        res.json(JSON.parse(data || '[]').sort((a, b) => b.timestamp - a.timestamp));
+    } catch (e) {
+        if (e.code === 'ENOENT') {
+            return res.json([]);
+        }
+        res.status(500).json({ error: 'Error' });
+    }
 });
 
 app.use(express.static(__dirname));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
-server.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
+    server.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
+};
+
+startServer();
