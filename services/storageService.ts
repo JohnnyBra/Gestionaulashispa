@@ -60,10 +60,10 @@ export const saveBatchBookings = async (bookings: Booking[]): Promise<void> => {
   if (response.status === 409) throw new Error('CONFLICT');
 };
 
-export const removeBooking = async (bookingId: string, user: User): Promise<void> => {
+export const removeBooking = async (bookingId: string, user: User, deleteSeries: boolean = false): Promise<void> => {
   await fetch(`/api/bookings/${bookingId}`, {
     method: 'DELETE',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user }),
+    body: JSON.stringify({ user, deleteSeries }),
   });
 };
