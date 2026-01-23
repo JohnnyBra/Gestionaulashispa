@@ -19,9 +19,9 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // IMPORTANTE: Sustituye esto por tu Client ID real de Google Cloud Console
-  const GOOGLE_CLIENT_ID = "TU_GOOGLE_CLIENT_ID_AQUI"; 
-  const isGoogleEnabled = GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== "TU_GOOGLE_CLIENT_ID_AQUI";
+  // Configuración de Google OAuth desde variables de entorno
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const isGoogleEnabled = !!GOOGLE_CLIENT_ID;
 
   useEffect(() => {
     if (!isGoogleEnabled) return;
