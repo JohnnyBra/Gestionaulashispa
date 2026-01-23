@@ -11,6 +11,7 @@ import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { getResourceCapacity } from '../utils/resourceUtils';
 
 interface CalendarViewProps {
   stage: Stage;
@@ -262,8 +263,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                  const seatingPlan = booking.seatingPlan || {};
                  const incidences = booking.incidences || {};
                  const tableData: any[] = [];
+                 const computerCount = getResourceCapacity(stage, currentResource);
 
-                 for (let i = 1; i <= 25; i++) { // Max 25 computers
+                 for (let i = 1; i <= computerCount; i++) {
                      const students = seatingPlan[i] || [];
                      const incidenceText = incidences[i] || '';
 
@@ -317,7 +319,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
         doc.text('Fecha: ___________________________', 110, 45);
         doc.text('Asignatura: ______________________', 20, 55);
         doc.text('Actividad: _______________________', 20, 65);
-        const tableData = Array.from({ length: 25 }, (_, i) => [ `PC ${i+1}`, '', '']);
+        const computerCount = getResourceCapacity(stage, currentResource);
+        const tableData = Array.from({ length: computerCount }, (_, i) => [ `PC ${i+1}`, '', '']);
         autoTable(doc, {
             startY: 75,
             head: [['PC', 'Alumno/s', 'Observaciones']],
