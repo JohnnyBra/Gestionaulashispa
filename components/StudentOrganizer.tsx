@@ -223,27 +223,32 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
 
   const renderBlankPDF = (doc: jsPDF, logo: HTMLImageElement | null) => {
     const pageWidth = doc.internal.pageSize.width;
-    if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 30, 30);
+    if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 25, 25);
 
     doc.setFontSize(16);
     doc.text('REGISTRO DE USO TIC', 20, 20);
 
-    doc.setFontSize(11);
-    doc.text('Clase: ___________________________', 20, 35);
-    doc.text('Profesor: ________________________', 20, 45);
-    doc.text('Horario: _________________________', 110, 35);
-    doc.text('Fecha: ___________________________', 110, 45);
-    doc.text('Asignatura: ______________________', 20, 55);
-    doc.text('Actividad: _______________________', 20, 65);
+    doc.setFontSize(10);
+    doc.text('Clase: ___________________________', 20, 30);
+    doc.text('Fecha: ___________________________', 110, 30);
+    doc.text('Profesor: ________________________', 20, 38);
+    doc.text('Horario: _________________________', 110, 38);
+    doc.text('Asignatura: ______________________', 20, 46);
+    doc.text('Actividad: _______________________', 20, 54);
 
     const tableData = Array.from({ length: COMPUTER_COUNT }, (_, i) => [ `PC ${i+1}`, '', '']);
 
     autoTable(doc, {
-        startY: 75,
+        startY: 60,
         head: [['PC', 'Alumno/s', 'Observaciones']],
         body: tableData,
         theme: 'grid',
-        styles: { minCellHeight: 8 }
+        styles: { minCellHeight: 9 },
+        columnStyles: {
+            0: { cellWidth: 20 },
+            1: { cellWidth: 'auto' },
+            2: { cellWidth: 45 }
+        }
     });
 
     doc.save('registro_tic_plantilla.pdf');
@@ -251,22 +256,22 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
 
   return (
     <div className="flex flex-col h-full overflow-hidden bg-white rounded-lg shadow-xl">
-      <div className="bg-blue-600 text-white p-4 flex justify-between items-center">
-        <div className="flex items-center gap-2">
-            <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded"><ArrowLeft size={20}/></button>
-            <h2 className="text-xl font-bold">Organizar Alumnado: {booking.course}</h2>
+      <div className="bg-blue-600 text-white p-4 flex justify-between items-center gap-2">
+        <div className="flex items-center gap-2 min-w-0">
+            <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded shrink-0"><ArrowLeft size={20}/></button>
+            <h2 className="text-lg md:text-xl font-bold truncate">Organizar Alumnado: {booking.course}</h2>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 shrink-0">
             <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100 text-sm font-medium">
-                <Printer size={16}/> Imprimir
+                <Printer size={16}/> <span className="hidden sm:inline">Imprimir</span>
             </button>
             {isAdmin && (
                 <button onClick={() => generateBlankTemplate()} className="flex items-center gap-1 bg-blue-800 text-white px-3 py-1 rounded hover:bg-blue-900 text-sm font-medium">
-                    <FileText size={16}/> Plantilla Vacía
+                    <FileText size={16}/> <span className="hidden sm:inline">Plantilla Vacía</span>
                 </button>
             )}
             <button onClick={handleSave} className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm font-medium">
-                <Save size={16}/> Guardar
+                <Save size={16}/> <span>Guardar</span>
             </button>
         </div>
       </div>
