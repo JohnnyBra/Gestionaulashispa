@@ -4,6 +4,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { ArrowLeft, User, Shuffle, SortAsc, Save, Printer, FileText, Users, MessageSquare, AlertTriangle } from 'lucide-react';
 import { Modal } from './Modal';
+import { getResourceCapacity } from '../utils/resourceUtils';
 
 interface StudentOrganizerProps {
   booking: Booking;
@@ -12,8 +13,6 @@ interface StudentOrganizerProps {
   onUpdateBooking: (bookingId: string, seatingPlan: SeatingPlan, incidences: { [key: number]: string }) => void;
   isAdmin?: boolean;
 }
-
-const COMPUTER_COUNT = 25;
 
 const getSortableName = (name: string) => {
   if (name.includes(',')) return name.toLowerCase();
@@ -34,6 +33,7 @@ const getSortableName = (name: string) => {
 };
 
 export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, classes, onClose, onUpdateBooking, isAdmin }) => {
+  const computerCount = getResourceCapacity(booking.stage, booking.resource);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [seatingPlan, setSeatingPlan] = useState<SeatingPlan>(booking.seatingPlan || {});
@@ -142,7 +142,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     const newPlan: SeatingPlan = {};
     let studentIndex = 0;
 
-    for (let i = 1; i <= COMPUTER_COUNT; i++) {
+    for (let i = 1; i <= computerCount; i++) {
         if (studentIndex >= studentsToAssign.length) break;
 
         const s1 = studentsToAssign[studentIndex];
@@ -216,7 +216,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     doc.text(`Actividad: ${booking.justification || '-'}`, 20, 50);
 
     const tableData = [];
-    for (let i = 1; i <= COMPUTER_COUNT; i++) {
+    for (let i = 1; i <= computerCount; i++) {
         const students = seatingPlan[i] || [];
         // If pair, join names
         const names = students.map(s => s.name).join(' / ');
@@ -265,7 +265,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     doc.text('Asignatura: ______________________', 110, 36);
     doc.text('Actividad: __________________________________________________', 20, 42);
 
-    const tableData = Array.from({ length: COMPUTER_COUNT }, (_, i) => [ `PC ${i+1}`, '', '']);
+    const tableData = Array.from({ length: computerCount }, (_, i) => [ `PC ${i+1}`, '', '']);
 
     autoTable(doc, {
         startY: 50,
@@ -325,7 +325,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
         {/* Computer Grid Area */}
         <div className={`flex-1 p-2 md:p-4 overflow-y-auto bg-gray-50 ${activeTab === 'computers' ? 'block' : 'hidden md:block'}`}>
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-                <h3 className="font-semibold text-gray-700 hidden md:block">Ordenadores ({COMPUTER_COUNT})</h3>
+                <h3 className="font-semibold text-gray-700 hidden md:block">Ordenadores ({computerCount})</h3>
 
                 {/* Responsive Toolbar */}
                 <div className="w-full md:w-auto flex flex-wrap gap-2 text-sm">
@@ -343,7 +343,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 pb-20 md:pb-0">
-                {Array.from({ length: COMPUTER_COUNT }, (_, i) => i + 1).map(num => {
+                {Array.from({ length: computerCount }, (_, i) => i + 1).map(num => {
                     const assignedStudents = seatingPlan[num] || [];
                     const hasIncidence = !!incidences[num];
                     return (
