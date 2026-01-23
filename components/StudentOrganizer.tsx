@@ -226,20 +226,21 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     if (logo) doc.addImage(logo, 'PNG', pageWidth - 40, 10, 25, 25);
 
     doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
     doc.text('REGISTRO DE USO TIC', 20, 20);
+    doc.setFont("helvetica", "normal");
 
     doc.setFontSize(10);
     doc.text('Clase: ___________________________', 20, 30);
-    doc.text('Fecha: ___________________________', 110, 30);
-    doc.text('Profesor: ________________________', 20, 38);
-    doc.text('Horario: _________________________', 110, 38);
-    doc.text('Asignatura: ______________________', 20, 46);
-    doc.text('Actividad: _______________________', 20, 54);
+    doc.text('Fecha/Horario: ___________________', 110, 30);
+    doc.text('Profesor: ________________________', 20, 36);
+    doc.text('Asignatura: ______________________', 110, 36);
+    doc.text('Actividad: __________________________________________________', 20, 42);
 
     const tableData = Array.from({ length: COMPUTER_COUNT }, (_, i) => [ `PC ${i+1}`, '', '']);
 
     autoTable(doc, {
-        startY: 60,
+        startY: 50,
         head: [['PC', 'Alumno/s', 'Observaciones']],
         body: tableData,
         theme: 'grid',
