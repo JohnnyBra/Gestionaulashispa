@@ -40,8 +40,10 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
   const [incidences, setIncidences] = useState<{ [key: number]: string }>(booking.incidences || {});
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isPairMode, setIsPairMode] = useState(false);
+  const [groupSize, setGroupSize] = useState<number>(1);
   const [activeTab, setActiveTab] = useState<'computers' | 'students'>('computers');
+
+  const isSecondaryCart = booking.stage === 'SECUNDARIA' && booking.resource === 'CART';
 
   // Incidence Modal State
   const [incidenceModalOpen, setIncidenceModalOpen] = useState(false);
@@ -102,8 +104,8 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     // If click on filled: Replace? Or Add if room?
     // Let's allow adding if count < 2.
 
-    if (current.length >= 2) {
-        alert("Este ordenador ya tiene 2 alumnos asignados.");
+    if (current.length >= groupSize) {
+        alert(`Este ordenador ya tiene ${groupSize} alumnos asignados.`);
         return;
     }
 
@@ -150,10 +152,9 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
 
         let assigned = [s1];
 
-        // If Pair Mode is ON, try to take the next student too
-        if (isPairMode && studentIndex < studentsToAssign.length) {
-            const s2 = studentsToAssign[studentIndex];
-            assigned.push(s2);
+        // Fill up to groupSize
+        while (assigned.length < groupSize && studentIndex < studentsToAssign.length) {
+            assigned.push(studentsToAssign[studentIndex]);
             studentIndex++;
         }
 
@@ -330,10 +331,16 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                 {/* Responsive Toolbar */}
                 <div className="w-full md:w-auto flex flex-wrap gap-2 text-sm">
                     <div className="flex items-center gap-2 bg-white p-1.5 px-3 rounded border shadow-sm">
-                        <label className="text-gray-600 flex items-center gap-1 cursor-pointer select-none">
-                            <input type="checkbox" checked={isPairMode} onChange={e => setIsPairMode(e.target.checked)} className="form-checkbox w-4 h-4"/>
-                            <span className="flex items-center gap-1"><Users size={16}/> <span className="hidden sm:inline">Parejas</span></span>
-                        </label>
+                        <span className="text-gray-600 flex items-center gap-1"><Users size={16}/> <span className="hidden sm:inline">Agrupación:</span></span>
+                        <select
+                            value={groupSize}
+                            onChange={e => setGroupSize(Number(e.target.value))}
+                            className="text-sm border-none bg-transparent focus:ring-0 cursor-pointer outline-none font-medium text-blue-600"
+                        >
+                            <option value={1}>Individual</option>
+                            <option value={2}>Parejas</option>
+                            {isSecondaryCart && <option value={3}>Tríos</option>}
+                        </select>
                     </div>
                     <div className="flex gap-2 ml-auto md:ml-0">
                         <button onClick={() => autoAssign('ALPHABETICAL')} className="px-3 py-1.5 bg-gray-200 rounded hover:bg-gray-300 flex items-center gap-1 font-medium"><SortAsc size={16}/> <span>ABC</span></button>
