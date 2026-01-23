@@ -191,7 +191,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
           doc.text(roomName, 20, 30);
 
           const tableData = dailyBookings.map(b => {
-              const slot = slots.find(s => s.slotId === b.slotId) || { label: b.slotId };
+              const slot = slots.find(s => s.id === b.slotId) || { label: b.slotId };
               return [
                  slots.find(s => s.id === b.slotId)?.label || b.slotId,
                  b.course || '-',
@@ -244,7 +244,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                  doc.setFontSize(10);
                  doc.text(roomName, 20, 28);
 
-                 const slot = slots.find(s => s.slotId === booking.slotId) || { label: booking.slotId };
+                 const slot = slots.find(s => s.id === booking.slotId) || { label: booking.slotId };
 
                  // Header info block
                  doc.setFillColor(240, 240, 240);
