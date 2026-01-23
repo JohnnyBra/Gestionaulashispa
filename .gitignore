@@ -6,3 +6,6 @@ backups/
 logo.png
 .DS_Store
 .env
+*.log
+*_cache.json
+history.json
