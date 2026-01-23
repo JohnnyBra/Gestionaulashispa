@@ -26,23 +26,38 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   useEffect(() => {
     if (!isGoogleEnabled) return;
 
-    if (window.google) {
-      try {
-        window.google.accounts.id.initialize({
-          client_id: GOOGLE_CLIENT_ID,
-          callback: handleGoogleResponse
-        });
+    const initializeGoogle = () => {
+      if (window.google && window.google.accounts) {
+        try {
+          window.google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleGoogleResponse
+          });
 
-        const buttonDiv = document.getElementById("googleButtonDiv");
-        if (buttonDiv) {
-          window.google.accounts.id.renderButton(
-            buttonDiv,
-            { theme: "outline", size: "large", width: "100%", text: "continue_with" } 
-          );
+          const buttonDiv = document.getElementById("googleButtonDiv");
+          if (buttonDiv) {
+            window.google.accounts.id.renderButton(
+              buttonDiv,
+              { theme: "outline", size: "large", width: "100%", text: "continue_with" }
+            );
+          }
+          return true;
+        } catch (e) {
+          console.warn("Error inicializando Google Auth:", e);
+          return false;
         }
-      } catch (e) {
-        console.warn("Error inicializando Google Auth:", e);
       }
+      return false;
+    };
+
+    if (!initializeGoogle()) {
+      const intervalId = setInterval(() => {
+        if (initializeGoogle()) {
+          clearInterval(intervalId);
+        }
+      }, 100);
+
+      return () => clearInterval(intervalId);
     }
   }, [isGoogleEnabled]);
 
