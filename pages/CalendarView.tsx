@@ -110,12 +110,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setIsModalOpen(true);
   };
 
-  const handleUpdateSeatingPlan = async (bookingId: string, seatingPlan: SeatingPlan) => {
+  const handleUpdateSeatingPlan = async (bookingId: string, seatingPlan: SeatingPlan, incidences: { [key: number]: string }) => {
       try {
           await fetch(`/api/bookings/${bookingId}`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ seatingPlan })
+              body: JSON.stringify({ seatingPlan, incidences })
           });
           // Update local state if needed, but socket should handle it.
           // Force close modal or show success?
@@ -260,15 +260,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                  // Students Table
                  const seatingPlan = booking.seatingPlan || {};
+                 const incidences = booking.incidences || {};
                  const tableData: any[] = [];
 
                  for (let i = 1; i <= 25; i++) { // Max 25 computers
                      const students = seatingPlan[i] || [];
-                     if (students.length > 0) {
+                     const incidenceText = incidences[i] || '';
+
+                     if (students.length > 0 || incidenceText) {
                          tableData.push([
                              `PC ${i}`,
                              students.map((s: any) => s.name).join(' / '),
-                             ''
+                             incidenceText
                          ]);
                      }
                  }
