@@ -464,7 +464,12 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     </>
                 )}
                 {(user.role === Role.ADMIN || existingBooking.teacherEmail === user.email) && (
-                    <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="w-full py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100">Eliminar</button>
+                    <div className="flex gap-2 w-full">
+                        <button onClick={async () => { await removeBooking(existingBooking.id, user); setIsModalOpen(false); }} className="flex-1 py-3 bg-red-50 text-red-600 rounded-xl font-bold border border-red-100">Eliminar</button>
+                        {user.role === Role.ADMIN && (
+                             <button onClick={async () => { await removeBooking(existingBooking.id, user, true); setIsModalOpen(false); }} className="flex-1 py-3 bg-red-600 text-white rounded-xl font-bold border border-red-700 shadow-lg">Eliminar Serie</button>
+                        )}
+                    </div>
                 )}
             </div>
         ) : (

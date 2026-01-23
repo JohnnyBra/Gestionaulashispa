@@ -325,16 +325,48 @@ app.delete('/api/bookings/:id', (req, res) => {
   const target = bookings.find(b => b.id === req.params.id);
   if (!target) return res.status(404).json({error: 'Not found'});
   
-  bookings = bookings.filter(b => b.id !== req.params.id);
-  fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-  
-  if (req.body.user) {
-      let history = [];
-      if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-      history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
-      fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+  if (req.body.deleteSeries) {
+      const targetDateStr = target.date;
+      const targetDay = new Date(targetDateStr).getUTCDay();
+
+      const toDeleteIds = bookings.filter(b => {
+          if (b.teacherEmail !== target.teacherEmail) return false;
+          if (b.slotId !== target.slotId) return false;
+          if (b.stage !== target.stage) return false;
+          if ((b.resource || 'ROOM') !== (target.resource || 'ROOM')) return false;
+
+          if (b.date < targetDateStr) return false;
+
+          const bDay = new Date(b.date).getUTCDay();
+          return bDay === targetDay;
+      }).map(b => b.id);
+
+      bookings = bookings.filter(b => !toDeleteIds.includes(b.id));
+
+      if (req.body.user) {
+          let history = [];
+          if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
+          history.push({
+              action: 'DELETED_SERIES',
+              user: req.body.user.email,
+              userName: req.body.user.name,
+              timestamp: Date.now(),
+              details: `Eliminada serie de reservas de ${target.teacherName} desde ${target.date}`
+          });
+          fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+      }
+  } else {
+      bookings = bookings.filter(b => b.id !== req.params.id);
+
+      if (req.body.user) {
+          let history = [];
+          if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
+          history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
+          fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+      }
   }
-  
+
+  fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
   io.emit('server:bookings_updated', bookings);
   res.json({ success: true });
 });
