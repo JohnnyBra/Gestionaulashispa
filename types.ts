@@ -63,6 +63,7 @@ export interface Booking {
   logs: ActionLog[]; // History of actions
   createdAt: number;
   seatingPlan?: SeatingPlan; // Optional seating plan
+  incidences?: { [computerId: number]: string }; // Incidencias por ordenador
 }
 
 // Fallbacks en caso de que la API falle

@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { Booking, Student, SeatingPlan, ClassGroup, SLOTS_PRIMARY, SLOTS_SECONDARY } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ArrowLeft, User, Shuffle, SortAsc, Save, Printer, FileText, Users } from 'lucide-react';
+import { ArrowLeft, User, Shuffle, SortAsc, Save, Printer, FileText, Users, MessageSquare, AlertTriangle } from 'lucide-react';
+import { Modal } from './Modal';
 
 interface StudentOrganizerProps {
   booking: Booking;
   classes: ClassGroup[];
   onClose: () => void;
-  onUpdateBooking: (bookingId: string, seatingPlan: SeatingPlan) => void;
+  onUpdateBooking: (bookingId: string, seatingPlan: SeatingPlan, incidences: { [key: number]: string }) => void;
   isAdmin?: boolean;
 }
 
@@ -36,10 +37,16 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
   const [seatingPlan, setSeatingPlan] = useState<SeatingPlan>(booking.seatingPlan || {});
+  const [incidences, setIncidences] = useState<{ [key: number]: string }>(booking.incidences || {});
   const [loading, setLoading] = useState(true);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [isPairMode, setIsPairMode] = useState(false);
   const [activeTab, setActiveTab] = useState<'computers' | 'students'>('computers');
+
+  // Incidence Modal State
+  const [incidenceModalOpen, setIncidenceModalOpen] = useState(false);
+  const [editingIncidenceComputer, setEditingIncidenceComputer] = useState<number | null>(null);
+  const [editingIncidenceText, setEditingIncidenceText] = useState('');
 
   // Load students on mount
   useEffect(() => {
@@ -155,8 +162,29 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     setSeatingPlan(newPlan);
   };
 
+  const openIncidenceModal = (e: React.MouseEvent, computerId: number) => {
+    e.stopPropagation();
+    setEditingIncidenceComputer(computerId);
+    setEditingIncidenceText(incidences[computerId] || '');
+    setIncidenceModalOpen(true);
+  };
+
+  const saveIncidence = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (editingIncidenceComputer !== null) {
+          const newIncidences = { ...incidences };
+          if (editingIncidenceText.trim()) {
+              newIncidences[editingIncidenceComputer] = editingIncidenceText.trim();
+          } else {
+              delete newIncidences[editingIncidenceComputer];
+          }
+          setIncidences(newIncidences);
+      }
+      setIncidenceModalOpen(false);
+  };
+
   const handleSave = () => {
-    onUpdateBooking(booking.id, seatingPlan);
+    onUpdateBooking(booking.id, seatingPlan, incidences);
   };
 
   // --- PDF Generation ---
@@ -192,12 +220,12 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
         const students = seatingPlan[i] || [];
         // If pair, join names
         const names = students.map(s => s.name).join(' / ');
-        const classesStr = students.map(s => s.classId).join(' / '); // Or just use one if they are same class
+        const incidenceText = incidences[i] || '';
 
         tableData.push([
             `PC ${i}`,
             names,
-            ''
+            incidenceText
         ]);
     }
 
@@ -317,23 +345,26 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 md:gap-3 pb-20 md:pb-0">
                 {Array.from({ length: COMPUTER_COUNT }, (_, i) => i + 1).map(num => {
                     const assignedStudents = seatingPlan[num] || [];
+                    const hasIncidence = !!incidences[num];
                     return (
                         <div
                             key={num}
-                            className={`border rounded p-2 h-24 md:h-28 flex flex-col justify-between cursor-pointer transition-all active:scale-95 md:active:scale-100 ${assignedStudents.length > 0 ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200' : 'bg-white hover:bg-gray-100 shadow-sm'}`}
+                            className={`relative border rounded p-2 h-24 md:h-28 flex flex-col justify-between cursor-pointer transition-all active:scale-95 md:active:scale-100 ${assignedStudents.length > 0 ? 'bg-blue-50 border-blue-300 ring-1 ring-blue-200' : 'bg-white hover:bg-gray-100 shadow-sm'}`}
                             onClick={() => {
                                 if (selectedStudent) {
                                     handleAssign(num, selectedStudent);
-                                    // On mobile, maybe switch back to student list after assign?
-                                    // Or stay to allow multi-assign?
-                                } else if (assignedStudents.length > 0) {
-                                    // Click on filled PC
                                 }
                             }}
                         >
-                            <div className="font-bold text-gray-400 text-sm flex justify-between">
+                            <div className="font-bold text-gray-400 text-sm flex justify-between items-center">
                                 <span>PC {num}</span>
-                                <span className="text-xs font-normal text-gray-400">{assignedStudents.length}/2</span>
+                                <button
+                                    onClick={(e) => openIncidenceModal(e, num)}
+                                    className={`p-1 rounded hover:bg-gray-200 transition-colors ${hasIncidence ? 'text-orange-500' : 'text-gray-300 hover:text-gray-500'}`}
+                                    title={hasIncidence ? incidences[num] : "Añadir incidencia"}
+                                >
+                                    {hasIncidence ? <AlertTriangle size={14} fill="currentColor" /> : <MessageSquare size={14} />}
+                                </button>
                             </div>
                             <div className="flex-1 flex flex-col justify-center gap-1 overflow-hidden mt-1">
                                 {assignedStudents.length === 0 ? (
@@ -357,6 +388,26 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                 })}
             </div>
         </div>
+
+        <Modal isOpen={incidenceModalOpen} onClose={() => setIncidenceModalOpen(false)} title={`Incidencia PC ${editingIncidenceComputer}`}>
+            <form onSubmit={saveIncidence} className="space-y-4">
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Descripción de la incidencia</label>
+                    <textarea
+                        className="w-full p-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                        rows={4}
+                        placeholder="Ej: El ratón no funciona, pantalla parpadea..."
+                        value={editingIncidenceText}
+                        onChange={e => setEditingIncidenceText(e.target.value)}
+                        autoFocus
+                    />
+                </div>
+                <div className="flex justify-end gap-2">
+                    <button type="button" onClick={() => setIncidenceModalOpen(false)} className="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">Cancelar</button>
+                    <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Guardar Incidencia</button>
+                </div>
+            </form>
+        </Modal>
 
         {/* Student List Sidebar */}
         <div className={`md:w-64 lg:w-80 border-l bg-white flex flex-col ${activeTab === 'students' ? 'block flex-1' : 'hidden md:flex'}`}>
