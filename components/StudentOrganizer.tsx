@@ -1,14 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Booking, Student, SeatingPlan, ClassGroup, SLOTS_PRIMARY, SLOTS_SECONDARY } from '../types';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { ArrowLeft, User, Shuffle, SortAsc, Save, Printer, FileText, Users, MessageSquare, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, User, Shuffle, SortAsc, Save, Printer, FileText, Users, MessageSquare, AlertTriangle, History } from 'lucide-react';
 import { Modal } from './Modal';
 import { getResourceCapacity } from '../utils/resourceUtils';
 
 interface StudentOrganizerProps {
   booking: Booking;
   classes: ClassGroup[];
+  historyBookings?: Booking[];
   onClose: () => void;
   onUpdateBooking: (bookingId: string, seatingPlan: SeatingPlan, incidences: { [key: number]: string }) => void;
   isAdmin?: boolean;
@@ -32,7 +33,7 @@ const getSortableName = (name: string) => {
   return `${surnames}, ${firstname}`.toLowerCase();
 };
 
-export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, classes, onClose, onUpdateBooking, isAdmin }) => {
+export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, classes, historyBookings, onClose, onUpdateBooking, isAdmin }) => {
   const computerCount = getResourceCapacity(booking.stage, booking.resource);
   const [allStudents, setAllStudents] = useState<Student[]>([]);
   const [filteredStudents, setFilteredStudents] = useState<Student[]>([]);
@@ -44,6 +45,27 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
   const [activeTab, setActiveTab] = useState<'computers' | 'students'>('computers');
 
   const isSecondaryCart = booking.stage === 'SECUNDARIA' && booking.resource === 'CART';
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+
+  const previousBookings = useMemo(() => {
+      if (!historyBookings) return [];
+      return historyBookings.filter(b =>
+          b.id !== booking.id &&
+          b.teacherEmail === booking.teacherEmail &&
+          b.course === booking.course &&
+          b.stage === booking.stage &&
+          (b.resource || 'ROOM') === (booking.resource || 'ROOM') &&
+          b.date < booking.date &&
+          b.seatingPlan && Object.keys(b.seatingPlan).length > 0
+      ).sort((a, b) => b.date.localeCompare(a.date));
+  }, [historyBookings, booking]);
+
+  const handleImportHistory = (prevBooking: Booking) => {
+      if (prevBooking.seatingPlan) {
+          setSeatingPlan(prevBooking.seatingPlan);
+          setShowHistoryModal(false);
+      }
+  };
 
   // Incidence Modal State
   const [incidenceModalOpen, setIncidenceModalOpen] = useState(false);
@@ -292,6 +314,11 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
             <h2 className="text-lg md:text-xl font-bold truncate">Organizar Alumnado: {booking.course}</h2>
         </div>
         <div className="flex gap-2 shrink-0">
+            {previousBookings.length > 0 && (
+                 <button onClick={() => setShowHistoryModal(true)} className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 text-sm font-medium">
+                    <History size={16}/> <span className="hidden sm:inline">Importar</span>
+                </button>
+            )}
             <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100 text-sm font-medium">
                 <Printer size={16}/> <span className="hidden sm:inline">Imprimir</span>
             </button>
@@ -414,6 +441,31 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                     <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Guardar Incidencia</button>
                 </div>
             </form>
+        </Modal>
+
+        <Modal isOpen={showHistoryModal} onClose={() => setShowHistoryModal(false)} title="Importar organización anterior" size="md">
+            <div className="space-y-4">
+                <p className="text-sm text-gray-500">Selecciona una reserva previa para copiar la organización del alumnado.</p>
+                <div className="space-y-2 max-h-[60vh] overflow-y-auto">
+                    {previousBookings.map(b => {
+                        const slots = b.stage === 'PRIMARIA' ? SLOTS_PRIMARY : SLOTS_SECONDARY;
+                        const slotLabel = slots.find(s => s.id === b.slotId)?.label || b.slotId;
+                        return (
+                            <button
+                                key={b.id}
+                                onClick={() => handleImportHistory(b)}
+                                className="w-full text-left p-3 border rounded-lg hover:bg-blue-50 hover:border-blue-200 transition-colors flex flex-col gap-1"
+                            >
+                                <div className="flex justify-between items-center">
+                                    <span className="font-bold text-gray-800">{b.date}</span>
+                                    <span className="text-xs bg-gray-100 text-gray-600 px-2 py-0.5 rounded-full">{slotLabel}</span>
+                                </div>
+                                <div className="text-sm text-gray-600">{b.subject || 'Sin asignatura'}</div>
+                            </button>
+                        );
+                    })}
+                </div>
+            </div>
         </Modal>
 
         {/* Student List Sidebar */}

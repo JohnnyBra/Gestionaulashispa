@@ -469,6 +469,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
             <StudentOrganizer
                 booking={existingBooking}
                 classes={importedClasses}
+                historyBookings={bookings}
                 onClose={() => setShowStudentOrganizer(false)}
                 onUpdateBooking={handleUpdateSeatingPlan}
                 isAdmin={user.role === Role.ADMIN}
