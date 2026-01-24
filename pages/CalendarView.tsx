@@ -5,7 +5,7 @@ import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
 import { StudentOrganizer } from '../components/StudentOrganizer';
-import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor, FileSpreadsheet, Users } from 'lucide-react';
+import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor, FileSpreadsheet, Users, GraduationCap, School } from 'lucide-react';
 import { addWeeks, subWeeks, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
@@ -35,6 +35,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [showFilters, setShowFilters] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [isSyncingTeachers, setIsSyncingTeachers] = useState(false);
+  const [isSyncingStudents, setIsSyncingStudents] = useState(false);
 
   // Form State
   const [course, setCourse] = useState('');
@@ -161,6 +163,31 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
   const handlePrintClick = () => {
       setShowPrintModal(true);
+  };
+
+  const handleSync = async (target: 'TEACHERS' | 'STUDENTS') => {
+      if (target === 'TEACHERS') setIsSyncingTeachers(true);
+      else setIsSyncingStudents(true);
+
+      try {
+          const res = await fetch('/api/admin/sync', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ target })
+          });
+          const data = await res.json();
+          if (data.success) {
+              alert(data.message || 'Sincronización iniciada.');
+          } else {
+              alert('Error al iniciar sincronización.');
+          }
+      } catch (e) {
+          console.error("Sync error", e);
+          alert('Error de conexión.');
+      } finally {
+          if (target === 'TEACHERS') setIsSyncingTeachers(false);
+          else setIsSyncingStudents(false);
+      }
   };
 
   const printWeeklyReport = () => {
@@ -354,6 +381,14 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                          {/* Admin Print Buttons */}
                          <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5"/></button>
                          <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-green-600 hover:bg-green-50"><Monitor className="w-5 h-5"/></button>
+
+                         {/* Admin Sync Buttons */}
+                         <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-amber-600 hover:bg-amber-50 disabled:opacity-50">
+                             {isSyncingTeachers ? <Loader2 className="w-5 h-5 animate-spin"/> : <School className="w-5 h-5"/>}
+                         </button>
+                         <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-indigo-600 hover:bg-indigo-50 disabled:opacity-50">
+                             {isSyncingStudents ? <Loader2 className="w-5 h-5 animate-spin"/> : <GraduationCap className="w-5 h-5"/>}
+                         </button>
                     </div>
                 )}
             </div>
