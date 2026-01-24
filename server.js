@@ -45,6 +45,7 @@ app.use(express.json());
 let usersMemoryCache = [];
 let studentsMemoryCache = [];
 let classesMemoryCache = [];
+let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
 
 const ROLE_MAP = {
   'ADMIN': 'ADMIN', 'ADMINISTRADOR': 'ADMIN', 'DIRECCION': 'ADMIN', 'DIRECTOR': 'ADMIN', 'JEFATURA': 'ADMIN',
@@ -80,7 +81,7 @@ let prismaSocket = null;
 const processExternalUsers = (externalUsers) => {
     if (!Array.isArray(externalUsers)) return;
 
-    console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos...`);
+    console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos. Modo: ${syncTarget}`);
 
     const allowedTeachers = [];
     const allowedStudents = [];
@@ -124,19 +125,24 @@ const processExternalUsers = (externalUsers) => {
       }
     }
 
-    if (allowedTeachers.length > 0) {
+    // Update Teachers if target is ALL or TEACHERS
+    if ((syncTarget === 'ALL' || syncTarget === 'TEACHERS') && allowedTeachers.length > 0) {
         allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
         usersMemoryCache = allowedTeachers;
         fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
         console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
     }
 
-    if (allowedStudents.length > 0) {
+    // Update Students if target is ALL or STUDENTS
+    if ((syncTarget === 'ALL' || syncTarget === 'STUDENTS') && allowedStudents.length > 0) {
         allowedStudents.sort((a, b) => a.name.localeCompare(b.name));
         studentsMemoryCache = allowedStudents;
         fs.writeFileSync(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2));
         console.log(`✅ [SYNC] ÉXITO: ${allowedStudents.length} alumnos sincronizados.`);
     }
+
+    // Reset sync target to default for future automatic updates
+    syncTarget = 'ALL';
 };
 
 const processExternalClasses = (externalClasses) => {
@@ -204,6 +210,26 @@ app.get('/api/admin/force-sync', (req, res) => {
         prismaSocket.disconnect();
         prismaSocket.connect();
         res.json({ success: true, message: 'Reconexión de socket iniciada.' });
+    } else {
+        startPrismaSocket();
+        res.json({ success: true, message: 'Socket iniciado.' });
+    }
+});
+
+app.post('/api/admin/sync', (req, res) => {
+    const { target } = req.body;
+    if (target === 'TEACHERS' || target === 'STUDENTS') {
+        syncTarget = target;
+    } else {
+        syncTarget = 'ALL';
+    }
+
+    console.log(`🔄 [ADMIN] Iniciando sincronización manual. Objetivo: ${syncTarget}`);
+
+    if (prismaSocket) {
+        prismaSocket.disconnect();
+        prismaSocket.connect();
+        res.json({ success: true, message: `Sincronización de ${syncTarget} iniciada.` });
     } else {
         startPrismaSocket();
         res.json({ success: true, message: 'Socket iniciado.' });
