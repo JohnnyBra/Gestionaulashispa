@@ -112,12 +112,12 @@ const sendWeeklyReport = async () => {
 };
 
 const initScheduler = () => {
-    // Schedule for Friday at 14:00
-    cron.schedule('0 14 * * 5', () => {
+    // Schedule for Friday at 11:00
+    cron.schedule('0 11 * * 5', () => {
         console.log('⏰ [SCHEDULER] Ejecutando tarea programada: Reporte Semanal');
         sendWeeklyReport();
     });
-    console.log('✅ [SCHEDULER] Servicio de reportes inicializado (Viernes 14:00)');
+    console.log('✅ [SCHEDULER] Servicio de reportes inicializado (Viernes 11:00)');
 };
 
 module.exports = {
