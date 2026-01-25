@@ -1,13 +1,17 @@
 import React, { useEffect, useState } from 'react';
 import { Incident } from '../types';
-import { CheckCircle, Circle, Monitor, User, Calendar, AlertTriangle, FileText } from 'lucide-react';
+import { CheckCircle, Circle, Monitor, User, Calendar, AlertTriangle, FileText, ArrowLeft } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 
-export const IncidentsPage: React.FC = () => {
+interface IncidentsPageProps {
+  onBack?: () => void;
+}
+
+export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -101,6 +105,15 @@ export const IncidentsPage: React.FC = () => {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
+      {onBack && (
+        <button
+          onClick={onBack}
+          className="mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium transition-colors"
+        >
+          <ArrowLeft className="w-5 h-5" />
+          <span>Volver</span>
+        </button>
+      )}
       <div className="flex justify-between items-center mb-8">
         <div>
            <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
