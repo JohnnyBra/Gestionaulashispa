@@ -66,6 +66,17 @@ export interface Booking {
   incidences?: { [computerId: number]: string }; // Incidencias por ordenador
 }
 
+export interface Incident {
+  id: string;
+  timestamp: number;
+  description: string;
+  teacherEmail: string;
+  teacherName: string;
+  resource: string; // 'AULA' or 'CARRO'
+  pcNumber?: string;
+  isResolved: boolean;
+}
+
 // Fallbacks en caso de que la API falle
 export const COURSES_PRIMARY = [
   '1ºA Primaria', '1ºB Primaria',

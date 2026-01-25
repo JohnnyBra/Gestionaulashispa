@@ -13,6 +13,7 @@ const HISTORY_FILE = path.join(__dirname, 'history.json');
 const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
 const STUDENTS_CACHE_FILE = path.join(__dirname, 'students_cache.json');
 const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
+const INCIDENTS_FILE = path.join(__dirname, 'incidents.json');
 
 // --- CONFIGURACIÓN EXTERNA ---
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
@@ -395,6 +396,52 @@ app.delete('/api/bookings/:id', (req, res) => {
   fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
   io.emit('server:bookings_updated', bookings);
   res.json({ success: true });
+});
+
+app.get('/api/incidents', (req, res) => {
+  if (!fs.existsSync(INCIDENTS_FILE)) return res.json([]);
+  try {
+      const incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]');
+      res.json(incidents.sort((a,b) => b.timestamp - a.timestamp));
+  } catch(e) { res.json([]); }
+});
+
+app.post('/api/incidents', (req, res) => {
+  try {
+    const newIncident = req.body;
+    let incidents = [];
+    if (fs.existsSync(INCIDENTS_FILE)) {
+        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
+    }
+
+    // Ensure ID and timestamp
+    newIncident.id = newIncident.id || Math.random().toString(36).substr(2, 9);
+    newIncident.timestamp = newIncident.timestamp || Date.now();
+
+    incidents.push(newIncident);
+    fs.writeFileSync(INCIDENTS_FILE, JSON.stringify(incidents, null, 2));
+
+    io.emit('server:incidents_updated', incidents);
+    res.status(201).json({ success: true, incident: newIncident });
+  } catch (e) { res.status(500).json({ error: 'Error saving incident' }); }
+});
+
+app.patch('/api/incidents/:id', (req, res) => {
+  try {
+    let incidents = [];
+    if (fs.existsSync(INCIDENTS_FILE)) {
+        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
+    }
+
+    const index = incidents.findIndex(i => i.id === req.params.id);
+    if (index === -1) return res.status(404).json({ error: 'Not found' });
+
+    incidents[index] = { ...incidents[index], ...req.body };
+    fs.writeFileSync(INCIDENTS_FILE, JSON.stringify(incidents, null, 2));
+
+    io.emit('server:incidents_updated', incidents);
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ error: 'Error updating incident' }); }
 });
 
 app.get('/api/history', (req, res) => {
