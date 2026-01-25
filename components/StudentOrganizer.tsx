@@ -195,9 +195,29 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
   const saveIncidence = (e: React.FormEvent) => {
       e.preventDefault();
       if (editingIncidenceComputer !== null) {
+          const text = editingIncidenceText.trim();
           const newIncidences = { ...incidences };
-          if (editingIncidenceText.trim()) {
-              newIncidences[editingIncidenceComputer] = editingIncidenceText.trim();
+
+          if (text) {
+              newIncidences[editingIncidenceComputer] = text;
+
+              // Automatically report to global incidents
+              const newIncident = {
+                  resource: booking.resource === 'CART' ? 'CARRO' : 'AULA',
+                  pcNumber: editingIncidenceComputer,
+                  description: text,
+                  teacherEmail: booking.teacherEmail,
+                  teacherName: booking.teacherName,
+                  isResolved: false,
+                  timestamp: Date.now()
+              };
+
+              fetch('/api/incidents', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(newIncident)
+              }).catch(console.error);
+
           } else {
               delete newIncidences[editingIncidenceComputer];
           }

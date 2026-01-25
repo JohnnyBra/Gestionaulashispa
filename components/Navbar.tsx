@@ -60,16 +60,6 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
               {user && (
                 <div className="flex items-center gap-2 md:gap-3 animate-fade-in">
                   
-                  {/* Report Incident Button (For Everyone) */}
-                  <button
-                    onClick={() => setIsIncidentModalOpen(true)}
-                    className="flex items-center gap-2 p-2 md:px-4 md:py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-lg md:rounded-xl transition-all border border-transparent hover:border-red-500/30 font-semibold text-xs md:text-sm"
-                    title="Reportar Incidencia"
-                  >
-                    <AlertTriangle className="h-4 w-4" />
-                    <span className="hidden lg:inline">Reportar</span>
-                  </button>
-
                   {/* Incidents Link (Admin Only) */}
                   {user.role === Role.ADMIN && (
                      <button
