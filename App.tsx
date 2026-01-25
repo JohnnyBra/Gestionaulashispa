@@ -4,10 +4,12 @@ import { Navbar } from './components/Navbar';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 import { CalendarView } from './pages/CalendarView';
+import { IncidentsPage } from './pages/IncidentsPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
   const [currentStage, setCurrentStage] = useState<Stage | null>(null);
+  const [view, setView] = useState<'DASHBOARD' | 'CALENDAR' | 'INCIDENTS'>('DASHBOARD');
 
   // Check for existing session in localStorage
   useEffect(() => {
@@ -47,24 +49,34 @@ const App: React.FC = () => {
   const handleLogout = () => {
     setUser(null);
     setCurrentStage(null);
+    setView('DASHBOARD');
     localStorage.removeItem('hispanidad_user');
   };
 
   const handleSelectStage = (stage: Stage) => {
     setCurrentStage(stage);
+    setView('CALENDAR');
   };
 
   const handleBackToDashboard = () => {
     setCurrentStage(null);
+    setView('DASHBOARD');
+  };
+
+  const handleNavigate = (newView: 'DASHBOARD' | 'INCIDENTS') => {
+    if (newView === 'DASHBOARD') {
+      setCurrentStage(null);
+    }
+    setView(newView);
   };
 
   // View Logic
   let content;
   if (!user) {
     content = <Login onLogin={handleLogin} />;
-  } else if (!currentStage) {
-    content = <Dashboard onSelectStage={handleSelectStage} />;
-  } else {
+  } else if (view === 'INCIDENTS') {
+    content = <IncidentsPage />;
+  } else if (view === 'CALENDAR' && currentStage) {
     content = (
       <CalendarView 
         stage={currentStage} 
@@ -72,11 +84,13 @@ const App: React.FC = () => {
         onBack={handleBackToDashboard} 
       />
     );
+  } else {
+    content = <Dashboard onSelectStage={handleSelectStage} />;
   }
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans flex flex-col">
-      <Navbar user={user} onLogout={handleLogout} />
+      <Navbar user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
       <main className="flex-grow flex flex-col">
         {content}
       </main>
