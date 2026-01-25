@@ -70,12 +70,20 @@ const App: React.FC = () => {
     setView(newView);
   };
 
+  const handleBackFromIncidents = () => {
+    if (currentStage) {
+      setView('CALENDAR');
+    } else {
+      setView('DASHBOARD');
+    }
+  };
+
   // View Logic
   let content;
   if (!user) {
     content = <Login onLogin={handleLogin} />;
   } else if (view === 'INCIDENTS') {
-    content = <IncidentsPage />;
+    content = <IncidentsPage onBack={handleBackFromIncidents} />;
   } else if (view === 'CALENDAR' && currentStage) {
     content = (
       <CalendarView 
