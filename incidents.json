@@ -1,0 +1,12 @@
+[
+  {
+    "description": "Teclado no funciona - Test Auto",
+    "resource": "CARRO",
+    "pcNumber": "99",
+    "teacherEmail": "admin@test.com",
+    "teacherName": "Admin User",
+    "isResolved": false,
+    "id": "gu03fdby2",
+    "timestamp": 1769365322361
+  }
+]
