@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
@@ -5,6 +6,7 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const { io: ClientIO } = require('socket.io-client');
+const reportService = require('./services/reportService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -449,7 +451,21 @@ app.get('/api/history', (req, res) => {
   try { res.json(JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]').sort((a,b) => b.timestamp - a.timestamp)); } catch(e) { res.json([]); }
 });
 
+app.get('/api/admin/test-email', async (req, res) => {
+    try {
+        console.log('🧪 [ADMIN] Iniciando prueba de email...');
+        const result = await reportService.sendWeeklyReport();
+        res.json({ success: true, message: 'Proceso de reporte ejecutado.', result });
+    } catch (e) {
+        console.error(e);
+        res.status(500).json({ success: false, error: e.message });
+    }
+});
+
 app.use(express.static(__dirname));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
+
+// Iniciar planificador de tareas
+reportService.initScheduler();
 
 server.listen(PORT, () => console.log(`🚀 Servidor listo en puerto ${PORT}`));
