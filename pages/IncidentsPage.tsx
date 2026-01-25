@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Incident } from '../types';
-import { CheckCircle, Circle, Monitor, User, Calendar, AlertTriangle, FileText, ArrowLeft } from 'lucide-react';
+import { CheckCircle, Circle, Monitor, User, Calendar, AlertTriangle, FileText, ArrowLeft, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
@@ -14,10 +14,11 @@ interface IncidentsPageProps {
 export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sendingReport, setSendingReport] = useState(false);
 
   const fetchIncidents = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/incidents');
+      const res = await fetch('/api/incidents');
       const data = await res.json();
       if (Array.isArray(data)) {
         setIncidents(data);
@@ -31,7 +32,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
 
   useEffect(() => {
     fetchIncidents();
-    const socket = io('http://localhost:3001');
+    const socket = io();
 
     socket.on('server:incidents_updated', (data: Incident[]) => {
         setIncidents(data.sort((a,b) => b.timestamp - a.timestamp));
@@ -47,7 +48,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
       // Optimistic update
       setIncidents(prev => prev.map(i => i.id === incident.id ? { ...i, isResolved: !i.isResolved } : i));
 
-      await fetch(`http://localhost:3001/api/incidents/${incident.id}`, {
+      await fetch(`/api/incidents/${incident.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ isResolved: !incident.isResolved })
@@ -101,6 +102,26 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
     doc.save('incidencias-tic.pdf');
   };
 
+  const sendReport = async () => {
+    if (!confirm('¿Estás seguro de que quieres enviar el reporte de incidencias por email?')) return;
+
+    setSendingReport(true);
+    try {
+      const res = await fetch('/api/admin/test-email');
+      const data = await res.json();
+      if (data.success) {
+        alert('Reporte enviado correctamente.');
+      } else {
+        alert('Error enviando el reporte: ' + (data.error || 'Desconocido'));
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Error de conexión al enviar el reporte.');
+    } finally {
+      setSendingReport(false);
+    }
+  };
+
   if (loading) return <div className="p-8 text-center text-slate-500">Cargando incidencias...</div>;
 
   return (
@@ -122,7 +143,15 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
            </h1>
            <p className="text-slate-500 text-sm mt-1">Gestión y seguimiento de problemas técnicos.</p>
         </div>
-        <div>
+        <div className="flex gap-2">
+           <button
+             onClick={sendReport}
+             disabled={sendingReport}
+             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition-colors font-medium shadow-lg shadow-emerald-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
+           >
+             <Mail className="w-4 h-4" />
+             <span>{sendingReport ? 'Enviando...' : 'Enviar Reporte'}</span>
+           </button>
            <button
              onClick={generatePDF}
              className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors font-medium shadow-lg shadow-slate-900/10"
