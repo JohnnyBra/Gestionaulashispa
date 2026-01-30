@@ -48,6 +48,7 @@ app.use(express.json());
 let usersMemoryCache = [];
 let studentsMemoryCache = [];
 let classesMemoryCache = [];
+let bookingsMemoryCache = [];
 let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
 
 const ROLE_MAP = {
@@ -75,8 +76,38 @@ const loadCache = () => {
       console.log(`✅ [CACHE] Clases cargadas: ${classesMemoryCache.length}`);
     } catch (e) { console.error("Error lectura caché clases:", e); }
   }
+  if (fs.existsSync(DATA_FILE)) {
+    try {
+      bookingsMemoryCache = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]');
+      console.log(`✅ [CACHE] Reservas cargadas: ${bookingsMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché reservas:", e); }
+  }
 };
 loadCache();
+
+// --- PERSISTENCE HELPER ---
+let isSavingBookings = false;
+let hasPendingSave = false;
+
+const saveBookings = async () => {
+  if (isSavingBookings) {
+    hasPendingSave = true;
+    return;
+  }
+  isSavingBookings = true;
+
+  try {
+    await fs.promises.writeFile(DATA_FILE, JSON.stringify(bookingsMemoryCache, null, 2));
+  } catch (e) {
+    console.error("❌ Error guardando reservas:", e);
+  } finally {
+    isSavingBookings = false;
+    if (hasPendingSave) {
+      hasPendingSave = false;
+      saveBookings();
+    }
+  }
+};
 
 // --- EXTERNAL DATA SYNC (VIA SOCKET) ---
 let prismaSocket = null;
@@ -298,24 +329,21 @@ app.get('/api/students', (req, res) => {
 });
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => {
-  if (!fs.existsSync(DATA_FILE)) return res.json([]);
-  try { res.json(JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]')); } catch(e) { res.json([]); }
+  res.json(bookingsMemoryCache);
 });
 
 app.post('/api/bookings', (req, res) => {
   try {
     const incoming = Array.isArray(req.body) ? req.body : [req.body];
-    let bookings = [];
-    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
     
     for (const item of incoming) {
        const incomingResource = item.resource || 'ROOM';
-       if (bookings.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
+       if (bookingsMemoryCache.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
          return res.status(409).json({ error: 'Conflict' });
        }
     }
-    bookings.push(...incoming);
-    fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
+    bookingsMemoryCache.push(...incoming);
+    saveBookings();
     
     if (incoming[0]?.logs?.[0]) {
         let history = [];
@@ -325,40 +353,34 @@ app.post('/api/bookings', (req, res) => {
         fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
     }
     
-    io.emit('server:bookings_updated', bookings);
+    io.emit('server:bookings_updated', bookingsMemoryCache);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 
 app.put('/api/bookings/:id', (req, res) => {
   try {
-    let bookings = [];
-    if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-
-    const index = bookings.findIndex(b => b.id === req.params.id);
+    const index = bookingsMemoryCache.findIndex(b => b.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'Not found' });
 
     // Update fields (preserving ID and potentially other immutable fields if needed)
-    bookings[index] = { ...bookings[index], ...req.body, id: req.params.id };
+    bookingsMemoryCache[index] = { ...bookingsMemoryCache[index], ...req.body, id: req.params.id };
 
-    fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-    io.emit('server:bookings_updated', bookings);
+    saveBookings();
+    io.emit('server:bookings_updated', bookingsMemoryCache);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error' }); }
 });
 
 app.delete('/api/bookings/:id', (req, res) => {
-  let bookings = [];
-  if (fs.existsSync(DATA_FILE)) try { bookings = JSON.parse(fs.readFileSync(DATA_FILE, 'utf8') || '[]'); } catch(e) {}
-  
-  const target = bookings.find(b => b.id === req.params.id);
+  const target = bookingsMemoryCache.find(b => b.id === req.params.id);
   if (!target) return res.status(404).json({error: 'Not found'});
   
   if (req.body.deleteSeries) {
       const targetDateStr = target.date;
       const targetDay = new Date(targetDateStr).getUTCDay();
 
-      const toDeleteIds = bookings.filter(b => {
+      const toDeleteIds = bookingsMemoryCache.filter(b => {
           if (b.teacherEmail !== target.teacherEmail) return false;
           if (b.slotId !== target.slotId) return false;
           if (b.stage !== target.stage) return false;
@@ -370,7 +392,7 @@ app.delete('/api/bookings/:id', (req, res) => {
           return bDay === targetDay;
       }).map(b => b.id);
 
-      bookings = bookings.filter(b => !toDeleteIds.includes(b.id));
+      bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteIds.includes(b.id));
 
       if (req.body.user) {
           let history = [];
@@ -385,7 +407,7 @@ app.delete('/api/bookings/:id', (req, res) => {
           fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
       }
   } else {
-      bookings = bookings.filter(b => b.id !== req.params.id);
+      bookingsMemoryCache = bookingsMemoryCache.filter(b => b.id !== req.params.id);
 
       if (req.body.user) {
           let history = [];
@@ -395,8 +417,8 @@ app.delete('/api/bookings/:id', (req, res) => {
       }
   }
 
-  fs.writeFileSync(DATA_FILE, JSON.stringify(bookings, null, 2));
-  io.emit('server:bookings_updated', bookings);
+  saveBookings();
+  io.emit('server:bookings_updated', bookingsMemoryCache);
   res.json({ success: true });
 });
 
