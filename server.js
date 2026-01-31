@@ -50,6 +50,7 @@ let usersEmailMap = new Map(); // O(1) Lookup Cache
 let studentsMemoryCache = [];
 let classesMemoryCache = [];
 let bookingsMemoryCache = [];
+let historyMemoryCache = [];
 let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
 
 // Helper to rebuild the map
@@ -92,6 +93,12 @@ const loadCache = () => {
       console.log(`✅ [CACHE] Reservas cargadas: ${bookingsMemoryCache.length}`);
     } catch (e) { console.error("Error lectura caché reservas:", e); }
   }
+  if (fs.existsSync(HISTORY_FILE)) {
+    try {
+      historyMemoryCache = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]');
+      console.log(`✅ [CACHE] Historial cargado: ${historyMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché historial:", e); }
+  }
 };
 loadCache();
 
@@ -115,6 +122,29 @@ const saveBookings = async () => {
     if (hasPendingSave) {
       hasPendingSave = false;
       saveBookings();
+    }
+  }
+};
+
+let isSavingHistory = false;
+let hasPendingSaveHistory = false;
+
+const saveHistory = async () => {
+  if (isSavingHistory) {
+    hasPendingSaveHistory = true;
+    return;
+  }
+  isSavingHistory = true;
+
+  try {
+    await fs.promises.writeFile(HISTORY_FILE, JSON.stringify(historyMemoryCache, null, 2));
+  } catch (e) {
+    console.error("❌ Error guardando historial:", e);
+  } finally {
+    isSavingHistory = false;
+    if (hasPendingSaveHistory) {
+      hasPendingSaveHistory = false;
+      saveHistory();
     }
   }
 };
@@ -357,11 +387,9 @@ app.post('/api/bookings', (req, res) => {
     saveBookings();
     
     if (incoming[0]?.logs?.[0]) {
-        let history = [];
-        if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-        history.push(incoming[0].logs[0]);
-        if (history.length > 1000) history = history.slice(-1000);
-        fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+        historyMemoryCache.push(incoming[0].logs[0]);
+        if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+        saveHistory();
     }
     
     io.emit('server:bookings_updated', bookingsMemoryCache);
@@ -406,25 +434,23 @@ app.delete('/api/bookings/:id', (req, res) => {
       bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteIds.includes(b.id));
 
       if (req.body.user) {
-          let history = [];
-          if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-          history.push({
+          historyMemoryCache.push({
               action: 'DELETED_SERIES',
               user: req.body.user.email,
               userName: req.body.user.name,
               timestamp: Date.now(),
               details: `Eliminada serie de reservas de ${target.teacherName} desde ${target.date}`
           });
-          fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+          if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+          saveHistory();
       }
   } else {
       bookingsMemoryCache = bookingsMemoryCache.filter(b => b.id !== req.params.id);
 
       if (req.body.user) {
-          let history = [];
-          if (fs.existsSync(HISTORY_FILE)) try { history = JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]'); } catch(e) {}
-          history.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
-          fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+          historyMemoryCache.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
+          if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+          saveHistory();
       }
   }
 
@@ -480,8 +506,7 @@ app.patch('/api/incidents/:id', (req, res) => {
 });
 
 app.get('/api/history', (req, res) => {
-  if (!fs.existsSync(HISTORY_FILE)) return res.json([]);
-  try { res.json(JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8') || '[]').sort((a,b) => b.timestamp - a.timestamp)); } catch(e) { res.json([]); }
+  res.json([...historyMemoryCache].sort((a,b) => b.timestamp - a.timestamp));
 });
 
 app.get('/api/admin/test-email', async (req, res) => {
