@@ -98,9 +98,20 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       (!courseFilter || b.course?.toLowerCase().includes(courseFilter.toLowerCase())));
   }, [bookings, teacherFilter, courseFilter, stage, currentResource]);
 
+  const bookingsMap = useMemo(() => {
+    const map = new Map<string, Booking>();
+    for (const b of filteredBookings) {
+      const key = `${b.date}-${b.slotId}`;
+      if (!map.has(key)) {
+        map.set(key, b);
+      }
+    }
+    return map;
+  }, [filteredBookings]);
+
   const handleSlotClick = (day: Date, slot: TimeSlot) => {
     if (!isBookableDay(day)) return;
-    const existing = filteredBookings.find(b => b.date === formatDate(day) && b.slotId === slot.id);
+    const existing = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
     setCourse(existing?.course || courses[0] || '');
@@ -433,7 +444,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     <span>{slot.start}</span><span className="text-slate-400">{slot.end}</span>
                   </div>
                   {weekDays.slice(0, 5).map(day => {
-                    const booking = filteredBookings.find(b => b.date === formatDate(day) && b.slotId === slot.id);
+                    const booking = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
                     const isHoliday = !isBookableDay(day);
                     return (
                         <div key={day.toISOString()} className="min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
