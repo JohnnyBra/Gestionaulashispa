@@ -431,7 +431,8 @@ app.delete('/api/bookings/:id', (req, res) => {
           return bDay === targetDay;
       }).map(b => b.id);
 
-      bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteIds.includes(b.id));
+      const toDeleteSet = new Set(toDeleteIds);
+      bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteSet.has(b.id));
 
       if (req.body.user) {
           historyMemoryCache.push({
