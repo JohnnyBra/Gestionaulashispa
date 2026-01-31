@@ -537,8 +537,10 @@ app.post('/api/bookings/request-swap', async (req, res) => {
         // Encode params
         const token = Buffer.from(bookingId).toString('base64');
         const reqEmailEncoded = Buffer.from(requesterEmail).toString('base64');
+        const labelEncoded = Buffer.from(slotLabel || booking.slotId).toString('base64');
+        const resourceEncoded = Buffer.from(resourceName || booking.resource).toString('base64');
 
-        const confirmLink = `${baseUrl}/api/bookings/swap/confirm?token=${token}&requester=${reqEmailEncoded}`;
+        const confirmLink = `${baseUrl}/api/bookings/swap/confirm?token=${token}&requester=${reqEmailEncoded}&label=${labelEncoded}&resource=${resourceEncoded}`;
 
         const bookingInfo = {
             date: booking.date,
@@ -557,11 +559,13 @@ app.post('/api/bookings/request-swap', async (req, res) => {
 
 app.get('/api/bookings/swap/confirm', async (req, res) => {
     try {
-        const { token, requester } = req.query;
+        const { token, requester, label, resource } = req.query;
         if (!token || !requester) return res.status(400).send("Enlace inválido");
 
         const bookingId = Buffer.from(token, 'base64').toString('utf8');
         const requesterEmail = Buffer.from(requester, 'base64').toString('utf8');
+        const slotLabel = label ? Buffer.from(label, 'base64').toString('utf8') : null;
+        const resourceName = resource ? Buffer.from(resource, 'base64').toString('utf8') : null;
 
         const bookingIndex = bookingsMemoryCache.findIndex(b => b.id === bookingId);
         if (bookingIndex === -1) {
@@ -588,8 +592,8 @@ app.get('/api/bookings/swap/confirm', async (req, res) => {
 
         const bookingInfo = {
             date: booking.date,
-            slotLabel: booking.slotId,
-            resourceName: booking.resource
+            slotLabel: slotLabel || booking.slotId,
+            resourceName: resourceName || booking.resource
         };
 
         await reportService.sendSwapReleasedEmail(requesterEmail, ownerName, bookingInfo);
