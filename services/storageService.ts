@@ -67,3 +67,22 @@ export const removeBooking = async (bookingId: string, user: User, deleteSeries:
     body: JSON.stringify({ user, deleteSeries }),
   });
 };
+
+export const requestBookingSwap = async (
+  bookingId: string,
+  reason: string,
+  requesterEmail: string,
+  requesterName: string,
+  slotLabel: string,
+  resourceName: string
+): Promise<void> => {
+  const response = await fetch('/api/bookings/request-swap', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ bookingId, reason, requesterEmail, requesterName, slotLabel, resourceName }),
+  });
+  if (!response.ok) {
+      const err = await response.json();
+      throw new Error(err.error || 'Error al solicitar el cambio');
+  }
+};

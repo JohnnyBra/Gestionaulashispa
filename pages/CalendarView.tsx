@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Stage, User, TimeSlot, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY, COURSES_PRIMARY, COURSES_SECONDARY, Role, ResourceType, ClassGroup, SeatingPlan } from '../types';
-import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers, getClasses } from '../services/storageService';
+import { getBookings, saveBooking, saveBatchBookings, removeBooking, getTeachers, getClasses, requestBookingSwap } from '../services/storageService';
 import { formatDate, getWeekDays, isBookableDay } from '../utils/dateUtils';
 import { Modal } from '../components/Modal';
 import { HistoryModal } from '../components/HistoryModal';
 import { StudentOrganizer } from '../components/StudentOrganizer';
-import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor, FileSpreadsheet, Users, GraduationCap, School } from 'lucide-react';
+import { ChevronLeft, ChevronRight, History, Filter, ArrowLeft, Loader2, Laptop, Monitor, FileSpreadsheet, Users, GraduationCap, School, MailQuestion } from 'lucide-react';
 import { addWeeks, subWeeks, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { io } from 'socket.io-client';
@@ -48,6 +48,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringEndDate, setRecurringEndDate] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSwapRequestMode, setIsSwapRequestMode] = useState(false);
+  const [swapReason, setSwapReason] = useState('');
 
   const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
   
@@ -121,7 +123,26 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     setBlockReason(existing?.justification || '');
     setIsBlocking(existing?.isBlocked || false);
     setShowStudentOrganizer(false);
+    setIsSwapRequestMode(false);
+    setSwapReason('');
     setIsModalOpen(true);
+  };
+
+  const handleSwapRequest = async () => {
+    if (!existingBooking || !swapReason.trim()) return;
+    if (!confirm("¿Seguro que deseas solicitar el cambio al profesor? Se le enviará un correo.")) return;
+
+    setIsSubmitting(true);
+    try {
+        const slotLabel = selectedSlot?.slot.label || existingBooking.slotId;
+        await requestBookingSwap(existingBooking.id, swapReason, user.email, user.name, slotLabel, roomName);
+        alert("Solicitud enviada correctamente.");
+        setIsModalOpen(false);
+    } catch (e: any) {
+        alert(e.message || "Error al enviar solicitud.");
+    } finally {
+        setIsSubmitting(false);
+    }
   };
 
   const handleUpdateSeatingPlan = async (bookingId: string, seatingPlan: SeatingPlan, incidences: { [key: number]: string }) => {
@@ -510,6 +531,43 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                             >
                                 <Users size={20}/> Organizar Alumnado
                             </button>
+                        )}
+
+                        {existingBooking.teacherEmail !== user.email && (
+                            !isSwapRequestMode ? (
+                                <button
+                                    onClick={() => setIsSwapRequestMode(true)}
+                                    className="w-full py-3 bg-amber-50 text-amber-700 rounded-xl font-bold border border-amber-100 flex items-center justify-center gap-2 hover:bg-amber-100 transition-colors"
+                                >
+                                    <MailQuestion size={20}/> Solicitar reserva a {existingBooking.teacherName}
+                                </button>
+                            ) : (
+                                <div className="space-y-2 bg-amber-50 p-3 rounded-xl border border-amber-100">
+                                    <label className="block text-xs font-bold text-amber-800 uppercase">Motivo de la solicitud</label>
+                                    <textarea
+                                        value={swapReason}
+                                        onChange={(e) => setSwapReason(e.target.value)}
+                                        placeholder={`Hola ${existingBooking.teacherName}, me gustaría usar el aula porque...`}
+                                        className="w-full p-3 rounded-lg border border-amber-200 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                                        rows={3}
+                                    />
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={() => setIsSwapRequestMode(false)}
+                                            className="flex-1 py-2 bg-white text-slate-600 rounded-lg font-bold border border-slate-200 text-sm hover:bg-slate-50"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={handleSwapRequest}
+                                            disabled={!swapReason.trim() || isSubmitting}
+                                            className="flex-1 py-2 bg-amber-600 text-white rounded-lg font-bold shadow-sm text-sm hover:bg-amber-700 disabled:opacity-50 flex items-center justify-center gap-2"
+                                        >
+                                            {isSubmitting ? <Loader2 className="animate-spin w-4 h-4"/> : 'Enviar Solicitud'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )
                         )}
                     </>
                 )}
