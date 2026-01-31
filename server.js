@@ -46,10 +46,19 @@ app.use(express.json());
 
 // --- MEMORY CACHE ---
 let usersMemoryCache = [];
+let usersEmailMap = new Map(); // O(1) Lookup Cache
 let studentsMemoryCache = [];
 let classesMemoryCache = [];
 let bookingsMemoryCache = [];
 let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
+
+// Helper to rebuild the map
+const updateUsersMap = () => {
+    usersEmailMap.clear();
+    usersMemoryCache.forEach(u => {
+        if (u.email) usersEmailMap.set(u.email.toLowerCase(), u);
+    });
+};
 
 const ROLE_MAP = {
   'ADMIN': 'ADMIN', 'ADMINISTRADOR': 'ADMIN', 'DIRECCION': 'ADMIN', 'DIRECTOR': 'ADMIN', 'JEFATURA': 'ADMIN',
@@ -61,6 +70,7 @@ const loadCache = () => {
   if (fs.existsSync(USERS_CACHE_FILE)) {
     try {
       usersMemoryCache = JSON.parse(fs.readFileSync(USERS_CACHE_FILE, 'utf8') || '[]');
+      updateUsersMap();
       console.log(`✅ [CACHE] Usuarios cargados: ${usersMemoryCache.length}`);
     } catch (e) { console.error("Error lectura caché usuarios:", e); }
   }
@@ -163,6 +173,7 @@ const processExternalUsers = (externalUsers) => {
     if ((syncTarget === 'ALL' || syncTarget === 'TEACHERS') && allowedTeachers.length > 0) {
         allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
         usersMemoryCache = allowedTeachers;
+        updateUsersMap();
         fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
         console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
     }
@@ -277,7 +288,7 @@ app.post('/api/auth/google', async (req, res) => {
     const googleRes = await fetch(`https://oauth2.googleapis.com/tokeninfo?id_token=${token}`);
     if (!googleRes.ok) return res.status(401).json({ success: false });
     const payload = await googleRes.json();
-    const user = usersMemoryCache.find(u => u.email === payload.email.toLowerCase());
+    const user = usersEmailMap.get(payload.email.toLowerCase());
     if (user) return res.json({ success: true, ...user });
     return res.status(403).json({ success: false, message: 'Usuario no registrado.' });
   } catch (e) { res.status(500).json({ success: false }); }
