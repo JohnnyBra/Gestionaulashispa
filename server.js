@@ -521,6 +521,97 @@ app.get('/api/admin/test-email', async (req, res) => {
     }
 });
 
+// --- BOOKING SWAP ENDPOINTS ---
+
+app.post('/api/bookings/request-swap', async (req, res) => {
+    try {
+        const { bookingId, reason, requesterEmail, requesterName, slotLabel, resourceName } = req.body;
+        const booking = bookingsMemoryCache.find(b => b.id === bookingId);
+
+        if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
+
+        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+        const host = req.get('host');
+        const baseUrl = `${protocol}://${host}`;
+
+        // Encode params
+        const token = Buffer.from(bookingId).toString('base64');
+        const reqEmailEncoded = Buffer.from(requesterEmail).toString('base64');
+        const labelEncoded = Buffer.from(slotLabel || booking.slotId).toString('base64');
+        const resourceEncoded = Buffer.from(resourceName || booking.resource).toString('base64');
+
+        const confirmLink = `${baseUrl}/api/bookings/swap/confirm?token=${token}&requester=${reqEmailEncoded}&label=${labelEncoded}&resource=${resourceEncoded}`;
+
+        const bookingInfo = {
+            date: booking.date,
+            slotLabel: slotLabel || booking.slotId,
+            resourceName: resourceName || booking.resource
+        };
+
+        await reportService.sendSwapRequestEmail(booking.teacherEmail, requesterName, requesterEmail, reason, bookingInfo, confirmLink);
+
+        res.json({ success: true });
+    } catch (e) {
+        console.error("Error swapping", e);
+        res.status(500).json({ error: e.message });
+    }
+});
+
+app.get('/api/bookings/swap/confirm', async (req, res) => {
+    try {
+        const { token, requester, label, resource } = req.query;
+        if (!token || !requester) return res.status(400).send("Enlace inválido");
+
+        const bookingId = Buffer.from(token, 'base64').toString('utf8');
+        const requesterEmail = Buffer.from(requester, 'base64').toString('utf8');
+        const slotLabel = label ? Buffer.from(label, 'base64').toString('utf8') : null;
+        const resourceName = resource ? Buffer.from(resource, 'base64').toString('utf8') : null;
+
+        const bookingIndex = bookingsMemoryCache.findIndex(b => b.id === bookingId);
+        if (bookingIndex === -1) {
+            return res.send("<h1>La reserva ya no existe o ya ha sido eliminada.</h1>");
+        }
+
+        const booking = bookingsMemoryCache[bookingIndex];
+        const ownerName = booking.teacherName;
+
+        // Delete booking
+        bookingsMemoryCache.splice(bookingIndex, 1);
+        saveBookings();
+        io.emit('server:bookings_updated', bookingsMemoryCache);
+
+        // Log history
+        historyMemoryCache.push({
+            action: 'DELETED',
+            user: booking.teacherEmail,
+            userName: booking.teacherName,
+            timestamp: Date.now(),
+            details: `Reserva cedida a solicitud de ${requesterEmail}`
+        });
+        saveHistory();
+
+        const bookingInfo = {
+            date: booking.date,
+            slotLabel: slotLabel || booking.slotId,
+            resourceName: resourceName || booking.resource
+        };
+
+        await reportService.sendSwapReleasedEmail(requesterEmail, ownerName, bookingInfo);
+
+        res.send(`
+            <div style="font-family: sans-serif; text-align: center; padding: 50px;">
+                <h1 style="color: green;">¡Reserva Cedida con Éxito!</h1>
+                <p>La reserva ha sido eliminada y se ha notificado al compañero/a.</p>
+                <p>Ya puedes cerrar esta ventana.</p>
+            </div>
+        `);
+
+    } catch (e) {
+        console.error("Error confirming swap", e);
+        res.status(500).send("Error interno del servidor");
+    }
+});
+
 app.use(express.static(__dirname));
 app.get('*', (req, res) => res.sendFile(path.join(__dirname, 'index.html')));
 
