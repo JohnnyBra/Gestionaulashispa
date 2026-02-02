@@ -85,7 +85,7 @@ const sendSwapReleasedEmail = async (to, ownerName, bookingInfo) => {
             <p>Entra en la aplicación lo antes posible para formalizar tu reserva.</p>
 
             <div style="text-align: center; margin: 30px 0;">
-                <a href="https://reservas.bibliohispa.es" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir a la Aplicación</a>
+                <a href="https://aulas.bibliohispa.es" style="background-color: #059669; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">Ir a la Aplicación</a>
             </div>
         </div>
     `;
