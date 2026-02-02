@@ -493,7 +493,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                     return (
                         <div key={day.toISOString()}
-                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
+                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                              onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
                                 <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6">No Lectivo</div>
