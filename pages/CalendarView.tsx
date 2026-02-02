@@ -111,8 +111,29 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     return map;
   }, [filteredBookings]);
 
+  const isPastSlot = (day: Date, slot: TimeSlot) => {
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const checkDay = new Date(day.getFullYear(), day.getMonth(), day.getDate());
+
+      if (checkDay < today) return true;
+      if (checkDay > today) return false;
+
+      const [startHour, startMinute] = slot.start.split(':').map(Number);
+      const slotStartTime = new Date(today);
+      slotStartTime.setHours(startHour, startMinute, 0, 0);
+
+      return now >= slotStartTime;
+  };
+
   const handleSlotClick = (day: Date, slot: TimeSlot) => {
     if (!isBookableDay(day)) return;
+
+    if (user.role !== Role.ADMIN && isPastSlot(day, slot)) {
+        alert("No se pueden realizar reservas en el pasado.");
+        return;
+    }
+
     const existing = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
     setExistingBooking(existing || null);
     setSelectedSlot({ date: day, slot });
@@ -467,8 +488,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                   {weekDays.slice(0, 5).map(day => {
                     const booking = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
                     const isHoliday = !isBookableDay(day);
+                    const isPast = isPastSlot(day, slot);
+                    const isRestricted = !booking && isPast && user.role !== Role.ADMIN;
+
                     return (
-                        <div key={day.toISOString()} className="min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer" onClick={() => handleSlotClick(day, slot)}>
+                        <div key={day.toISOString()}
+                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-50 opacity-50 cursor-not-allowed' : ''}`}
+                             onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
                                 <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6">No Lectivo</div>
                              ) : booking ? (
