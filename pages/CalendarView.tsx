@@ -134,11 +134,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       if (checkDay < today) return true;
       if (checkDay > today) return false;
 
-      const [startHour, startMinute] = slot.start.split(':').map(Number);
-      const slotStartTime = new Date(today);
-      slotStartTime.setHours(startHour, startMinute, 0, 0);
+      const [endHour, endMinute] = slot.end.split(':').map(Number);
+      const slotEndTime = new Date(today);
+      slotEndTime.setHours(endHour, endMinute, 0, 0);
 
-      return now >= slotStartTime;
+      return now >= slotEndTime;
   };
 
   const handleSlotClick = (day: Date, slot: TimeSlot) => {
