@@ -427,10 +427,10 @@ app.post('/api/bookings', (req, res) => {
                     }
 
                     if (slotDef) {
-                        const [sHour, sMinute] = slotDef.start.split(':').map(Number);
-                        const slotStartVal = sHour * 60 + sMinute;
+                        const [eHour, eMinute] = slotDef.end.split(':').map(Number);
+                        const slotEndVal = eHour * 60 + eMinute;
 
-                        if (currentTimeVal >= slotStartVal) {
+                        if (currentTimeVal >= slotEndVal) {
                              return res.status(403).json({ error: 'No se permiten reservas en horas pasadas.' });
                         }
                     }
