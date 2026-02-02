@@ -20,7 +20,22 @@ interface CalendarViewProps {
 }
 
 export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack }) => {
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const getInitialDate = () => {
+    const now = new Date();
+    const day = now.getDay();
+    const hours = now.getHours();
+    const minutes = now.getMinutes();
+
+    // Si es viernes (5) después de las 14:30, o fin de semana (6, 0), mostramos la semana siguiente
+    if ((day === 5 && (hours > 14 || (hours === 14 && minutes >= 30))) || day === 6 || day === 0) {
+      const nextWeek = new Date(now);
+      nextWeek.setDate(now.getDate() + 3); // Sumamos días suficientes para saltar al lunes de la siguiente semana
+      return nextWeek;
+    }
+    return now;
+  };
+
+  const [currentDate, setCurrentDate] = useState(getInitialDate());
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [teachers, setTeachers] = useState<{name: string, email: string}[]>([]);
   const [importedClasses, setImportedClasses] = useState<ClassGroup[]>([]);
@@ -493,7 +508,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                     return (
                         <div key={day.toISOString()}
-                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
+                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-200 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                              onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
                                 <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6">No Lectivo</div>
@@ -504,7 +519,9 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                     <p className="mt-auto text-[8px] font-bold border-t border-current/10 pt-1 truncate">{booking.teacherName}</p>
                                 </div>
                              ) : (
-                                <div className="h-full border border-dashed border-slate-100 rounded-xl group-hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-xl text-slate-300">+</div>
+                                !isRestricted && (
+                                    <div className="h-full border border-dashed border-slate-100 rounded-xl group-hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-xl text-slate-300">+</div>
+                                )
                              )}
                         </div>
                     );
