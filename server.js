@@ -67,6 +67,22 @@ const ROLE_MAP = {
   'ALUMNO': 'STUDENT', 'ESTUDIANTE': 'STUDENT', 'STUDENT': 'STUDENT'
 };
 
+const SLOTS_PRIMARY = [
+  { id: 'p1', label: '9:00 - 10:00', start: '09:00', end: '10:00' },
+  { id: 'p2', label: '10:00 - 11:00', start: '10:00', end: '11:00' },
+  { id: 'p3', label: '11:30 - 12:30', start: '11:30', end: '12:30' },
+  { id: 'p4', label: '12:30 - 14:00', start: '12:30', end: '14:00' },
+];
+
+const SLOTS_SECONDARY = [
+  { id: 's1', label: '8:00 - 9:00', start: '08:00', end: '09:00' },
+  { id: 's2', label: '9:00 - 10:00', start: '09:00', end: '10:00' },
+  { id: 's3', label: '10:00 - 11:00', start: '10:00', end: '11:00' },
+  { id: 's4', label: '11:30 - 12:30', start: '11:30', end: '12:30' },
+  { id: 's5', label: '12:30 - 13:30', start: '12:30', end: '13:30' },
+  { id: 's6', label: '13:30 - 14:30', start: '13:30', end: '14:30' },
+];
+
 const loadCache = () => {
   if (fs.existsSync(USERS_CACHE_FILE)) {
     try {
@@ -377,6 +393,53 @@ app.post('/api/bookings', (req, res) => {
   try {
     const incoming = Array.isArray(req.body) ? req.body : [req.body];
     
+    // --- VALIDATION: Prevent past bookings for non-admins ---
+    if (incoming.length > 0) {
+        const userEmail = incoming[0].teacherEmail;
+        const user = usersEmailMap.get(userEmail ? userEmail.toLowerCase() : '');
+        // If user is not found or not ADMIN, apply restriction
+        if (!user || user.role !== 'ADMIN') {
+            const now = new Date();
+            // Local date string construction YYYY-MM-DD
+            const currentYear = now.getFullYear();
+            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+            const currentDay = String(now.getDate()).padStart(2, '0');
+            const todayLocalStr = `${currentYear}-${currentMonth}-${currentDay}`;
+
+            const currentHour = now.getHours();
+            const currentMinute = now.getMinutes();
+            const currentTimeVal = currentHour * 60 + currentMinute;
+
+            for (const item of incoming) {
+                if (item.date < todayLocalStr) {
+                    return res.status(403).json({ error: 'No se permiten reservas en días pasados.' });
+                }
+
+                if (item.date === todayLocalStr) {
+                    const slotId = item.slotId;
+                    const stage = item.stage;
+
+                    let slotDef;
+                    if (stage === 'PRIMARIA') {
+                        slotDef = SLOTS_PRIMARY.find(s => s.id === slotId);
+                    } else {
+                        slotDef = SLOTS_SECONDARY.find(s => s.id === slotId);
+                    }
+
+                    if (slotDef) {
+                        const [sHour, sMinute] = slotDef.start.split(':').map(Number);
+                        const slotStartVal = sHour * 60 + sMinute;
+
+                        if (currentTimeVal >= slotStartVal) {
+                             return res.status(403).json({ error: 'No se permiten reservas en horas pasadas.' });
+                        }
+                    }
+                }
+            }
+        }
+    }
+    // --------------------------------------------------------
+
     for (const item of incoming) {
        const incomingResource = item.resource || 'ROOM';
        if (bookingsMemoryCache.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
