@@ -486,19 +486,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
       <div className="flex-1 glass-panel rounded-[1.5rem] overflow-hidden shadow-xl flex flex-col relative">
         <div className="w-full h-full overflow-auto">
             <div className="min-w-[700px] h-full"> 
-              <div className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] sticky top-0 z-20 bg-white border-b border-slate-100">
-                <div className="bg-white"></div>
+              <div className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] sticky top-0 z-20 bg-slate-200 border-b border-slate-300">
+                <div className="bg-slate-200"></div>
                 {weekDays.slice(0, 5).map(day => (
-                    <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-100 bg-white">
+                    <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-300 bg-slate-200">
                         <div className="text-lg md:text-2xl font-black text-slate-800">{format(day, 'd')}</div>
-                        <div className="text-[10px] md:text-xs font-bold uppercase text-slate-400">{format(day, 'EEE', { locale: es })}</div>
+                        <div className="text-[10px] md:text-xs font-bold uppercase text-slate-500">{format(day, 'EEE', { locale: es })}</div>
                     </div>
                 ))}
               </div>
               {slots.map(slot => (
-                <div key={slot.id} className="grid grid-cols-[60px_repeat(5,1fr)] md:grid-cols-[100px_repeat(5,1fr)] border-b border-slate-100">
-                  <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-500 bg-slate-50 border-r border-slate-100">
-                    <span>{slot.start}</span><span className="text-slate-400">{slot.end}</span>
+                <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-300">
+                  <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 bg-slate-200 border-r border-slate-300">
+                    <span>{slot.start}</span><span className="text-slate-500">{slot.end}</span>
                   </div>
                   {weekDays.slice(0, 5).map(day => {
                     const booking = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
@@ -508,19 +508,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                     return (
                         <div key={day.toISOString()}
-                             className={`min-h-[100px] p-2 border-r border-slate-100 relative group cursor-pointer ${isRestricted ? 'bg-slate-200 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
+                             className={`min-h-[100px] p-2 border-r border-slate-300 relative group cursor-pointer ${isRestricted ? 'bg-slate-200 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                              onClick={() => handleSlotClick(day, slot)}>
                              {isHoliday ? (
                                 <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6">No Lectivo</div>
                              ) : booking ? (
-                                <div className={`h-full rounded-xl p-2 border shadow-sm flex flex-col ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
-                                    <p className="text-[10px] font-black truncate leading-tight">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
-                                    <p className="text-[9px] truncate leading-tight mt-0.5">{booking.isBlocked ? booking.justification : booking.subject}</p>
-                                    <p className="mt-auto text-[8px] font-bold border-t border-current/10 pt-1 truncate">{booking.teacherName}</p>
+                                <div title={`${booking.course} - ${booking.subject} - ${booking.teacherName}\n${booking.justification}`} className={`w-full h-full rounded-xl p-2 border shadow-sm flex flex-col overflow-hidden ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
+                                    <p className="text-[10px] font-black truncate leading-tight w-full">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
+                                    <p className="text-[9px] truncate leading-tight mt-0.5 w-full">{booking.isBlocked ? booking.justification : booking.subject}</p>
+                                    <p className="mt-auto text-[8px] font-bold border-t border-current/10 pt-1 truncate w-full">{booking.teacherName}</p>
                                 </div>
                              ) : (
                                 !isRestricted && (
-                                    <div className="h-full border border-dashed border-slate-100 rounded-xl group-hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-xl text-slate-300">+</div>
+                                    <div className="h-full border border-dashed border-slate-300 rounded-xl group-hover:bg-slate-50 opacity-0 group-hover:opacity-100 transition-all flex items-center justify-center text-xl text-slate-300">+</div>
                                 )
                              )}
                         </div>
