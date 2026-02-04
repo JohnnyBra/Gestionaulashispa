@@ -81,10 +81,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
         {/* Primary Card */}
         <div 
           onClick={() => onSelectStage(Stage.PRIMARY)}
-          className="group relative h-[320px] md:h-[360px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
+          className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
         >
           {/* Content Layer */}
-          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between pb-16">
+          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
              <div className="flex justify-between items-start">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:scale-110 transition-transform duration-300">
                    <BookOpen className="h-6 w-6 md:h-7 md:w-7" />
@@ -107,15 +107,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
              </div>
           </div>
 
-          {/* Marquee Ticker with Fixed Label */}
-          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
-              <div className="flex-shrink-0 px-4 h-full flex items-center bg-white/50 border-r border-slate-200 z-40">
+          {/* Stacked Footer */}
+          <div className="relative w-full z-30 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex flex-col">
+              <div className="w-full py-2 flex items-center justify-center bg-white/50 border-b border-slate-200">
                   <div className="flex items-center gap-2 text-blue-600">
                       <Clock className="w-3 h-3 md:w-4 md:h-4" />
                       <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
                   </div>
               </div>
-              <div className="flex-grow overflow-hidden relative h-full flex items-center">
+              <div className="w-full h-8 flex items-center overflow-hidden relative">
                    <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
                       <span>{freeSlotsPrimary}</span>
                       <span aria-hidden="true">{freeSlotsPrimary}</span>
@@ -125,16 +125,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
           </div>
 
           {/* Decorative Gradient Blob */}
-          <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-blue-400/10 rounded-full blur-3xl group-hover:bg-blue-400/20 transition-all duration-500"></div>
+          <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-blue-400/10 rounded-full blur-3xl group-hover:bg-blue-400/20 transition-all duration-500 pointer-events-none"></div>
         </div>
 
         {/* Secondary Card */}
         <div 
           onClick={() => onSelectStage(Stage.SECONDARY)}
-          className="group relative h-[320px] md:h-[360px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
+          className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
         >
           {/* Content Layer */}
-          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between pb-16">
+          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
              <div className="flex justify-between items-start">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 group-hover:scale-110 transition-transform duration-300">
                    <Monitor className="h-6 w-6 md:h-7 md:w-7" />
@@ -157,15 +157,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
              </div>
           </div>
 
-          {/* Marquee Ticker with Fixed Label */}
-          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
-              <div className="flex-shrink-0 px-4 h-full flex items-center bg-white/50 border-r border-slate-200 z-40">
+          {/* Stacked Footer */}
+          <div className="relative w-full z-30 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex flex-col">
+              <div className="w-full py-2 flex items-center justify-center bg-white/50 border-b border-slate-200">
                   <div className="flex items-center gap-2 text-emerald-600">
                       <Clock className="w-3 h-3 md:w-4 md:h-4" />
                       <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
                   </div>
               </div>
-              <div className="flex-grow overflow-hidden relative h-full flex items-center">
+              <div className="w-full h-8 flex items-center overflow-hidden relative">
                   <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
                       <span>{freeSlotsSecondary}</span>
                       <span aria-hidden="true">{freeSlotsSecondary}</span>
@@ -175,7 +175,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
           </div>
 
           {/* Decorative Gradient Blob */}
-          <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-emerald-400/10 rounded-full blur-3xl group-hover:bg-emerald-400/20 transition-all duration-500"></div>
+          <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-emerald-400/10 rounded-full blur-3xl group-hover:bg-emerald-400/20 transition-all duration-500 pointer-events-none"></div>
         </div>
 
       </div>
