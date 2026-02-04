@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Stage, User, Booking } from '../types';
+import { Stage, User, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY } from '../types';
 import { BookOpen, Monitor, ArrowRight, Calendar, Loader2, Clock } from 'lucide-react';
 import { getBookings } from '../services/storageService';
 import { getUserUpcomingBookings, getFreeSlots } from '../utils/dashboardUtils';
@@ -32,6 +32,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
   const freeSlotsPrimary = getFreeSlots(bookings, Stage.PRIMARY);
   const freeSlotsSecondary = getFreeSlots(bookings, Stage.SECONDARY);
 
+  const getSlotLabel = (stage: Stage, slotId: string) => {
+    const slots = stage === Stage.PRIMARY ? SLOTS_PRIMARY : SLOTS_SECONDARY;
+    const slot = slots.find(s => s.id === slotId);
+    return slot ? slot.label : slotId;
+  };
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in pb-20">
       
@@ -59,7 +65,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${booking.stage === Stage.PRIMARY ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                           {booking.resource === 'CART' ? 'Carro' : 'Aula'}
                        </span>
-                       <span className="text-[10px] font-bold text-slate-400">{booking.slotId}</span>
+                       <span className="text-[10px] font-bold text-slate-400">{getSlotLabel(booking.stage, booking.slotId)}</span>
                     </div>
                     <p className="font-bold text-slate-800 text-sm mb-1 capitalize">{formatDisplayDate(new Date(booking.date))}</p>
                     <p className="text-xs text-slate-500 font-medium truncate">{booking.course} - {booking.subject}</p>
