@@ -58,12 +58,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
               <Calendar className="w-5 h-5 text-slate-400" />
               <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Mis Próximas Reservas</h2>
            </div>
-           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {upcomingBookings.map(booking => (
                  <div key={booking.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
                     <div className="flex items-center justify-between mb-2">
                        <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${booking.stage === Stage.PRIMARY ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
-                          {booking.resource === 'CART' ? 'Carro' : 'Aula'}
+                          {booking.resource === 'CART' ? 'Carro' : booking.stage === Stage.PRIMARY ? 'Idiomas' : 'Informática'}
                        </span>
                        <span className="text-[10px] font-bold text-slate-400">{getSlotLabel(booking.stage, booking.slotId)}</span>
                     </div>
