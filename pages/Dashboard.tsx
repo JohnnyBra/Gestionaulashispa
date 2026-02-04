@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Stage, User, Booking } from '../types';
-import { BookOpen, Monitor, ArrowRight, Calendar, Loader2 } from 'lucide-react';
+import { BookOpen, Monitor, ArrowRight, Calendar, Loader2, Clock } from 'lucide-react';
 import { getBookings } from '../services/storageService';
 import { getUserUpcomingBookings, getFreeSlots } from '../utils/dashboardUtils';
 import { formatDisplayDate } from '../utils/dateUtils';
@@ -101,12 +101,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
              </div>
           </div>
 
-          {/* Marquee Ticker */}
-          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/80 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
-              <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
-                  <span>{freeSlotsPrimary}</span>
-                  <span aria-hidden="true">{freeSlotsPrimary}</span>
-                  <span aria-hidden="true">{freeSlotsPrimary}</span>
+          {/* Marquee Ticker with Fixed Label */}
+          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
+              <div className="flex-shrink-0 px-4 h-full flex items-center bg-white/50 border-r border-slate-200 z-40">
+                  <div className="flex items-center gap-2 text-blue-600">
+                      <Clock className="w-3 h-3 md:w-4 md:h-4" />
+                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
+                  </div>
+              </div>
+              <div className="flex-grow overflow-hidden relative h-full flex items-center">
+                   <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
+                      <span>{freeSlotsPrimary}</span>
+                      <span aria-hidden="true">{freeSlotsPrimary}</span>
+                      <span aria-hidden="true">{freeSlotsPrimary}</span>
+                   </div>
               </div>
           </div>
 
@@ -143,12 +151,20 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
              </div>
           </div>
 
-          {/* Marquee Ticker */}
-          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/80 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
-              <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
-                  <span>{freeSlotsSecondary}</span>
-                  <span aria-hidden="true">{freeSlotsSecondary}</span>
-                  <span aria-hidden="true">{freeSlotsSecondary}</span>
+          {/* Marquee Ticker with Fixed Label */}
+          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/90 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
+              <div className="flex-shrink-0 px-4 h-full flex items-center bg-white/50 border-r border-slate-200 z-40">
+                  <div className="flex items-center gap-2 text-emerald-600">
+                      <Clock className="w-3 h-3 md:w-4 md:h-4" />
+                      <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
+                  </div>
+              </div>
+              <div className="flex-grow overflow-hidden relative h-full flex items-center">
+                  <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
+                      <span>{freeSlotsSecondary}</span>
+                      <span aria-hidden="true">{freeSlotsSecondary}</span>
+                      <span aria-hidden="true">{freeSlotsSecondary}</span>
+                  </div>
               </div>
           </div>
 
