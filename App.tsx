@@ -93,7 +93,7 @@ const App: React.FC = () => {
       />
     );
   } else {
-    content = <Dashboard onSelectStage={handleSelectStage} />;
+    content = <Dashboard onSelectStage={handleSelectStage} user={user} />;
   }
 
   return (

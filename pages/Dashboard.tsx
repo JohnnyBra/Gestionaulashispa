@@ -1,24 +1,73 @@
-import React from 'react';
-import { Stage } from '../types';
-import { BookOpen, Monitor, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Stage, User, Booking } from '../types';
+import { BookOpen, Monitor, ArrowRight, Calendar, Loader2 } from 'lucide-react';
+import { getBookings } from '../services/storageService';
+import { getUserUpcomingBookings, getFreeSlots } from '../utils/dashboardUtils';
+import { formatDisplayDate } from '../utils/dateUtils';
 
 interface DashboardProps {
   onSelectStage: (stage: Stage) => void;
+  user: User;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => {
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const data = await getBookings();
+        setBookings(data);
+      } catch (e) {
+        console.error("Error fetching bookings for dashboard", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBookings();
+  }, []);
+
+  const upcomingBookings = getUserUpcomingBookings(bookings, user);
+  const freeSlotsPrimary = getFreeSlots(bookings, Stage.PRIMARY);
+  const freeSlotsSecondary = getFreeSlots(bookings, Stage.SECONDARY);
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in pb-20">
       
       {/* Hero Header */}
-      <div className="text-center mb-10 md:mb-16 relative">
+      <div className="text-center mb-8 md:mb-12 relative">
          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-3 md:mb-4">
-            ¿Dónde quieres <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600">enseñar hoy?</span>
+            Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand-600 to-indigo-600">{user.name.split(' ')[0]}</span>
          </h1>
          <p className="text-base md:text-lg text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed px-4">
-            Selecciona el espacio adecuado para tu clase. Consulta disponibilidad en tiempo real.
+            ¿Dónde quieres enseñar hoy? Selecciona tu espacio.
          </p>
       </div>
+
+      {/* User Upcoming Bookings */}
+      {upcomingBookings.length > 0 && (
+        <div className="mb-10 max-w-4xl mx-auto">
+           <div className="flex items-center gap-2 mb-4 px-1">
+              <Calendar className="w-5 h-5 text-slate-400" />
+              <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Mis Próximas Reservas</h2>
+           </div>
+           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+              {upcomingBookings.map(booking => (
+                 <div key={booking.id} className="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex items-center justify-between mb-2">
+                       <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${booking.stage === Stage.PRIMARY ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                          {booking.resource === 'CART' ? 'Carro' : 'Aula'}
+                       </span>
+                       <span className="text-[10px] font-bold text-slate-400">{booking.slotId}</span>
+                    </div>
+                    <p className="font-bold text-slate-800 text-sm mb-1 capitalize">{formatDisplayDate(new Date(booking.date))}</p>
+                    <p className="text-xs text-slate-500 font-medium truncate">{booking.course} - {booking.subject}</p>
+                 </div>
+              ))}
+           </div>
+        </div>
+      )}
 
       {/* Cards Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 max-w-4xl mx-auto">
@@ -26,10 +75,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
         {/* Primary Card */}
         <div 
           onClick={() => onSelectStage(Stage.PRIMARY)}
-          className="group relative h-[280px] md:h-[320px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100"
+          className="group relative h-[320px] md:h-[360px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
         >
           {/* Content Layer */}
-          <div className="relative z-20 p-6 md:p-8 h-full flex flex-col justify-between">
+          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between pb-16">
              <div className="flex justify-between items-start">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center border border-blue-100 group-hover:scale-110 transition-transform duration-300">
                    <BookOpen className="h-6 w-6 md:h-7 md:w-7" />
@@ -52,6 +101,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
              </div>
           </div>
 
+          {/* Marquee Ticker */}
+          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/80 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
+              <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
+                  <span>{freeSlotsPrimary}</span>
+                  <span aria-hidden="true">{freeSlotsPrimary}</span>
+                  <span aria-hidden="true">{freeSlotsPrimary}</span>
+              </div>
+          </div>
+
           {/* Decorative Gradient Blob */}
           <div className="absolute top-[-50%] right-[-50%] w-[100%] h-[100%] bg-blue-400/10 rounded-full blur-3xl group-hover:bg-blue-400/20 transition-all duration-500"></div>
         </div>
@@ -59,10 +117,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
         {/* Secondary Card */}
         <div 
           onClick={() => onSelectStage(Stage.SECONDARY)}
-          className="group relative h-[280px] md:h-[320px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100"
+          className="group relative h-[320px] md:h-[360px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass bg-white border border-slate-100 flex flex-col"
         >
           {/* Content Layer */}
-          <div className="relative z-20 p-6 md:p-8 h-full flex flex-col justify-between">
+          <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between pb-16">
              <div className="flex justify-between items-start">
                 <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center border border-emerald-100 group-hover:scale-110 transition-transform duration-300">
                    <Monitor className="h-6 w-6 md:h-7 md:w-7" />
@@ -74,7 +132,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
 
              <div>
                 <h3 className="text-xl md:text-2xl font-bold text-slate-900 mb-1 group-hover:text-emerald-700 transition-colors">Etapa Secundaria</h3>
-                <p className="text-slate-500 font-medium text-sm md:text-base">Aula de Informática</p>
+                <p className="text-slate-500 font-medium text-sm md:text-base">Aula de Informática & Carro</p>
              </div>
 
              <div className="flex items-center justify-between pt-6 border-t border-slate-100/50">
@@ -83,6 +141,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage }) => {
                     <ArrowRight className="h-4 w-4 md:h-5 md:w-5" />
                  </span>
              </div>
+          </div>
+
+          {/* Marquee Ticker */}
+          <div className="absolute bottom-0 left-0 w-full h-10 bg-slate-50/80 backdrop-blur-sm border-t border-slate-100 flex items-center overflow-hidden z-30">
+              <div className="animate-marquee whitespace-nowrap flex items-center gap-8 text-[10px] md:text-xs font-semibold text-slate-500 px-4">
+                  <span>{freeSlotsSecondary}</span>
+                  <span aria-hidden="true">{freeSlotsSecondary}</span>
+                  <span aria-hidden="true">{freeSlotsSecondary}</span>
+              </div>
           </div>
 
           {/* Decorative Gradient Blob */}
