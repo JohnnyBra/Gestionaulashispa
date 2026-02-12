@@ -51,6 +51,7 @@ let studentsMemoryCache = [];
 let classesMemoryCache = [];
 let bookingsMemoryCache = [];
 let historyMemoryCache = [];
+let incidentsMemoryCache = [];
 let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
 
 // Helper to rebuild the map
@@ -115,6 +116,12 @@ const loadCache = () => {
       console.log(`✅ [CACHE] Historial cargado: ${historyMemoryCache.length}`);
     } catch (e) { console.error("Error lectura caché historial:", e); }
   }
+  if (fs.existsSync(INCIDENTS_FILE)) {
+    try {
+      incidentsMemoryCache = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]');
+      console.log(`✅ [CACHE] Incidencias cargadas: ${incidentsMemoryCache.length}`);
+    } catch (e) { console.error("Error lectura caché incidencias:", e); }
+  }
 };
 loadCache();
 
@@ -138,6 +145,29 @@ const saveBookings = async () => {
     if (hasPendingSave) {
       hasPendingSave = false;
       saveBookings();
+    }
+  }
+};
+
+let isSavingIncidents = false;
+let hasPendingSaveIncidents = false;
+
+const saveIncidents = async () => {
+  if (isSavingIncidents) {
+    hasPendingSaveIncidents = true;
+    return;
+  }
+  isSavingIncidents = true;
+
+  try {
+    await fs.promises.writeFile(INCIDENTS_FILE, JSON.stringify(incidentsMemoryCache, null, 2));
+  } catch (e) {
+    console.error("❌ Error guardando incidencias:", e);
+  } finally {
+    isSavingIncidents = false;
+    if (hasPendingSaveIncidents) {
+      hasPendingSaveIncidents = false;
+      saveIncidents();
     }
   }
 };
@@ -524,47 +554,34 @@ app.delete('/api/bookings/:id', (req, res) => {
 });
 
 app.get('/api/incidents', (req, res) => {
-  if (!fs.existsSync(INCIDENTS_FILE)) return res.json([]);
-  try {
-      const incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]');
-      res.json(incidents.sort((a,b) => b.timestamp - a.timestamp));
-  } catch(e) { res.json([]); }
+  res.json([...incidentsMemoryCache].sort((a,b) => b.timestamp - a.timestamp));
 });
 
 app.post('/api/incidents', (req, res) => {
   try {
     const newIncident = req.body;
-    let incidents = [];
-    if (fs.existsSync(INCIDENTS_FILE)) {
-        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
-    }
 
     // Ensure ID and timestamp
     newIncident.id = newIncident.id || Math.random().toString(36).substr(2, 9);
     newIncident.timestamp = newIncident.timestamp || Date.now();
 
-    incidents.push(newIncident);
-    fs.writeFileSync(INCIDENTS_FILE, JSON.stringify(incidents, null, 2));
+    incidentsMemoryCache.push(newIncident);
+    saveIncidents();
 
-    io.emit('server:incidents_updated', incidents);
+    io.emit('server:incidents_updated', incidentsMemoryCache);
     res.status(201).json({ success: true, incident: newIncident });
   } catch (e) { res.status(500).json({ error: 'Error saving incident' }); }
 });
 
 app.patch('/api/incidents/:id', (req, res) => {
   try {
-    let incidents = [];
-    if (fs.existsSync(INCIDENTS_FILE)) {
-        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
-    }
-
-    const index = incidents.findIndex(i => i.id === req.params.id);
+    const index = incidentsMemoryCache.findIndex(i => i.id === req.params.id);
     if (index === -1) return res.status(404).json({ error: 'Not found' });
 
-    incidents[index] = { ...incidents[index], ...req.body };
-    fs.writeFileSync(INCIDENTS_FILE, JSON.stringify(incidents, null, 2));
+    incidentsMemoryCache[index] = { ...incidentsMemoryCache[index], ...req.body };
+    saveIncidents();
 
-    io.emit('server:incidents_updated', incidents);
+    io.emit('server:incidents_updated', incidentsMemoryCache);
     res.json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error updating incident' }); }
 });
