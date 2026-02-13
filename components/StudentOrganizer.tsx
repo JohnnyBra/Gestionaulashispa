@@ -327,71 +327,71 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
     };
 
     return (
-        <div className="flex flex-col h-full overflow-hidden bg-white rounded-lg shadow-xl">
-            <div className="bg-blue-600 text-white p-4 flex justify-between items-center gap-2">
+        <div className="flex flex-col h-full overflow-hidden glass-medium rounded-lg shadow-xl">
+            <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4 flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                    <button onClick={onClose} className="hover:bg-blue-700 p-1 rounded shrink-0"><ArrowLeft size={20} /></button>
+                    <button onClick={onClose} className="hover:bg-white/20 p-1 rounded shrink-0"><ArrowLeft size={20} /></button>
                     <h2 className="text-lg md:text-xl font-bold truncate">Organizar Alumnado: {booking.course}</h2>
                 </div>
                 <div className="flex gap-2 shrink-0">
                     {previousBookings.length > 0 && (
-                        <button onClick={() => setShowHistoryModal(true)} className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1 rounded hover:bg-amber-600 text-sm font-medium">
+                        <button onClick={() => setShowHistoryModal(true)} className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1 rounded-lg hover:bg-amber-600 text-sm font-medium shadow-sm">
                             <History size={16} /> <span className="hidden sm:inline">Importar</span>
                         </button>
                     )}
-                    <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white text-blue-600 px-3 py-1 rounded hover:bg-gray-100 text-sm font-medium">
+                    <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white/20 text-white px-3 py-1 rounded-lg hover:bg-white/30 text-sm font-medium">
                         <Printer size={16} /> <span className="hidden sm:inline">Imprimir</span>
                     </button>
                     {isAdmin && (
-                        <button onClick={() => generateBlankTemplate()} className="flex items-center gap-1 bg-blue-800 text-white px-3 py-1 rounded hover:bg-blue-900 text-sm font-medium">
+                        <button onClick={() => generateBlankTemplate()} className="flex items-center gap-1 bg-primary-800 text-white px-3 py-1 rounded-lg hover:bg-primary-900 text-sm font-medium">
                             <FileText size={16} /> <span className="hidden sm:inline">Plantilla Vacía</span>
                         </button>
                     )}
-                    <button onClick={handleSave} className="flex items-center gap-1 bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 text-sm font-medium">
+                    <button onClick={handleSave} className="flex items-center gap-1 bg-emerald-500 text-white px-3 py-1 rounded-lg hover:bg-emerald-600 text-sm font-medium shadow-sm">
                         <Save size={16} /> <span>Guardar</span>
                     </button>
                 </div>
             </div>
 
             {/* Mobile Tabs */}
-            <div className="md:hidden flex border-b bg-gray-50 dark:bg-slate-900 dark:border-slate-700">
+            <div className="md:hidden flex border-b border-glass-border glass-light">
                 <button
-                    className={`flex-1 py-3 text-sm font-semibold text-center ${activeTab === 'computers' ? 'bg-white dark:bg-slate-800 border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}
+                    className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeTab === 'computers' ? 'glass-medium border-b-2 border-primary-500 text-primary-600 dark:text-primary-400' : 'text-muted'}`}
                     onClick={() => setActiveTab('computers')}
                 >
                     Ordenadores
                 </button>
                 <button
-                    className={`flex-1 py-3 text-sm font-semibold text-center ${activeTab === 'students' ? 'bg-white dark:bg-slate-800 border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-slate-400'}`}
+                    className={`flex-1 py-3 text-sm font-semibold text-center transition-colors ${activeTab === 'students' ? 'glass-medium border-b-2 border-primary-500 text-primary-600 dark:text-primary-400' : 'text-muted'}`}
                     onClick={() => setActiveTab('students')}
                 >
                     Alumnos ({filteredStudents.length})
                 </button>
             </div>
 
-            <div className="flex-1 overflow-hidden flex flex-col md:flex-row bg-white dark:bg-slate-900">
+            <div className="flex-1 overflow-hidden flex flex-col md:flex-row">
                 {/* Computer Grid Area */}
-                <div className={`flex-1 p-2 md:p-4 overflow-y-auto bg-gray-50 dark:bg-slate-900 ${activeTab === 'computers' ? 'block' : 'hidden md:block'}`}>
+                <div className={`flex-1 p-2 md:p-4 overflow-y-auto bg-app ${activeTab === 'computers' ? 'block' : 'hidden md:block'}`}>
                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-4 gap-2">
-                        <h3 className="font-semibold text-gray-700 dark:text-slate-200 hidden md:block">Ordenadores ({computerCount})</h3>
+                        <h3 className="font-semibold text-slate-700 dark:text-slate-200 hidden md:block">Ordenadores ({computerCount})</h3>
 
                         {/* Responsive Toolbar */}
                         <div className="w-full md:w-auto flex flex-wrap gap-2 text-sm">
-                            <div className="flex items-center gap-2 bg-white dark:bg-slate-800 p-1.5 px-3 rounded border dark:border-slate-700 shadow-sm">
-                                <span className="text-gray-600 dark:text-slate-400 flex items-center gap-1"><Users size={16} /> <span className="hidden sm:inline">Agrupación:</span></span>
+                            <div className="flex items-center gap-2 glass p-1.5 px-3 rounded-lg shadow-sm">
+                                <span className="text-muted flex items-center gap-1"><Users size={16} /> <span className="hidden sm:inline">Agrupación:</span></span>
                                 <select
                                     value={groupSize}
                                     onChange={e => setGroupSize(Number(e.target.value))}
-                                    className="text-sm border-none bg-transparent focus:ring-0 cursor-pointer outline-none font-medium text-blue-600 dark:text-blue-400"
+                                    className="text-sm border-none bg-transparent focus:ring-0 cursor-pointer outline-none font-medium text-primary-600 dark:text-primary-400"
                                 >
-                                    <option value={1} className="dark:bg-slate-800">Individual</option>
-                                    <option value={2} className="dark:bg-slate-800">Parejas</option>
-                                    {isSecondaryCart && <option value={3} className="dark:bg-slate-800">Tríos</option>}
+                                    <option value={1}>Individual</option>
+                                    <option value={2}>Parejas</option>
+                                    {isSecondaryCart && <option value={3}>Tríos</option>}
                                 </select>
                             </div>
                             <div className="flex gap-2 ml-auto md:ml-0">
-                                <button onClick={() => autoAssign('ALPHABETICAL')} className="px-3 py-1.5 bg-gray-200 dark:bg-slate-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 flex items-center gap-1 font-medium"><SortAsc size={16} /> <span>ABC</span></button>
-                                <button onClick={() => autoAssign('RANDOM')} className="px-3 py-1.5 bg-gray-200 dark:bg-slate-700 dark:text-slate-200 rounded hover:bg-gray-300 dark:hover:bg-slate-600 flex items-center gap-1 font-medium"><Shuffle size={16} /> <span>Azar</span></button>
+                                <button onClick={() => autoAssign('ALPHABETICAL')} className="btn-ghost px-3 py-1.5 text-sm flex items-center gap-1 font-medium"><SortAsc size={16} /> <span>ABC</span></button>
+                                <button onClick={() => autoAssign('RANDOM')} className="btn-ghost px-3 py-1.5 text-sm flex items-center gap-1 font-medium"><Shuffle size={16} /> <span>Azar</span></button>
                             </div>
                         </div>
                     </div>
@@ -403,18 +403,18 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                             return (
                                 <div
                                     key={num}
-                                    className={`relative border dark:border-slate-700 rounded p-2 h-24 md:h-28 flex flex-col justify-between cursor-pointer transition-all active:scale-95 md:active:scale-100 ${assignedStudents.length > 0 ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-300 dark:border-blue-800 ring-1 ring-blue-200 dark:ring-blue-900/30' : 'bg-white dark:bg-slate-800 hover:bg-gray-100 dark:hover:bg-slate-700 shadow-sm'}`}
+                                    className={`relative rounded-xl p-2 h-24 md:h-28 flex flex-col justify-between cursor-pointer transition-all active:scale-95 md:active:scale-100 ${assignedStudents.length > 0 ? 'bg-primary-50 dark:bg-primary-900/20 border border-primary-200 dark:border-primary-800 ring-1 ring-primary-200/50 dark:ring-primary-900/30' : 'glass hover:bg-glass-bg shadow-sm'}`}
                                     onClick={() => {
                                         if (selectedStudent) {
                                             handleAssign(num, selectedStudent);
                                         }
                                     }}
                                 >
-                                    <div className="font-bold text-gray-400 dark:text-slate-500 text-sm flex justify-between items-center">
+                                    <div className="font-bold text-muted text-sm flex justify-between items-center">
                                         <span>PC {num}</span>
                                         <button
                                             onClick={(e) => openIncidenceModal(e, num)}
-                                            className={`p-1 rounded hover:bg-gray-200 dark:hover:bg-slate-600 transition-colors ${hasIncidence ? 'text-orange-500' : 'text-gray-300 dark:text-slate-600 hover:text-gray-500 dark:hover:text-slate-400'}`}
+                                            className={`p-1 rounded hover:bg-glass-bg transition-colors ${hasIncidence ? 'text-orange-500' : 'text-slate-300 dark:text-slate-600 hover:text-muted'}`}
                                             title={hasIncidence ? incidences[num] : "Añadir incidencia"}
                                         >
                                             {hasIncidence ? <AlertTriangle size={14} fill="currentColor" /> : <MessageSquare size={14} />}
@@ -422,10 +422,10 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                                     </div>
                                     <div className="flex-1 flex flex-col justify-center gap-1 overflow-hidden mt-1">
                                         {assignedStudents.length === 0 ? (
-                                            <div className="text-center text-gray-300 dark:text-slate-600 italic text-xs md:text-sm">Libre</div>
+                                            <div className="text-center text-slate-300 dark:text-slate-600 italic text-xs md:text-sm">Libre</div>
                                         ) : (
                                             assignedStudents.map(s => (
-                                                <div key={s.id} className="text-xs bg-white dark:bg-slate-700 dark:text-slate-200 border dark:border-slate-600 rounded px-1 py-0.5 flex justify-between items-center truncate shadow-sm">
+                                                <div key={s.id} className="text-xs glass rounded px-1 py-0.5 flex justify-between items-center truncate shadow-sm text-slate-800 dark:text-slate-200">
                                                     <span className="truncate flex-1" title={s.name}>{s.name}</span>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleUnassign(num, s.id); }}
@@ -448,7 +448,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                         <div>
                             <label className="block text-sm font-medium text-gray-700 dark:text-slate-300 mb-1">Descripción de la incidencia</label>
                             <textarea
-                                className="w-full p-3 border dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                className="w-full p-3 input-glass"
                                 rows={4}
                                 placeholder="Ej: El ratón no funciona, pantalla parpadea..."
                                 value={editingIncidenceText}
@@ -457,8 +457,8 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                             />
                         </div>
                         <div className="flex justify-end gap-2">
-                            <button type="button" onClick={() => setIncidenceModalOpen(false)} className="px-4 py-2 text-gray-600 dark:text-slate-400 hover:bg-gray-100 dark:hover:bg-slate-700 rounded-lg">Cancelar</button>
-                            <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 font-medium">Guardar Incidencia</button>
+                            <button type="button" onClick={() => setIncidenceModalOpen(false)} className="btn-ghost px-4 py-2 text-sm">Cancelar</button>
+                            <button type="submit" className="btn-primary px-4 py-2 text-sm">Guardar Incidencia</button>
                         </div>
                     </form>
                 </Modal>
@@ -473,11 +473,11 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                                     <button
                                         key={b.id}
                                         onClick={() => handleImportHistory(b)}
-                                        className="w-full text-left p-3 border dark:border-slate-700 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:border-blue-200 dark:hover:border-blue-800 transition-colors flex flex-col gap-1"
+                                        className="w-full text-left p-3 glass rounded-lg hover:bg-primary-50 dark:hover:bg-primary-900/20 hover:border-primary-200 dark:hover:border-primary-800 transition-colors flex flex-col gap-1"
                                     >
                                         <div className="flex justify-between items-center">
-                                            <span className="font-bold text-gray-800 dark:text-white">{b.date}</span>
-                                            <span className="text-xs bg-gray-100 dark:bg-slate-800 text-gray-600 dark:text-slate-400 px-2 py-0.5 rounded-full">{slotLabel}</span>
+                                            <span className="font-bold text-slate-800 dark:text-white">{b.date}</span>
+                                            <span className="text-xs glass px-2 py-0.5 rounded-full text-muted">{slotLabel}</span>
                                         </div>
                                         <div className="text-sm text-gray-600 dark:text-slate-400">{b.subject || 'Sin asignatura'}</div>
                                     </button>
@@ -488,9 +488,9 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                 </Modal>
 
                 {/* Student List Sidebar */}
-                <div className={`md:w-64 lg:w-80 border-l dark:border-slate-700 bg-white dark:bg-slate-800 flex flex-col ${activeTab === 'students' ? 'block flex-1' : 'hidden md:flex'}`}>
-                    <div className="p-3 border-b dark:border-slate-700 bg-gray-50 dark:bg-slate-800 hidden md:block">
-                        <h3 className="font-semibold text-slate-800 dark:text-slate-200">Alumnos ({filteredStudents.length})</h3>
+                <div className={`md:w-64 lg:w-80 border-l border-glass-border glass-light flex flex-col ${activeTab === 'students' ? 'block flex-1' : 'hidden md:flex'}`}>
+                    <div className="p-3 border-b border-glass-border glass hidden md:block">
+                        <h3 className="font-semibold text-slate-800 dark:text-slate-200 font-display">Alumnos ({filteredStudents.length})</h3>
                         <div className="text-xs text-gray-500 dark:text-slate-400">Selecciona un alumno y pulsa en un PC</div>
                     </div>
                     <div className="flex-1 overflow-y-auto p-2 pb-20 md:pb-2">
@@ -506,7 +506,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                                         <div
                                             key={s.id}
                                             onClick={() => setSelectedStudent(selectedStudent?.id === s.id ? null : s)}
-                                            className={`p-3 md:p-2 rounded-lg cursor-pointer text-sm flex items-center gap-3 md:gap-2 transition-colors ${selectedStudent?.id === s.id ? 'bg-blue-600 text-white shadow-md' : 'hover:bg-gray-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-transparent'}`}
+                                            className={`p-3 md:p-2 rounded-lg cursor-pointer text-sm flex items-center gap-3 md:gap-2 transition-colors ${selectedStudent?.id === s.id ? 'bg-primary-600 text-white shadow-md' : 'hover:bg-glass-bg text-slate-700 dark:text-slate-200 border border-transparent'}`}
                                         >
                                             <User size={16} />
                                             <span className="truncate font-medium">{s.name}</span>
@@ -517,7 +517,7 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
                         )}
                     </div>
                     {/* Mobile Hint for Students Tab */}
-                    <div className="md:hidden p-3 bg-blue-50 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 text-xs text-center border-t dark:border-slate-700">
+                    <div className="md:hidden p-3 bg-primary-50 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs text-center border-t border-glass-border">
                         {selectedStudent ? `Seleccionado: ${selectedStudent.name}. Ve a "Ordenadores" para asignar.` : 'Toca un nombre para seleccionarlo.'}
                     </div>
                 </div>

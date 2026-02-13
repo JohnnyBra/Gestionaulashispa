@@ -35,11 +35,11 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
     const socket = io();
 
     socket.on('server:incidents_updated', (data: Incident[]) => {
-        setIncidents(data.sort((a,b) => b.timestamp - a.timestamp));
+      setIncidents(data.sort((a, b) => b.timestamp - a.timestamp));
     });
 
     return () => {
-        socket.disconnect();
+      socket.disconnect();
     };
   }, []);
 
@@ -129,7 +129,7 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
       {onBack && (
         <button
           onClick={onBack}
-          className="mb-4 flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium transition-colors"
+          className="mb-4 flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium transition-colors p-2 glass rounded-lg"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Volver</span>
@@ -137,89 +137,89 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
       )}
       <div className="flex justify-between items-center mb-8">
         <div>
-           <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
-             <AlertTriangle className="text-red-500" />
-             Registro de Incidencias
-           </h1>
-           <p className="text-slate-500 text-sm mt-1">Gestión y seguimiento de problemas técnicos.</p>
+          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+            <AlertTriangle className="text-red-500" />
+            Registro de Incidencias
+          </h1>
+          <p className="text-slate-500 text-sm mt-1">Gestión y seguimiento de problemas técnicos.</p>
         </div>
         <div className="flex gap-2">
-           <button
-             onClick={sendReport}
-             disabled={sendingReport}
-             className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl hover:bg-emerald-500 transition-colors font-medium shadow-lg shadow-emerald-900/10 disabled:opacity-50 disabled:cursor-not-allowed"
-           >
-             <Mail className="w-4 h-4" />
-             <span>{sendingReport ? 'Enviando...' : 'Enviar Reporte'}</span>
-           </button>
-           <button
-             onClick={generatePDF}
-             className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl hover:bg-slate-700 transition-colors font-medium shadow-lg shadow-slate-900/10"
-           >
-             <FileText className="w-4 h-4" />
-             <span>Imprimir PDF</span>
-           </button>
+          <button
+            onClick={sendReport}
+            disabled={sendingReport}
+            className="flex items-center gap-2 px-4 py-2 btn-primary bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white"
+          >
+            <Mail className="w-4 h-4" />
+            <span>{sendingReport ? 'Enviando...' : 'Enviar Reporte'}</span>
+          </button>
+          <button
+            onClick={generatePDF}
+            className="flex items-center gap-2 px-4 py-2 glass hover:bg-glass-bg text-slate-700 dark:text-slate-200 rounded-xl transition-colors font-medium shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Imprimir PDF</span>
+          </button>
         </div>
       </div>
 
       <div className="space-y-8">
         {sortedDates.map(date => (
           <div key={date}>
-            <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
-                {format(new Date(date), "EEEE, d 'de' MMMM", { locale: es })}
+            <h3 className="text-sm font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-3 flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              {format(new Date(date), "EEEE, d 'de' MMMM", { locale: es })}
             </h3>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                {grouped[date].map((incident, idx) => (
-                    <div key={incident.id} className={`p-4 flex items-start gap-4 ${idx !== grouped[date].length - 1 ? 'border-b border-slate-100' : ''} hover:bg-slate-50 transition-colors`}>
-                        {/* Status Toggle */}
-                        <button
-                            onClick={() => toggleResolved(incident)}
-                            className={`flex-shrink-0 mt-1 transition-colors ${incident.isResolved ? 'text-emerald-500' : 'text-slate-300 hover:text-emerald-500'}`}
-                            title={incident.isResolved ? "Marcar como pendiente" : "Marcar como resuelto"}
-                        >
-                            {incident.isResolved ? <CheckCircle className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
-                        </button>
+            <div className="glass-medium rounded-xl shadow-sm border border-glass-border overflow-hidden">
+              {grouped[date].map((incident, idx) => (
+                <div key={incident.id} className={`p-4 flex items-start gap-4 ${idx !== grouped[date].length - 1 ? 'border-b border-glass-border' : ''} hover:bg-glass-bg transition-colors`}>
+                  {/* Status Toggle */}
+                  <button
+                    onClick={() => toggleResolved(incident)}
+                    className={`flex-shrink-0 mt-1 transition-colors ${incident.isResolved ? 'text-emerald-500' : 'text-slate-300 hover:text-emerald-500'}`}
+                    title={incident.isResolved ? "Marcar como pendiente" : "Marcar como resuelto"}
+                  >
+                    {incident.isResolved ? <CheckCircle className="w-6 h-6" /> : <Circle className="w-6 h-6" />}
+                  </button>
 
-                        <div className="flex-grow">
-                            <div className="flex justify-between items-start mb-1">
-                                <div className="flex items-center gap-2">
-                                    <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${incident.resource === 'AULA' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
-                                        {incident.resource}
-                                    </span>
-                                    {incident.pcNumber && (
-                                        <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                                            <Monitor className="w-3 h-3" />
-                                            PC {incident.pcNumber}
-                                        </span>
-                                    )}
-                                </div>
-                                <span className="text-xs text-slate-400 font-mono">
-                                    {format(new Date(incident.timestamp), 'HH:mm')}
-                                </span>
-                            </div>
-
-                            <p className={`text-sm ${incident.isResolved ? 'text-slate-500 line-through' : 'text-slate-800 font-medium'}`}>
-                                {incident.description}
-                            </p>
-
-                            <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
-                                <User className="w-3 h-3" />
-                                <span>{incident.teacherName}</span>
-                            </div>
-                        </div>
+                  <div className="flex-grow">
+                    <div className="flex justify-between items-start mb-1">
+                      <div className="flex items-center gap-2">
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${incident.resource === 'AULA' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800'}`}>
+                          {incident.resource}
+                        </span>
+                        {incident.pcNumber && (
+                          <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 glass-light px-2 py-0.5 rounded-md border border-glass-border">
+                            <Monitor className="w-3 h-3" />
+                            PC {incident.pcNumber}
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-xs text-slate-400 font-mono">
+                        {format(new Date(incident.timestamp), 'HH:mm')}
+                      </span>
                     </div>
-                ))}
+
+                    <p className={`text-sm ${incident.isResolved ? 'text-muted line-through' : 'text-slate-800 dark:text-slate-200 font-medium'}`}>
+                      {incident.description}
+                    </p>
+
+                    <div className="mt-2 flex items-center gap-2 text-xs text-slate-400">
+                      <User className="w-3 h-3" />
+                      <span>{incident.teacherName}</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         ))}
 
         {sortedDates.length === 0 && (
-            <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300 text-slate-400">
-                <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-100" />
-                <p>No hay incidencias registradas.</p>
-            </div>
+          <div className="text-center py-12 glass-medium rounded-xl border border-dashed border-glass-border text-muted">
+            <CheckCircle className="w-12 h-12 mx-auto mb-3 text-emerald-100 dark:text-emerald-900/30" />
+            <p>No hay incidencias registradas.</p>
+          </div>
         )}
       </div>
     </div>
