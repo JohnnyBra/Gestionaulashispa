@@ -81,7 +81,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
             {/* Primary Card */}
             <div
                onClick={() => onSelectStage(Stage.PRIMARY)}
-               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass border-glass-border flex flex-col"
+               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass-medium border-glass-border flex flex-col"
             >
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
@@ -108,9 +108,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                </div>
 
                {/* Stacked Footer */}
-               <div className="relative w-full z-30 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800 flex flex-col">
-                  <div className="w-full py-2 flex items-center justify-center bg-white/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
-                     <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+               <div className="relative w-full z-30 glass-light border-t border-glass-border flex flex-col">
+                  <div className="w-full py-2 flex items-center justify-center glass border-b border-glass-border">
+                     <div className="flex items-center gap-2 text-primary-600 dark:text-primary-400">
                         <Clock className="w-3 h-3 md:w-4 md:h-4" />
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
                      </div>
@@ -131,7 +131,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
             {/* Secondary Card */}
             <div
                onClick={() => onSelectStage(Stage.SECONDARY)}
-               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass border-glass-border flex flex-col"
+               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass-medium border-glass-border flex flex-col"
             >
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
@@ -158,8 +158,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                </div>
 
                {/* Stacked Footer */}
-               <div className="relative w-full z-30 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-t border-slate-100 dark:border-slate-800 flex flex-col">
-                  <div className="w-full py-2 flex items-center justify-center bg-white/50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700">
+               <div className="relative w-full z-30 glass-light border-t border-glass-border flex flex-col">
+                  <div className="w-full py-2 flex items-center justify-center glass border-b border-glass-border">
                      <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
                         <Clock className="w-3 h-3 md:w-4 md:h-4" />
                         <span className="text-[10px] md:text-xs font-bold uppercase tracking-wider">Próximos Huecos</span>
