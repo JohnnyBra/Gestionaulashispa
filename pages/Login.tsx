@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { loginExternal, loginGoogle } from '../services/storageService';
-import { AlertCircle, Mail, ArrowRight, Lock, Loader2, ArrowLeft } from 'lucide-react';
+import { AlertCircle, Mail, ArrowRight, Lock, Loader2, ArrowLeft, Sun, Moon } from 'lucide-react';
+import { useTheme } from '../src/context/ThemeContext';
 
 interface LoginProps {
   onLogin: (user: User) => void;
@@ -14,6 +15,7 @@ declare global {
 }
 
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
+  const { theme, setTheme } = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -89,12 +91,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
 
     try {
       const result = await loginExternal({ email, password });
-      
+
       if (result && result.success) {
         const safeUser: User = {
-            name: result.name || email.split('@')[0] || 'Usuario',
-            email: result.email || email,
-            role: result.role
+          name: result.name || email.split('@')[0] || 'Usuario',
+          email: result.email || email,
+          role: result.role
         };
         onLogin(safeUser);
       } else {
@@ -109,102 +111,111 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row w-full bg-slate-50 lg:bg-white overflow-hidden relative">
-      
+    <div className="min-h-screen flex flex-col lg:flex-row w-full bg-app overflow-hidden relative transition-colors duration-300">
+
       {/* Botón Volver a Prisma (Flotante en Desktop, Flujo en Mobile) */}
-      <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center lg:block bg-white lg:bg-transparent border-b lg:border-none border-slate-100">
-        <a 
-            href="https://prisma.bibliohispa.es" 
-            className="flex items-center gap-2 px-4 py-2 bg-slate-50 lg:bg-white/80 backdrop-blur-md text-slate-600 hover:text-brand-600 border border-slate-200 rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm font-bold group"
-        >
+      <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center items-center gap-3 lg:block bg-white lg:bg-transparent border-b lg:border-none border-slate-100 dark:border-slate-800">
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            className="p-2 text-slate-600 dark:text-gray-300 bg-slate-50 lg:bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:shadow-md transition-all"
+            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+          >
+            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <a
+            href="https://prisma.bibliohispa.es"
+            className="flex items-center gap-2 px-4 py-2 bg-slate-50 lg:bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm font-bold group"
+          >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span>Volver a Prisma</span>
-        </a>
+          </a>
+        </div>
       </div>
 
-      <div className="w-full h-[25vh] lg:h-auto lg:w-1/2 bg-slate-900 relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-brand-900 z-0"></div>
+      <div className="w-full h-[25vh] lg:h-auto lg:w-1/2 mesh-auth relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
+        <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] z-0"></div>
         <div className="relative z-10 animate-fade-in text-center lg:text-left">
-           <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-start lg:space-x-4 mb-4 lg:mb-8">
-              <div className="h-12 w-12 lg:h-16 lg:w-16 bg-white rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg mb-3 lg:mb-0">
-                <img src="/logo.png" alt="Logo" className="h-8 w-auto lg:h-10" />
-              </div>
-              <div>
-                <h2 className="text-xl lg:text-2xl font-bold">La Hispanidad</h2>
-                <p className="text-brand-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
-              </div>
-           </div>
-           <h1 className="hidden lg:block text-4xl font-extrabold leading-tight">Acceso Unificado mediante <span className="text-brand-400">PrismaEdu</span></h1>
+          <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-start lg:space-x-4 mb-4 lg:mb-8">
+            <div className="h-12 w-12 lg:h-16 lg:w-16 bg-white rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg mb-3 lg:mb-0">
+              <img src="/logo.png" alt="Logo" className="h-8 w-auto lg:h-10" />
+            </div>
+            <div>
+              <h2 className="text-xl lg:text-2xl font-bold">La Hispanidad</h2>
+              <p className="text-brand-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
+            </div>
+          </div>
+          <h1 className="hidden lg:block text-4xl font-extrabold leading-tight">Acceso Unificado mediante <span className="text-brand-400">PrismaEdu</span></h1>
         </div>
       </div>
 
       <div className="w-full flex-1 flex items-center justify-center p-6 md:p-8 z-20">
-         <div className="w-full max-w-md animate-scale-in">
-            <div className="mb-6 lg:mb-8 text-center lg:text-left">
-               <h2 className="text-2xl md:text-3xl font-bold text-slate-900">Iniciar Sesión</h2>
-               <p className="text-slate-500 mt-2 text-sm md:text-base">Usa tu cuenta corporativa de la cooperativa.</p>
+        <div className="w-full max-w-md animate-scale-in glass-medium p-8 rounded-3xl shadow-glass-lg">
+          <div className="mb-6 lg:mb-8 text-center lg:text-left">
+            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white font-display">Iniciar Sesión</h2>
+            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm md:text-base">Usa tu cuenta corporativa de la cooperativa.</p>
+          </div>
+
+          {error && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm font-medium">
+              <AlertCircle className="w-5 h-5 shrink-0" />
+              <span>{error}</span>
             </div>
+          )}
 
-            {error && (
-               <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm font-medium">
-                  <AlertCircle className="w-5 h-5 shrink-0" />
-                  <span>{error}</span>
-               </div>
-            )}
-
-            {isGoogleEnabled && (
-                <div className="mb-6">
-                    <div id="googleButtonDiv" className="w-full h-[44px]"></div>
-                    <div className="relative mt-6">
-                        <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-slate-200"></div>
-                        </div>
-                        <div className="relative flex justify-center text-sm">
-                            <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
-                        </div>
-                    </div>
+          {isGoogleEnabled && (
+            <div className="mb-6">
+              <div id="googleButtonDiv" className="w-full h-[44px]"></div>
+              <div className="relative mt-6">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-slate-200"></div>
                 </div>
-            )}
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
+                </div>
+              </div>
+            </div>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-               <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Email</label>
-                  <div className="relative">
-                     <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                     <input
-                       type="email"
-                       value={email}
-                       onChange={(e) => setEmail(e.target.value)}
-                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base"
-                       placeholder="usuario@colegiolahispanidad.es"
-                       required
-                     />
-                  </div>
-               </div>
-               <div>
-                  <label className="block text-sm font-semibold text-slate-700 mb-1.5">Contraseña</label>
-                  <div className="relative">
-                     <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
-                     <input
-                       type="password"
-                       value={password}
-                       onChange={(e) => setPassword(e.target.value)}
-                       className="block w-full pl-11 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base"
-                       placeholder="••••••••"
-                       required
-                     />
-                  </div>
-               </div>
-               <button
-                type="submit"
-                disabled={loading}
-                className="w-full flex items-center justify-center py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg disabled:opacity-70 text-base"
-               >
-                 {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : 'Entrar'}
-                 {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
-               </button>
-            </form>
-         </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base text-slate-900 dark:text-white placeholder:text-slate-400"
+                  placeholder="usuario@colegiolahispanidad.es"
+                  required
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Contraseña</label>
+              <div className="relative">
+                <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base text-slate-900 dark:text-white placeholder:text-slate-400"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full flex items-center justify-center py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg disabled:opacity-70 text-base"
+            >
+              {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : 'Entrar'}
+              {!loading && <ArrowRight className="w-4 h-4 ml-2" />}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
