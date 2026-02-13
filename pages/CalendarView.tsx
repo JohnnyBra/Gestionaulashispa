@@ -447,11 +447,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'glass text-muted'}`}><Filter className="w-5 h-5" /></button>
 
                                 {/* Admin Print Buttons */}
-                                <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5" /></button>
-                                <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-green-600 hover:bg-green-50"><Monitor className="w-5 h-5" /></button>
+                                <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"><FileSpreadsheet className="w-5 h-5" /></button>
+                                <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"><Monitor className="w-5 h-5" /></button>
 
                                 {/* Admin Sync Buttons */}
-                                <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-amber-600 hover:bg-amber-50 disabled:opacity-50">
+                                <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50">
                                     {isSyncingTeachers ? <Loader2 className="w-5 h-5 animate-spin" /> : <School className="w-5 h-5" />}
                                 </button>
                                 <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
@@ -489,15 +489,15 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         <div className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] sticky top-0 z-20 bg-slate-200 border-b border-slate-300">
                             <div className="bg-slate-200"></div>
                             {weekDays.slice(0, 5).map(day => (
-                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50">
+                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/50">
                                     <div className="text-lg md:text-2xl font-black text-slate-800 dark:text-slate-200">{format(day, 'd')}</div>
                                     <div className="text-[10px] md:text-xs font-bold uppercase text-slate-500 dark:text-slate-400">{format(day, 'EEE', { locale: es })}</div>
                                 </div>
                             ))}
                         </div>
                         {slots.map(slot => (
-                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-700">
-                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
+                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800">
+                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-800">
                                     <span>{slot.start}</span><span className="text-slate-500 dark:text-slate-500">{slot.end}</span>
                                 </div>
                                 {weekDays.slice(0, 5).map(day => {
@@ -508,7 +508,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                                     return (
                                         <div key={day.toISOString()}
-                                            className={`min-h-[100px] p-2 border-r border-slate-200 dark:border-slate-700 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
+                                            className={`min-h-[100px] p-2 border-r border-slate-200 dark:border-slate-800 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                                             onClick={() => handleSlotClick(day, slot)}>
                                             {isHoliday ? (
                                                 <div className="h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-300 dark:text-slate-600 font-black uppercase -rotate-6">No Lectivo</div>
