@@ -1,0 +1,170 @@
+/* PrismaEdu Design System — "Prismatic Glass" */
+/* Ported and Adapted for ExcursionesV2 with Light/Dark Mode Support */
+
+/* ============ ROOT VARIABLES ============ */
+:root {
+    /* Default (Light Mode) */
+    --bg-app: #f8fafc;
+    /* surface-50 */
+    --bg-card: rgba(255, 255, 255, 0.7);
+    --text-main: #0f172a;
+    /* surface-900 */
+    --text-muted: #64748b;
+    /* surface-500 */
+    --glass-border: rgba(0, 0, 0, 0.08);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
+
+    --glass-bg: rgba(255, 255, 255, 0.6);
+    --glass-bg-light: rgba(255, 255, 255, 0.8);
+    --glass-bg-medium: rgba(255, 255, 255, 0.9);
+    --glass-hover-bg: rgba(255, 255, 255, 0.12);
+
+    --mesh-auth: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.15) 0%, transparent 50%),
+        linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+
+    /* Safe areas */
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+}
+
+/* Dark Mode (Class based for manual toggle + system preference via JS) */
+.dark {
+    /* Dark Mode Defaults (Matching PrismaEdu Original) */
+    --bg-app: #0f172a;
+    /* surface-900 */
+    --bg-card: rgba(255, 255, 255, 0.06);
+    --text-main: #f1f5f9;
+    /* surface-100 */
+    --text-muted: #94a3b8;
+    /* surface-400 */
+    --glass-border: rgba(255, 255, 255, 0.12);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+
+    --glass-bg: rgba(255, 255, 255, 0.06);
+    --glass-bg-light: rgba(255, 255, 255, 0.1);
+    --glass-bg-medium: rgba(255, 255, 255, 0.14);
+
+    --mesh-auth: radial-gradient(ellipse at 20% 50%, rgba(99, 102, 241, 0.4) 0%, transparent 50%),
+        radial-gradient(ellipse at 80% 20%, rgba(168, 85, 247, 0.35) 0%, transparent 50%),
+        radial-gradient(ellipse at 50% 80%, rgba(236, 72, 153, 0.3) 0%, transparent 50%),
+        linear-gradient(135deg, #0f0a2a 0%, #1a1145 50%, #0f172a 100%);
+}
+
+/* ============ BASE ============ */
+html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-text-size-adjust: 100%;
+}
+
+body {
+    overscroll-behavior: none;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background-color: var(--bg-app);
+    color: var(--text-main);
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* ============ GLASS UTILITIES ============ */
+.glass {
+    background: var(--glass-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+}
+
+.glass-light {
+    background: var(--glass-bg-light);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border: 1px solid var(--glass-border);
+}
+
+.glass-medium {
+    background: var(--glass-bg-medium);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--glass-border);
+}
+
+.glass-strong {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(32px);
+    -webkit-backdrop-filter: blur(32px);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+/* ============ ANIMATIONS ============ */
+@keyframes float {
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    33% {
+        transform: translateY(-12px) rotate(1deg);
+    }
+
+    66% {
+        transform: translateY(6px) rotate(-1deg);
+    }
+}
+
+@keyframes glow-pulse {
+
+    0%,
+    100% {
+        opacity: 0.5;
+        filter: blur(20px);
+    }
+
+    50% {
+        opacity: 0.8;
+        filter: blur(25px);
+    }
+}
+
+@keyframes slide-up {
+    from {
+        transform: translateY(24px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+@keyframes scale-in {
+    from {
+        transform: scale(0.92);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ============ UTILITIES ============ */
+.mesh-auth {
+    background: var(--mesh-auth);
+    background-size: cover;
+    background-attachment: fixed;
+}
+
+.text-gradient {
+    background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
