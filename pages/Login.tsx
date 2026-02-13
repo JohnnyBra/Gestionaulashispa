@@ -118,14 +118,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
         <div className="flex items-center gap-2">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 text-slate-600 dark:text-gray-300 bg-slate-50 lg:bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:shadow-md transition-all"
+            className="p-2 text-muted glass hover:bg-glass-bg rounded-full transition-all"
             title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           >
             {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
           </button>
           <a
             href="https://prisma.bibliohispa.es"
-            className="flex items-center gap-2 px-4 py-2 bg-slate-50 lg:bg-white/80 dark:bg-slate-800/80 backdrop-blur-md text-slate-600 dark:text-gray-300 hover:text-brand-600 dark:hover:text-brand-400 border border-slate-200 dark:border-slate-700 rounded-full shadow-sm hover:shadow-md transition-all text-xs md:text-sm font-bold group"
+            className="flex items-center gap-2 px-4 py-2 glass text-muted hover:text-primary-600 dark:hover:text-primary-400 rounded-full transition-all text-xs md:text-sm font-bold group"
           >
             <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
             <span>Volver a Prisma</span>
@@ -141,19 +141,19 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <img src="/logo.png" alt="Logo" className="h-8 w-auto lg:h-10" />
             </div>
             <div>
-              <h2 className="text-xl lg:text-2xl font-bold">La Hispanidad</h2>
-              <p className="text-brand-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
+              <h2 className="text-xl lg:text-2xl font-bold font-display">La Hispanidad</h2>
+              <p className="text-primary-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
             </div>
           </div>
-          <h1 className="hidden lg:block text-4xl font-extrabold leading-tight">Acceso Unificado mediante <span className="text-brand-400">PrismaEdu</span></h1>
+          <h1 className="hidden lg:block text-4xl font-extrabold leading-tight">Acceso Unificado mediante <span className="text-primary-400">PrismaEdu</span></h1>
         </div>
       </div>
 
       <div className="w-full flex-1 flex items-center justify-center p-6 md:p-8 z-20">
         <div className="w-full max-w-md animate-scale-in glass-medium p-8 rounded-3xl shadow-glass-lg">
           <div className="mb-6 lg:mb-8 text-center lg:text-left">
-            <h2 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white font-display">Iniciar Sesión</h2>
-            <p className="text-gray-500 dark:text-gray-400 mt-2 text-sm md:text-base">Usa tu cuenta corporativa de la cooperativa.</p>
+            <h2 className="text-2xl md:text-3xl font-bold text-slate-900 dark:text-white font-display">Iniciar Sesión</h2>
+            <p className="text-muted mt-2 text-sm md:text-base">Usa tu cuenta corporativa de la cooperativa.</p>
           </div>
 
           {error && (
@@ -181,12 +181,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Email</label>
               <div className="relative">
-                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                <Mail className="absolute left-4 top-3.5 h-5 w-5 text-muted" />
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base text-slate-900 dark:text-white placeholder:text-slate-400"
+                  className="block w-full pl-11 pr-4 py-3 input-glass"
                   placeholder="usuario@colegiolahispanidad.es"
                   required
                 />
@@ -195,12 +195,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <div>
               <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-1.5">Contraseña</label>
               <div className="relative">
-                <Lock className="absolute left-4 top-3.5 h-5 w-5 text-slate-400" />
+                <Lock className="absolute left-4 top-3.5 h-5 w-5 text-muted" />
                 <input
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="block w-full pl-11 pr-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-500 transition-all outline-none text-base text-slate-900 dark:text-white placeholder:text-slate-400"
+                  className="block w-full pl-11 pr-4 py-3 input-glass"
                   placeholder="••••••••"
                   required
                 />
@@ -209,7 +209,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             <button
               type="submit"
               disabled={loading}
-              className="w-full flex items-center justify-center py-3.5 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl transition-all shadow-lg disabled:opacity-70 text-base"
+              className="w-full flex items-center justify-center btn-primary"
             >
               {loading ? <Loader2 className="animate-spin w-5 h-5 mr-2" /> : 'Entrar'}
               {!loading && <ArrowRight className="w-4 h-4 ml-2" />}

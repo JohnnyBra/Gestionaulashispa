@@ -90,8 +90,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
     const roomName = stage === Stage.PRIMARY ? 'Aula de Idiomas' : (currentResource === 'CART' ? 'Carro de Portátiles' : 'Aula de Informática');
     const colors = stage === Stage.PRIMARY
-        ? { primary: 'blue', text: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', gradient: 'from-blue-600 to-indigo-600' }
-        : { primary: 'emerald', text: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-200', gradient: 'from-emerald-600 to-teal-600' };
+        ? { primary: 'blue', text: 'text-blue-600 dark:text-blue-400', bg: 'bg-blue-50 dark:bg-blue-900/30', border: 'border-blue-200 dark:border-blue-800', gradient: 'from-blue-600 to-indigo-600' }
+        : { primary: 'emerald', text: 'text-emerald-600 dark:text-emerald-400', bg: 'bg-emerald-50 dark:bg-emerald-900/30', border: 'border-emerald-200 dark:border-emerald-800', gradient: 'from-emerald-600 to-teal-600' };
 
     useEffect(() => {
         const init = async () => {
@@ -432,10 +432,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
     return (
         <div className="flex flex-col h-[calc(100vh-64px)] md:h-[calc(100vh-80px)] w-full max-w-full overflow-hidden px-2 md:px-4 py-2 md:py-8">
             <div className="flex-none flex flex-col gap-3 mb-4 w-full">
-                <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-panel p-3 rounded-2xl md:rounded-3xl gap-3 w-full">
+                <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-medium p-3 rounded-2xl md:rounded-3xl gap-3 w-full">
                     <div className="flex items-center justify-between w-full lg:w-auto">
                         <div className="flex items-center gap-3">
-                            <button onClick={onBack} className="p-2 hover:bg-slate-100 rounded-xl bg-white border border-slate-100 shadow-sm shrink-0"><ArrowLeft className="h-5 w-5" /></button>
+                            <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm shrink-0"><ArrowLeft className="h-5 w-5" /></button>
                             <div>
                                 <h2 className={`text-base md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient} leading-tight truncate`}>{roomName}</h2>
                                 <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{stage}</p>
@@ -443,8 +443,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         </div>
                         {user.role === Role.ADMIN && (
                             <div className="flex gap-2">
-                                <button onClick={() => setIsHistoryOpen(true)} className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm lg:hidden"><History className="w-5 h-5" /></button>
-                                <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'bg-white'}`}><Filter className="w-5 h-5" /></button>
+                                <button onClick={() => setIsHistoryOpen(true)} className="p-2 glass text-muted rounded-xl shadow-sm lg:hidden"><History className="w-5 h-5" /></button>
+                                <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'glass text-muted'}`}><Filter className="w-5 h-5" /></button>
 
                                 {/* Admin Print Buttons */}
                                 <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-blue-600 hover:bg-blue-50"><FileSpreadsheet className="w-5 h-5" /></button>
@@ -454,28 +454,28 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-amber-600 hover:bg-amber-50 disabled:opacity-50">
                                     {isSyncingTeachers ? <Loader2 className="w-5 h-5 animate-spin" /> : <School className="w-5 h-5" />}
                                 </button>
-                                <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 bg-white border border-slate-100 rounded-xl shadow-sm text-indigo-600 hover:bg-indigo-50 disabled:opacity-50">
+                                <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
                                     {isSyncingStudents ? <Loader2 className="w-5 h-5 animate-spin" /> : <GraduationCap className="w-5 h-5" />}
                                 </button>
                             </div>
                         )}
                     </div>
                     {stage === Stage.SECONDARY && (
-                        <div className="grid grid-cols-2 gap-1 bg-slate-100 p-1 rounded-xl">
-                            <button onClick={() => setCurrentResource('ROOM')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500'}`}><Monitor className="w-4 h-4" />Aula</button>
-                            <button onClick={() => setCurrentResource('CART')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'CART' ? 'bg-white shadow-sm text-emerald-600' : 'text-slate-500'}`}><Laptop className="w-4 h-4" />Carro</button>
+                        <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
+                            <button onClick={() => setCurrentResource('ROOM')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white dark:bg-emerald-600 shadow-sm text-emerald-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}><Monitor className="w-4 h-4" />Aula</button>
+                            <button onClick={() => setCurrentResource('CART')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'CART' ? 'bg-white dark:bg-emerald-600 shadow-sm text-emerald-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}><Laptop className="w-4 h-4" />Carro</button>
                         </div>
                     )}
-                    <div className="flex items-center justify-between w-full lg:w-auto space-x-2 bg-slate-50 p-1 rounded-xl border border-slate-200">
-                        <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm"><ChevronLeft className="w-5 h-5" /></button>
-                        <div className="flex-1 text-center"><span className="block text-sm font-bold text-slate-800 capitalize">{format(weekDays[0], 'MMMM yyyy', { locale: es })}</span></div>
-                        <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 bg-white rounded-lg shadow-sm"><ChevronRight className="w-5 h-5" /></button>
+                    <div className="flex items-center justify-between w-full lg:w-auto space-x-2 glass-light p-1 rounded-xl border border-glass-border">
+                        <button onClick={() => setCurrentDate(subWeeks(currentDate, 1))} className="p-2 glass hover:bg-glass-bg rounded-lg shadow-sm text-muted"><ChevronLeft className="w-5 h-5" /></button>
+                        <div className="flex-1 text-center"><span className="block text-sm font-bold text-slate-800 dark:text-slate-200 capitalize">{format(weekDays[0], 'MMMM yyyy', { locale: es })}</span></div>
+                        <button onClick={() => setCurrentDate(addWeeks(currentDate, 1))} className="p-2 glass hover:bg-glass-bg rounded-lg shadow-sm text-muted"><ChevronRight className="w-5 h-5" /></button>
                     </div>
                 </div>
                 {user.role === Role.ADMIN && showFilters && (
                     <div className="glass-panel p-3 rounded-2xl flex flex-col md:flex-row gap-3">
-                        <input type="text" placeholder="Filtrar profesor..." value={teacherFilter} onChange={e => setTeacherFilter(e.target.value)} className="flex-1 p-2.5 border rounded-xl text-sm outline-none" />
-                        <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)} className="flex-1 p-2.5 border rounded-xl text-sm outline-none bg-white">
+                        <input type="text" placeholder="Filtrar profesor..." value={teacherFilter} onChange={e => setTeacherFilter(e.target.value)} className="flex-1 p-2.5 border input-glass rounded-xl text-sm outline-none" />
+                        <select value={courseFilter} onChange={e => setCourseFilter(e.target.value)} className="flex-1 p-2.5 border input-glass rounded-xl text-sm outline-none">
                             <option value="">Todos los cursos</option>
                             {courses.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
@@ -483,22 +483,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 )}
             </div>
 
-            <div className="flex-1 glass-panel rounded-[1.5rem] overflow-hidden shadow-xl flex flex-col relative">
+            <div className="flex-1 glass-medium rounded-[1.5rem] overflow-hidden shadow-xl flex flex-col relative">
                 <div className="w-full h-full overflow-auto">
                     <div className="min-w-[700px] h-full">
                         <div className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] sticky top-0 z-20 bg-slate-200 border-b border-slate-300">
                             <div className="bg-slate-200"></div>
                             {weekDays.slice(0, 5).map(day => (
-                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-300 bg-slate-200">
-                                    <div className="text-lg md:text-2xl font-black text-slate-800">{format(day, 'd')}</div>
-                                    <div className="text-[10px] md:text-xs font-bold uppercase text-slate-500">{format(day, 'EEE', { locale: es })}</div>
+                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800/50">
+                                    <div className="text-lg md:text-2xl font-black text-slate-800 dark:text-slate-200">{format(day, 'd')}</div>
+                                    <div className="text-[10px] md:text-xs font-bold uppercase text-slate-500 dark:text-slate-400">{format(day, 'EEE', { locale: es })}</div>
                                 </div>
                             ))}
                         </div>
                         {slots.map(slot => (
-                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-300">
-                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 bg-slate-200 border-r border-slate-300">
-                                    <span>{slot.start}</span><span className="text-slate-500">{slot.end}</span>
+                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-700">
+                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-700">
+                                    <span>{slot.start}</span><span className="text-slate-500 dark:text-slate-500">{slot.end}</span>
                                 </div>
                                 {weekDays.slice(0, 5).map(day => {
                                     const booking = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
@@ -508,10 +508,10 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                                     return (
                                         <div key={day.toISOString()}
-                                            className={`min-h-[100px] p-2 border-r border-slate-300 relative group cursor-pointer ${isRestricted ? 'bg-slate-200 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
+                                            className={`min-h-[100px] p-2 border-r border-slate-200 dark:border-slate-700 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                                             onClick={() => handleSlotClick(day, slot)}>
                                             {isHoliday ? (
-                                                <div className="h-full flex items-center justify-center bg-slate-50/50 text-[10px] text-slate-300 font-black uppercase -rotate-6">No Lectivo</div>
+                                                <div className="h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-300 dark:text-slate-600 font-black uppercase -rotate-6">No Lectivo</div>
                                             ) : booking ? (
                                                 <div title={`${booking.course} - ${booking.subject} - ${booking.teacherName}\n${booking.justification}`} className={`w-full h-full rounded-xl p-2 border shadow-sm flex flex-col overflow-hidden ${booking.isBlocked ? 'bg-slate-800 text-white' : colors.bg + ' ' + colors.text}`}>
                                                     <p className="text-[10px] font-black truncate leading-tight w-full">{booking.isBlocked ? 'BLOQUEADO' : booking.course}</p>
@@ -597,7 +597,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                             <div className="flex gap-2">
                                                 <button
                                                     onClick={() => setIsSwapRequestMode(false)}
-                                                    className="flex-1 py-2 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 rounded-lg font-bold border border-slate-200 dark:border-slate-700 text-sm hover:bg-slate-50 dark:hover:bg-slate-800"
+                                                    className="flex-1 py-2 btn-ghost text-sm"
                                                 >
                                                     Cancelar
                                                 </button>
@@ -636,7 +636,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 {user.role === Role.ADMIN && (
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Profesor Responsable</label>
-                                        <select value={selectedTeacherEmail} onChange={e => setSelectedTeacherEmail(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 dark:border-slate-700 border rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                        <select value={selectedTeacherEmail} onChange={e => setSelectedTeacherEmail(e.target.value)} className="w-full p-3 input-glass">
                                             {teachers.length === 0 && <option>Cargando lista de tutores...</option>}
                                             {teachers.map(t => <option key={t.email} value={t.email}>{t.name}</option>)}
                                         </select>
@@ -645,22 +645,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <div className="grid grid-cols-2 gap-4">
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Curso</label>
-                                        <select value={course} onChange={e => setCourse(e.target.value)} className="w-full p-3 border dark:border-slate-700 rounded-xl font-bold text-sm bg-slate-50 dark:bg-slate-900 outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all">
+                                        <select value={course} onChange={e => setCourse(e.target.value)} className="w-full p-3 input-glass">
                                             {courses.map(c => <option key={c} value={c}>{c}</option>)}
                                         </select>
                                     </div>
                                     <div>
                                         <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Asignatura</label>
-                                        <input type="text" required value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border dark:border-slate-700 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" placeholder="Ej: Matemáticas" />
+                                        <input type="text" required value={subject} onChange={e => setSubject(e.target.value)} className="w-full p-3 input-glass" placeholder="Ej: Matemáticas" />
                                     </div>
                                 </div>
                                 <div>
                                     <label className="block text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1">Actividad</label>
-                                    <textarea required value={justification} onChange={e => setJustification(e.target.value)} className="w-full p-3 bg-slate-50 dark:bg-slate-900 border dark:border-slate-700 rounded-xl font-bold text-sm outline-none text-slate-900 dark:text-white focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" rows={2} placeholder="Descripción de la actividad..." />
+                                    <textarea required value={justification} onChange={e => setJustification(e.target.value)} className="w-full p-3 input-glass" rows={2} placeholder="Descripción de la actividad..." />
                                 </div>
                             </>
                         ) : (
-                            <textarea required value={blockReason} onChange={e => setBlockReason(e.target.value)} placeholder="Motivo del bloqueo..." className="w-full p-4 bg-slate-50 dark:bg-slate-900 border dark:border-slate-700 rounded-xl font-bold text-sm text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all" rows={3} />
+                            <textarea required value={blockReason} onChange={e => setBlockReason(e.target.value)} placeholder="Motivo del bloqueo..." className="w-full p-4 input-glass" rows={3} />
                         )}
                         {isRecurring && user.role === Role.ADMIN && (
                             <div className="p-3 bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 rounded-xl">
@@ -668,7 +668,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                 <input type="date" required value={recurringEndDate} onChange={e => setRecurringEndDate(e.target.value)} className="w-full p-2 bg-white dark:bg-slate-900 border dark:border-slate-700 rounded-lg font-bold text-sm text-slate-900 dark:text-white outline-none" />
                             </div>
                         )}
-                        <button type="submit" disabled={isSubmitting} className="w-full py-4 bg-slate-900 dark:bg-blue-600 text-white rounded-xl font-bold shadow-lg flex items-center justify-center hover:bg-slate-800 dark:hover:bg-blue-700 transition-all">
+                        <button type="submit" disabled={isSubmitting} className="w-full btn-primary bg-primary-600 hover:bg-primary-700 justify-center">
                             {isSubmitting ? <Loader2 className="animate-spin w-5 h-5" /> : 'Confirmar Reserva'}
                         </button>
                     </form>

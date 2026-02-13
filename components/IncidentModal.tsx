@@ -56,11 +56,11 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
     <Modal isOpen={isOpen} onClose={onClose} title="Reportar Incidencia">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Recurso Afectado</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recurso Afectado</label>
           <select
             value={resource}
             onChange={(e) => setResource(e.target.value)}
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-3 py-2 select-glass"
           >
             <option value="AULA">Aula de Informática</option>
             <option value="CARRO">Carro de Portátiles</option>
@@ -68,25 +68,25 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Nº de Ordenador (Opcional)</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nº de Ordenador (Opcional)</label>
           <input
             type="text"
             value={pcNumber}
             onChange={(e) => setPcNumber(e.target.value)}
             placeholder="Ej: 15"
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+            className="w-full px-3 py-2 input-glass"
           />
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Descripción del Problema</label>
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Descripción del Problema</label>
           <textarea
             required
             rows={4}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
             placeholder="Describe qué ocurre..."
-            className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-none"
+            className="w-full px-3 py-2 input-glass resize-none"
           />
         </div>
 
@@ -94,14 +94,14 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 text-slate-500 hover:text-slate-700 font-medium text-sm mr-3"
+            className="px-4 py-2 text-muted hover:text-slate-700 dark:hover:text-slate-200 font-medium text-sm mr-3"
           >
             Cancelar
           </button>
           <button
             type="submit"
             disabled={loading}
-            className="px-6 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-red-500/20 transition-all disabled:opacity-50"
+            className="btn-danger text-sm disabled:opacity-50"
           >
             {loading ? 'Enviando...' : 'Registrar Incidencia'}
           </button>
