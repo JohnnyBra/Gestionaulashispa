@@ -567,6 +567,37 @@ body {
     border-bottom: 1px solid var(--glass-border);
 }
 
+/* ============ PAST SLOT VISUAL INDICATORS ============ */
+.slot-past {
+    background-color: #f1f5f9;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(0, 0, 0, 0.06) 10px,
+        rgba(0, 0, 0, 0.06) 20px
+    );
+    cursor: not-allowed !important;
+    pointer-events: none;
+}
+
+.dark .slot-past {
+    background-color: #0f172a;
+    background-image: repeating-linear-gradient(
+        45deg,
+        transparent,
+        transparent 10px,
+        rgba(255, 255, 255, 0.06) 10px,
+        rgba(255, 255, 255, 0.06) 20px
+    );
+}
+
+.slot-past-booked {
+    opacity: 0.5;
+    pointer-events: auto;
+    cursor: pointer;
+}
+
 /* ============ TEXT GRADIENT PRIMARY ============ */
 .text-gradient-primary {
     background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
