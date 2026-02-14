@@ -330,24 +330,24 @@ export const StudentOrganizer: React.FC<StudentOrganizerProps> = ({ booking, cla
         <div className="flex flex-col h-full overflow-hidden glass-medium rounded-lg shadow-xl">
             <div className="bg-gradient-to-r from-primary-600 to-primary-700 text-white p-4 flex justify-between items-center gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                    <button onClick={onClose} className="hover:bg-white/20 p-1 rounded shrink-0"><ArrowLeft size={20} /></button>
-                    <h2 className="text-lg md:text-xl font-bold truncate">Organizar Alumnado: {booking.course}</h2>
+                    <button onClick={onClose} className="hover:bg-white/20 p-1.5 rounded-lg shrink-0 transition-all duration-200"><ArrowLeft size={20} /></button>
+                    <h2 className="text-lg md:text-xl font-bold truncate font-display">Organizar Alumnado: {booking.course}</h2>
                 </div>
                 <div className="flex gap-2 shrink-0">
                     {previousBookings.length > 0 && (
-                        <button onClick={() => setShowHistoryModal(true)} className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1 rounded-lg hover:bg-amber-600 text-sm font-medium shadow-sm">
+                        <button onClick={() => setShowHistoryModal(true)} className="flex items-center gap-1 bg-amber-500 text-white px-3 py-1.5 rounded-xl hover:bg-amber-600 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5">
                             <History size={16} /> <span className="hidden sm:inline">Importar</span>
                         </button>
                     )}
-                    <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white/20 text-white px-3 py-1 rounded-lg hover:bg-white/30 text-sm font-medium">
+                    <button onClick={() => generatePDF()} className="flex items-center gap-1 bg-white/20 text-white px-3 py-1.5 rounded-xl hover:bg-white/30 text-sm font-medium transition-all duration-200">
                         <Printer size={16} /> <span className="hidden sm:inline">Imprimir</span>
                     </button>
                     {isAdmin && (
-                        <button onClick={() => generateBlankTemplate()} className="flex items-center gap-1 bg-primary-800 text-white px-3 py-1 rounded-lg hover:bg-primary-900 text-sm font-medium">
+                        <button onClick={() => generateBlankTemplate()} className="flex items-center gap-1 bg-primary-800 text-white px-3 py-1.5 rounded-xl hover:bg-primary-900 text-sm font-medium transition-all duration-200">
                             <FileText size={16} /> <span className="hidden sm:inline">Plantilla Vacía</span>
                         </button>
                     )}
-                    <button onClick={handleSave} className="flex items-center gap-1 bg-emerald-500 text-white px-3 py-1 rounded-lg hover:bg-emerald-600 text-sm font-medium shadow-sm">
+                    <button onClick={handleSave} className="flex items-center gap-1 bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 text-sm font-medium shadow-sm transition-all duration-200 hover:-translate-y-0.5">
                         <Save size={16} /> <span>Guardar</span>
                     </button>
                 </div>
