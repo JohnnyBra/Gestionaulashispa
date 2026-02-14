@@ -46,11 +46,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
 
             {/* Logo Section */}
             <div
-              className="flex items-center space-x-2 md:space-x-4 cursor-pointer"
+              className="flex items-center space-x-2.5 md:space-x-4 cursor-pointer group"
               onClick={() => onNavigate('DASHBOARD')}
             >
-              <div className="h-8 w-8 md:h-10 md:w-10 glass rounded-lg md:rounded-xl flex items-center justify-center shrink-0">
-                <img src="/logo.png" alt="Logo" className="h-5 w-auto md:h-7 object-contain" />
+              <div className="h-9 w-9 md:h-11 md:w-11 bg-white rounded-xl md:rounded-2xl flex items-center justify-center shrink-0 shadow-md dark:shadow-lg dark:shadow-primary-500/10 ring-1 ring-black/5 dark:ring-white/10 group-hover:scale-105 transition-transform duration-200">
+                <img src="/logo.png" alt="Logo" className="h-6 w-auto md:h-8 object-contain" />
               </div>
               <div>
                 <span className="block text-gray-900 dark:text-white font-display font-bold text-sm md:text-base leading-none mb-0.5">La Hispanidad</span>
