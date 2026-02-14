@@ -65,7 +65,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
                 {/* Theme Toggle */}
                 <button
                   onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-                  className="p-2 text-muted hover:bg-glass-bg rounded-lg transition-colors md:mr-2"
+                  className="p-2 text-muted hover:bg-glass-bg rounded-lg transition-all duration-200 hover:scale-105 md:mr-2"
                   title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
                 >
                   {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
@@ -75,13 +75,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
                 {user.role === Role.ADMIN && (
                   <button
                     onClick={() => onNavigate('INCIDENTS')}
-                    className="relative flex items-center gap-2 p-2 md:px-4 md:py-2 glass rounded-lg md:rounded-xl transition-all font-semibold text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-glass-bg"
+                    className="relative flex items-center gap-2 p-2 md:px-4 md:py-2 glass rounded-lg md:rounded-xl transition-all duration-200 font-semibold text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-glass-bg hover:scale-[1.02]"
                     title="Gestionar Incidencias"
                   >
                     <Shield className="h-4 w-4" />
                     <span className="hidden lg:inline">Incidencias</span>
                     {unresolvedCount > 0 && (
-                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-1 ring-white">
+                      <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-1 ring-white dark:ring-slate-800">
+                        <span className="absolute inset-0 rounded-full bg-red-500 animate-pulse-ring"></span>
                         {unresolvedCount}
                       </span>
                     )}
@@ -91,7 +92,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
                 {/* Link a Prisma (Solo icono en movil) */}
                 <a
                   href="https://prisma.bibliohispa.es"
-                  className="flex items-center gap-2 p-2 md:px-4 md:py-2 glass rounded-lg md:rounded-xl transition-all font-semibold text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-glass-bg"
+                  className="flex items-center gap-2 p-2 md:px-4 md:py-2 glass rounded-lg md:rounded-xl transition-all duration-200 font-semibold text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-glass-bg hover:scale-[1.02]"
                   title="Ir al Portal Prisma"
                 >
                   <LayoutGrid className="h-4 w-4" />

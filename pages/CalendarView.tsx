@@ -435,7 +435,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                 <div className="flex flex-col lg:flex-row justify-between items-stretch lg:items-center glass-medium p-3 rounded-2xl md:rounded-3xl gap-3 w-full">
                     <div className="flex items-center justify-between w-full lg:w-auto">
                         <div className="flex items-center gap-3">
-                            <button onClick={onBack} className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 text-slate-700 dark:text-slate-200 shadow-sm shrink-0"><ArrowLeft className="h-5 w-5" /></button>
+                            <button onClick={onBack} className="p-2 glass hover:bg-glass-bg rounded-xl text-slate-700 dark:text-slate-200 shadow-sm shrink-0 transition-all duration-200"><ArrowLeft className="h-5 w-5" /></button>
                             <div>
                                 <h2 className={`text-base md:text-2xl font-black bg-clip-text text-transparent bg-gradient-to-r ${colors.gradient} leading-tight truncate`}>{roomName}</h2>
                                 <p className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-wider">{stage}</p>
@@ -443,27 +443,27 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         </div>
                         {user.role === Role.ADMIN && (
                             <div className="flex gap-2">
-                                <button onClick={() => setIsHistoryOpen(true)} className="p-2 glass text-muted rounded-xl shadow-sm lg:hidden"><History className="w-5 h-5" /></button>
-                                <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden ${showFilters ? 'bg-slate-800 text-white' : 'glass text-muted'}`}><Filter className="w-5 h-5" /></button>
+                                <button onClick={() => setIsHistoryOpen(true)} className="p-2 glass text-muted rounded-xl shadow-sm lg:hidden transition-all duration-200 hover:scale-105"><History className="w-5 h-5" /></button>
+                                <button onClick={() => setShowFilters(!showFilters)} className={`p-2 rounded-xl border lg:hidden transition-all duration-200 ${showFilters ? 'bg-slate-800 text-white dark:bg-slate-600' : 'glass text-muted'}`}><Filter className="w-5 h-5" /></button>
 
                                 {/* Admin Print Buttons */}
-                                <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20"><FileSpreadsheet className="w-5 h-5" /></button>
-                                <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20"><Monitor className="w-5 h-5" /></button>
+                                <button onClick={handlePrintClick} title="Imprimir Informes" className="p-2 glass rounded-xl shadow-sm text-blue-600 dark:text-blue-400 hover:bg-glass-bg transition-all duration-200 hover:scale-105"><FileSpreadsheet className="w-5 h-5" /></button>
+                                <button onClick={printBlankTemplate} title="Imprimir Plantilla Vacía" className="p-2 glass rounded-xl shadow-sm text-green-600 dark:text-green-400 hover:bg-glass-bg transition-all duration-200 hover:scale-105"><Monitor className="w-5 h-5" /></button>
 
                                 {/* Admin Sync Buttons */}
-                                <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-900/20 disabled:opacity-50">
+                                <button onClick={() => handleSync('TEACHERS')} disabled={isSyncingTeachers} title="Sincronizar Tutores" className="p-2 glass rounded-xl shadow-sm text-amber-600 dark:text-amber-400 hover:bg-glass-bg transition-all duration-200 hover:scale-105 disabled:opacity-50">
                                     {isSyncingTeachers ? <Loader2 className="w-5 h-5 animate-spin" /> : <School className="w-5 h-5" />}
                                 </button>
-                                <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 rounded-xl shadow-sm text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 disabled:opacity-50">
+                                <button onClick={() => handleSync('STUDENTS')} disabled={isSyncingStudents} title="Sincronizar Alumnos" className="p-2 glass rounded-xl shadow-sm text-indigo-600 dark:text-indigo-400 hover:bg-glass-bg transition-all duration-200 hover:scale-105 disabled:opacity-50">
                                     {isSyncingStudents ? <Loader2 className="w-5 h-5 animate-spin" /> : <GraduationCap className="w-5 h-5" />}
                                 </button>
                             </div>
                         )}
                     </div>
                     {stage === Stage.SECONDARY && (
-                        <div className="grid grid-cols-2 gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700">
-                            <button onClick={() => setCurrentResource('ROOM')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'ROOM' ? 'bg-white dark:bg-emerald-600 shadow-sm text-emerald-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}><Monitor className="w-4 h-4" />Aula</button>
-                            <button onClick={() => setCurrentResource('CART')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all ${currentResource === 'CART' ? 'bg-white dark:bg-emerald-600 shadow-sm text-emerald-600 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700/50'}`}><Laptop className="w-4 h-4" />Carro</button>
+                        <div className="grid grid-cols-2 gap-1 glass p-1 rounded-xl">
+                            <button onClick={() => setCurrentResource('ROOM')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${currentResource === 'ROOM' ? 'glass-medium shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-muted hover:bg-glass-bg'}`}><Monitor className="w-4 h-4" />Aula</button>
+                            <button onClick={() => setCurrentResource('CART')} className={`flex items-center justify-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-all duration-200 ${currentResource === 'CART' ? 'glass-medium shadow-sm text-emerald-600 dark:text-emerald-400' : 'text-muted hover:bg-glass-bg'}`}><Laptop className="w-4 h-4" />Carro</button>
                         </div>
                     )}
                     <div className="flex items-center justify-between w-full lg:w-auto space-x-2 glass-light p-1 rounded-xl border border-glass-border">
@@ -486,18 +486,18 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
             <div className="flex-1 glass-medium rounded-[1.5rem] overflow-hidden shadow-xl flex flex-col relative">
                 <div className="w-full h-full overflow-auto">
                     <div className="min-w-[700px] h-full">
-                        <div className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] sticky top-0 z-20 bg-slate-200 border-b border-slate-300">
-                            <div className="bg-slate-200"></div>
+                        <div className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] sticky top-0 z-20 glass-light border-b border-glass-border">
+                            <div className="glass-light"></div>
                             {weekDays.slice(0, 5).map(day => (
-                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-800/50">
+                                <div key={day.toISOString()} className="p-2 md:p-4 text-center border-r border-glass-border glass">
                                     <div className="text-lg md:text-2xl font-black text-slate-800 dark:text-slate-200">{format(day, 'd')}</div>
                                     <div className="text-[10px] md:text-xs font-bold uppercase text-slate-500 dark:text-slate-400">{format(day, 'EEE', { locale: es })}</div>
                                 </div>
                             ))}
                         </div>
                         {slots.map(slot => (
-                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-slate-200 dark:border-slate-800">
-                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/50 border-r border-slate-200 dark:border-slate-800">
+                            <div key={slot.id} className="grid grid-cols-[60px_repeat(5,minmax(0,1fr))] md:grid-cols-[100px_repeat(5,minmax(0,1fr))] border-b border-glass-border">
+                                <div className="p-4 flex flex-col items-center justify-center text-[10px] md:text-xs font-bold text-slate-600 dark:text-slate-400 glass border-r border-glass-border">
                                     <span>{slot.start}</span><span className="text-slate-500 dark:text-slate-500">{slot.end}</span>
                                 </div>
                                 {weekDays.slice(0, 5).map(day => {
@@ -508,7 +508,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
                                     return (
                                         <div key={day.toISOString()}
-                                            className={`min-h-[100px] p-2 border-r border-slate-200 dark:border-slate-800 relative group cursor-pointer ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
+                                            className={`min-h-[100px] p-2 border-r border-glass-border relative group cursor-pointer transition-colors duration-150 ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
                                             onClick={() => handleSlotClick(day, slot)}>
                                             {isHoliday ? (
                                                 <div className="h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-300 dark:text-slate-600 font-black uppercase -rotate-6">No Lectivo</div>
@@ -551,7 +551,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                     />
                 ) : existingBooking ? (
                     <div className="space-y-4">
-                        <div className="p-4 bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-100 dark:border-slate-800">
+                        <div className="p-4 glass rounded-xl">
                             <p className="text-[10px] font-bold text-slate-400 uppercase">Responsable</p>
                             <p className="font-bold text-slate-900 dark:text-white">{existingBooking.teacherName}</p>
                             <p className="text-xs text-slate-500 dark:text-slate-400">{existingBooking.teacherEmail}</p>
@@ -559,8 +559,8 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                         {!existingBooking.isBlocked && (
                             <>
                                 <div className="grid grid-cols-2 gap-3">
-                                    <div className="p-3 border dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900"><p className="text-[10px] font-bold uppercase text-slate-400">Curso</p><p className="text-sm font-bold text-slate-900 dark:text-white">{existingBooking.course}</p></div>
-                                    <div className="p-3 border dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900"><p className="text-[10px] font-bold uppercase text-slate-400">Asignatura</p><p className="text-sm font-bold text-slate-900 dark:text-white">{existingBooking.subject}</p></div>
+                                    <div className="p-3 glass rounded-xl"><p className="text-[10px] font-bold uppercase text-slate-400">Curso</p><p className="text-sm font-bold text-slate-900 dark:text-white">{existingBooking.course}</p></div>
+                                    <div className="p-3 glass rounded-xl"><p className="text-[10px] font-bold uppercase text-slate-400">Asignatura</p><p className="text-sm font-bold text-slate-900 dark:text-white">{existingBooking.subject}</p></div>
                                 </div>
                                 <div className="p-3 border dark:border-slate-800 rounded-xl bg-white dark:bg-slate-900">
                                     <p className="text-[10px] font-bold uppercase text-slate-400">Actividad</p>
@@ -677,19 +677,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
 
             <Modal isOpen={showPrintModal} onClose={() => setShowPrintModal(false)} title="Imprimir Informes" size="md">
                 <div className="space-y-4">
-                    <button onClick={printWeeklyReport} className="w-full p-4 text-left border rounded-xl hover:bg-slate-50 flex flex-col gap-1">
-                        <span className="font-bold text-lg text-slate-800">Informe Semanal</span>
-                        <span className="text-sm text-slate-500">Resumen de todas las reservas de la semana actual.</span>
+                    <button onClick={printWeeklyReport} className="w-full p-4 text-left glass rounded-xl hover:bg-glass-bg transition-all duration-200 flex flex-col gap-1">
+                        <span className="font-bold text-lg text-slate-800 dark:text-white">Informe Semanal</span>
+                        <span className="text-sm text-muted">Resumen de todas las reservas de la semana actual.</span>
                     </button>
-                    <div className="border-t border-slate-100 my-2"></div>
+                    <div className="border-t border-glass-border my-2"></div>
                     <div className="space-y-2">
-                        <p className="text-sm font-bold text-slate-400 uppercase">Informe Detallado por Día</p>
+                        <p className="text-sm font-bold text-muted uppercase">Informe Detallado por Día</p>
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
                             {weekDays.slice(0, 5).map(day => (
                                 <button
                                     key={day.toISOString()}
                                     onClick={() => printDetailedDayReport(day)}
-                                    className="p-2 border rounded-lg text-sm font-semibold hover:bg-slate-50 hover:border-slate-300"
+                                    className="p-2 glass rounded-lg text-sm font-semibold hover:bg-glass-bg transition-all duration-200 text-slate-700 dark:text-slate-300"
                                 >
                                     {format(day, 'EEEE d', { locale: es })}
                                 </button>

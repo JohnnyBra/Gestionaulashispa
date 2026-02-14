@@ -114,14 +114,14 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="min-h-screen flex flex-col lg:flex-row w-full bg-app overflow-hidden relative transition-colors duration-300">
 
       {/* Botón Volver a Prisma (Flotante en Desktop, Flujo en Mobile) */}
-      <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center items-center gap-3 lg:block bg-white lg:bg-transparent border-b lg:border-none border-slate-100 dark:border-slate-800">
+      <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center items-center gap-3 lg:block glass-light lg:bg-transparent lg:border-none lg:backdrop-blur-none border-b border-glass-border">
         <div className="flex items-center gap-2">
           <button
             onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-            className="p-2 text-muted glass hover:bg-glass-bg rounded-full transition-all"
+            className="p-2 text-muted glass hover:bg-glass-bg rounded-full transition-all duration-200 hover:scale-105"
             title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
           >
-            {theme === 'dark' ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <a
             href="https://prisma.bibliohispa.es"
@@ -157,7 +157,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           </div>
 
           {error && (
-            <div className="mb-6 p-4 bg-red-50 border border-red-100 rounded-xl flex items-start gap-3 text-red-700 text-sm font-medium">
+            <div className="mb-6 p-4 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 rounded-xl flex items-start gap-3 text-red-700 dark:text-red-400 text-sm font-medium animate-slide-up">
               <AlertCircle className="w-5 h-5 shrink-0" />
               <span>{error}</span>
             </div>
@@ -168,10 +168,10 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
               <div id="googleButtonDiv" className="w-full h-[44px]"></div>
               <div className="relative mt-6">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-slate-200"></div>
+                  <div className="w-full border-t border-glass-border"></div>
                 </div>
                 <div className="relative flex justify-center text-sm">
-                  <span className="px-2 bg-white text-slate-500">O usa tu contraseña</span>
+                  <span className="px-3 py-0.5 glass-light rounded-full text-muted text-xs font-medium">O usa tu contraseña</span>
                 </div>
               </div>
             </div>
