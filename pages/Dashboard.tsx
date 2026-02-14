@@ -44,7 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
          {/* Hero Header */}
          <div className="text-center mb-8 md:mb-12 relative">
             <h1 className="text-3xl md:text-5xl font-extrabold text-gray-900 dark:text-white tracking-tight mb-3 md:mb-4 font-display">
-               Hola, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-accent-600 dark:from-primary-400 dark:to-accent-400">{user.name.split(' ')[0]}</span>
+               Hola, <span className="gradient-text">{user.name.split(' ')[0]}</span>
             </h1>
             <p className="text-base md:text-lg text-slate-500 max-w-2xl mx-auto font-medium leading-relaxed px-4">
                ¿Dónde quieres enseñar hoy? Selecciona tu espacio.
@@ -59,8 +59,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                   <h2 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Mis Próximas Reservas</h2>
                </div>
                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {upcomingBookings.map(booking => (
-                     <div key={booking.id} className="glass p-4 rounded-2xl shadow-sm hover:shadow-md transition-shadow">
+                  {upcomingBookings.map((booking, idx) => (
+                     <div key={booking.id} className={`glass p-4 rounded-2xl shadow-sm hover:shadow-md transition-all duration-300 hover:-translate-y-1 animate-slide-up stagger-${Math.min(idx + 1, 8)}`}>
                         <div className="flex items-center justify-between mb-2">
                            <span className={`text-[10px] font-bold px-2 py-1 rounded-full ${booking.stage === Stage.PRIMARY ? 'bg-blue-50 text-blue-600' : 'bg-emerald-50 text-emerald-600'}`}>
                               {booking.resource === 'CART' ? 'Carro' : booking.stage === Stage.PRIMARY ? 'Idiomas' : 'Informática'}
@@ -81,7 +81,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
             {/* Primary Card */}
             <div
                onClick={() => onSelectStage(Stage.PRIMARY)}
-               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass-medium border-glass-border flex flex-col"
+               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 glass-medium border-glass-border flex flex-col animate-slide-up stagger-1 glow-border-blue"
             >
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
@@ -131,7 +131,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
             {/* Secondary Card */}
             <div
                onClick={() => onSelectStage(Stage.SECONDARY)}
-               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 hover:shadow-glass-hover shadow-glass glass-medium border-glass-border flex flex-col"
+               className="group relative h-[380px] md:h-[420px] rounded-[2rem] overflow-hidden cursor-pointer transition-all duration-500 hover:-translate-y-2 glass-medium border-glass-border flex flex-col animate-slide-up stagger-2 glow-border-green"
             >
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">

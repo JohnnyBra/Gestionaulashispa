@@ -125,11 +125,11 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
   if (loading) return <div className="p-8 text-center text-slate-500">Cargando incidencias...</div>;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 animate-fade-in">
       {onBack && (
         <button
           onClick={onBack}
-          className="mb-4 flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium transition-colors p-2 glass rounded-lg"
+          className="mb-4 flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white font-medium transition-all duration-200 p-2 glass rounded-lg hover:scale-[1.02]"
         >
           <ArrowLeft className="w-5 h-5" />
           <span>Volver</span>
@@ -137,11 +137,11 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
       )}
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-slate-800 flex items-center gap-2">
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2 font-display">
             <AlertTriangle className="text-red-500" />
             Registro de Incidencias
           </h1>
-          <p className="text-slate-500 text-sm mt-1">Gestión y seguimiento de problemas técnicos.</p>
+          <p className="text-muted text-sm mt-1">Gestión y seguimiento de problemas técnicos.</p>
         </div>
         <div className="flex gap-2">
           <button

@@ -19,13 +19,13 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <script>
     tailwind.config = {
-      darkMode: 'class', // Manual toggle support
+      darkMode: 'class',
       theme: {
         extend: {
           fontFamily: {
             display: ['Outfit', 'sans-serif'],
             body: ['Plus Jakarta Sans', 'sans-serif'],
-            sans: ['Plus Jakarta Sans', 'sans-serif'], // Override default sans
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
           },
           colors: {
             primary: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' },
@@ -35,9 +35,8 @@
               border: 'var(--glass-border)',
               bg: 'var(--glass-bg)',
             },
-            // Semantics
             muted: 'var(--text-muted)',
-            brand: { // Keep existing brand colors for compatibility if needed, or map them
+            brand: {
               50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e', 950: '#082f49',
             },
             accent: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87', 950: '#3b0764' },
@@ -46,12 +45,15 @@
             'float': 'float 6s ease-in-out infinite',
             'glow-pulse': 'glow-pulse 2s ease-in-out infinite',
             'slide-up': 'slide-up 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            'slide-down': 'slide-down 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
+            'slide-in-right': 'slide-in-right 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
             'scale-in': 'scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
-            'blob': 'blob 7s infinite', // Keep existing blob
-            'fade-in': 'fadeIn 0.5s ease-out',
-            'slide-down': 'slideDown 0.5s cubic-bezier(0.16, 1, 0.3, 1)',
-            'bounce-subtle': 'bounceSubtle 2s ease-in-out infinite',
+            'fade-in': 'fade-in 0.5s ease-out',
+            'bounce-subtle': 'bounce-subtle 2s ease-in-out infinite',
             'shimmer': 'shimmer 2s linear infinite',
+            'gradient-shift': 'gradient-shift 4s ease-in-out infinite',
+            'pulse-ring': 'pulse-ring 1.5s ease-out infinite',
+            'blob': 'blob 7s infinite',
             'marquee': 'marquee 20s linear infinite',
           },
           keyframes: {
@@ -64,35 +66,48 @@
               '0%, 100%': { opacity: '0.5', filter: 'blur(20px)' },
               '50%': { opacity: '0.8', filter: 'blur(25px)' },
             },
-            slideUp: { // Mapped
+            'slide-up': {
               '0%': { opacity: '0', transform: 'translateY(24px)' },
               '100%': { opacity: '1', transform: 'translateY(0)' },
             },
-            scaleIn: { // Mapped
+            'slide-down': {
+              '0%': { opacity: '0', transform: 'translateY(-24px)' },
+              '100%': { opacity: '1', transform: 'translateY(0)' },
+            },
+            'slide-in-right': {
+              '0%': { opacity: '0', transform: 'translateX(32px)' },
+              '100%': { opacity: '1', transform: 'translateX(0)' },
+            },
+            'scale-in': {
               '0%': { opacity: '0', transform: 'scale(0.92)' },
               '100%': { opacity: '1', transform: 'scale(1)' },
+            },
+            'fade-in': {
+              '0%': { opacity: '0' },
+              '100%': { opacity: '1' },
+            },
+            'bounce-subtle': {
+              '0%, 100%': { transform: 'translateY(0)' },
+              '50%': { transform: 'translateY(-4px)' },
+            },
+            'gradient-shift': {
+              '0%': { backgroundPosition: '0% 50%' },
+              '50%': { backgroundPosition: '100% 50%' },
+              '100%': { backgroundPosition: '0% 50%' },
+            },
+            'pulse-ring': {
+              '0%': { transform: 'scale(1)', opacity: '0.6' },
+              '100%': { transform: 'scale(1.5)', opacity: '0' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' },
             },
             blob: {
               '0%': { transform: 'translate(0px, 0px) scale(1)' },
               '33%': { transform: 'translate(30px, -50px) scale(1.1)' },
               '66%': { transform: 'translate(-20px, 20px) scale(0.9)' },
               '100%': { transform: 'translate(0px, 0px) scale(1)' },
-            },
-            fadeIn: {
-              '0%': { opacity: '0' },
-              '100%': { opacity: '1' },
-            },
-            slideDown: {
-              '0%': { opacity: '0', transform: 'translateY(-24px)' },
-              '100%': { opacity: '1', transform: 'translateY(0)' },
-            },
-            bounceSubtle: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-4px)' },
-            },
-            shimmer: {
-              '0%': { backgroundPosition: '-200% 0' },
-              '100%': { backgroundPosition: '200% 0' },
             },
             marquee: {
               '0%': { transform: 'translateX(0%)' },
@@ -118,102 +133,14 @@
 }
 </script>
   <style>
-    /* Base reset */
+    /* Minimal inline — all design system styles live in theme.css */
     body {
-      background-color: var(--bg-app);
       overflow-x: hidden;
-    }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar {
-      width: 6px;
-      height: 6px;
-    }
-
-    ::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    ::-webkit-scrollbar-thumb {
-      background: #cbd5e1;
-      border-radius: 10px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-      background: #94a3b8;
-    }
-
-    .dark ::-webkit-scrollbar-thumb {
-      background: rgba(255, 255, 255, 0.12);
-    }
-
-    .dark ::-webkit-scrollbar-thumb:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-
-    /* Glassmorphism Classes */
-    .glass-panel {
-      background: var(--glass-bg-light);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid var(--glass-border);
-      box-shadow: var(--glass-shadow);
-    }
-
-    .glass-header {
-      background: var(--glass-bg-medium);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border-bottom: 1px solid var(--glass-border);
-    }
-
-    /* Text Gradient Utilities */
-    .text-gradient-primary {
-      background: linear-gradient(135deg, #818cf8, #c084fc, #f472b6);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* Animated Background Mesh */
-    .bg-mesh {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100vw;
-      height: 100vh;
-      z-index: -1;
-      background-color: var(--bg-app);
-      overflow: hidden;
-    }
-
-    .bg-mesh::before {
-      content: '';
-      position: absolute;
-      top: -10%;
-      right: -10%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(circle, rgba(14, 165, 233, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
-      border-radius: 50%;
-      animation: blob 15s infinite alternate;
-    }
-
-    .bg-mesh::after {
-      content: '';
-      position: absolute;
-      bottom: -10%;
-      left: -10%;
-      width: 60%;
-      height: 60%;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(255, 255, 255, 0) 70%);
-      border-radius: 50%;
-      animation: blob 20s infinite alternate-reverse;
     }
   </style>
 </head>
 
-<body class="antialiased selection:bg-primary-200 selection:text-primary-900">
+<body class="antialiased">
   <div class="bg-mesh"></div>
   <div id="root"></div>
   <script src="/dist/bundle.js"></script>
