@@ -504,12 +504,13 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
                                     const booking = bookingsMap.get(`${formatDate(day)}-${slot.id}`);
                                     const isHoliday = !isBookableDay(day);
                                     const isPast = isPastSlot(day, slot);
-                                    const isRestricted = !booking && isPast && user.role !== Role.ADMIN;
+                                    const isPastForUser = isPast && user.role !== Role.ADMIN;
+                                    const isRestricted = !booking && isPastForUser;
 
                                     return (
                                         <div key={day.toISOString()}
-                                            className={`min-h-[100px] p-2 border-r border-glass-border relative group cursor-pointer transition-colors duration-150 ${isRestricted ? 'bg-slate-100 dark:bg-slate-900 cursor-not-allowed bg-[image:repeating-linear-gradient(45deg,transparent,transparent_10px,rgba(0,0,0,0.05)_10px,rgba(0,0,0,0.05)_20px)]' : ''}`}
-                                            onClick={() => handleSlotClick(day, slot)}>
+                                            className={`min-h-[100px] p-2 border-r border-glass-border relative group transition-colors duration-150 ${isRestricted ? 'slot-past' : 'cursor-pointer'} ${booking && isPastForUser ? 'slot-past-booked' : ''}`}
+                                            onClick={() => !isRestricted && handleSlotClick(day, slot)}>
                                             {isHoliday ? (
                                                 <div className="h-full flex items-center justify-center bg-slate-50/50 dark:bg-slate-900/50 text-[10px] text-slate-300 dark:text-slate-600 font-black uppercase -rotate-6">No Lectivo</div>
                                             ) : booking ? (
