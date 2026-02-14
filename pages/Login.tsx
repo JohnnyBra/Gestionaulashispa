@@ -136,12 +136,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="w-full h-[25vh] lg:h-auto lg:w-1/2 mesh-auth relative flex flex-col justify-center p-8 lg:p-16 text-white shrink-0">
         <div className="absolute inset-0 bg-black/20 backdrop-blur-[2px] z-0"></div>
         <div className="relative z-10 animate-fade-in text-center lg:text-left">
-          <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-start lg:space-x-4 mb-4 lg:mb-8">
-            <div className="h-12 w-12 lg:h-16 lg:w-16 bg-white rounded-xl lg:rounded-2xl flex items-center justify-center shadow-lg mb-3 lg:mb-0">
-              <img src="/logo.png" alt="Logo" className="h-8 w-auto lg:h-10" />
+          <div className="flex flex-col lg:flex-row items-center justify-center lg:justify-start lg:space-x-5 mb-4 lg:mb-8">
+            <div className="h-16 w-16 lg:h-20 lg:w-20 bg-white rounded-2xl lg:rounded-3xl flex items-center justify-center shadow-xl ring-1 ring-white/20 mb-3 lg:mb-0">
+              <img src="/logo.png" alt="Logo" className="h-11 w-auto lg:h-14 object-contain" />
             </div>
             <div>
-              <h2 className="text-xl lg:text-2xl font-bold font-display">La Hispanidad</h2>
+              <h2 className="text-2xl lg:text-3xl font-bold font-display">La Hispanidad</h2>
               <p className="text-primary-200 text-xs lg:text-sm font-medium tracking-widest uppercase">Gestión Centralizada</p>
             </div>
           </div>
