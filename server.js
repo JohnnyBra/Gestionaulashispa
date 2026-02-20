@@ -7,6 +7,8 @@ const http = require('http');
 const { Server } = require('socket.io');
 const { io: ClientIO } = require('socket.io-client');
 const reportService = require('./services/reportService');
+const cookieParser = require('cookie-parser');
+const jwt = require('jsonwebtoken');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -21,7 +23,7 @@ const INCIDENTS_FILE = path.join(__dirname, 'incidents.json');
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 const EXTERNAL_SOCKET_URL = 'https://prisma.bibliohispa.es';
 // Forzamos el valor por defecto si no viene en el env
-const API_SECRET = process.env.API_SECRET || 'YOUR_API_SECRET'; 
+const API_SECRET = process.env.API_SECRET || 'YOUR_API_SECRET';
 
 // User Agent personalizado para evitar bloqueos anti-bot genéricos
 const SERVER_USER_AGENT = 'Hispanidad-Reservas-Server/1.0';
@@ -43,6 +45,42 @@ const io = new Server(server, {
 
 app.use(cors());
 app.use(express.json());
+app.use(cookieParser());
+
+const JWT_SSO_SECRET = process.env.JWT_SSO_SECRET || 'fallback-secret';
+
+const globalAuthMiddleware = async (req, res, next) => {
+  if (process.env.ENABLE_GLOBAL_SSO !== 'true') return next();
+
+  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/proxy') || req.path.startsWith('/assets') || req.path === '/favicon.ico') {
+    return next();
+  }
+
+  const token = req.cookies.BIBLIO_SSO_TOKEN;
+  if (!token) return next();
+
+  try {
+    const decoded = jwt.verify(token, JWT_SSO_SECRET);
+    if (decoded.role === 'FAMILY' || decoded.role === 'STUDENT') {
+      if (req.path.startsWith('/api/')) {
+        return res.status(403).json({ success: false, message: 'Acceso denegado a satélites para este rol.' });
+      }
+      return res.redirect('https://prisma.bibliohispa.es');
+    }
+
+    if (decoded.role === 'TEACHER' || decoded.role === 'ADMIN') {
+      // Sincronización de permisos (check-access via Prisma) se asume manejada
+      // por los endpoints al usar la base de cacheada local (la "lógica actual").
+      req.ssoUser = decoded;
+      return next();
+    }
+    return next();
+  } catch (err) {
+    return next();
+  }
+};
+
+app.use(globalAuthMiddleware);
 
 // --- MEMORY CACHE ---
 let usersMemoryCache = [];
@@ -55,10 +93,10 @@ let syncTarget = 'ALL'; // 'ALL', 'TEACHERS', 'STUDENTS'
 
 // Helper to rebuild the map
 const updateUsersMap = () => {
-    usersEmailMap.clear();
-    usersMemoryCache.forEach(u => {
-        if (u.email) usersEmailMap.set(u.email.toLowerCase(), u);
-    });
+  usersEmailMap.clear();
+  usersMemoryCache.forEach(u => {
+    if (u.email) usersEmailMap.set(u.email.toLowerCase(), u);
+  });
 };
 
 const ROLE_MAP = {
@@ -169,125 +207,125 @@ const saveHistory = async () => {
 let prismaSocket = null;
 
 const processExternalUsers = (externalUsers) => {
-    if (!Array.isArray(externalUsers)) return;
+  if (!Array.isArray(externalUsers)) return;
 
-    console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos. Modo: ${syncTarget}`);
+  console.log(`🔄 [SYNC] Procesando ${externalUsers.length} usuarios recibidos. Modo: ${syncTarget}`);
 
-    const allowedTeachers = [];
-    const allowedStudents = [];
+  const allowedTeachers = [];
+  const allowedStudents = [];
 
-    for (const u of externalUsers) {
-      const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
-      
-      // Strict Whitelist Logic: Only explicitly mapped roles are allowed.
-      let appRole = ROLE_MAP[rawRole];
+  for (const u of externalUsers) {
+    const rawRole = (u.role || u.rol || '').toString().toUpperCase().trim();
 
-      // Fallback inference
-      if (!appRole) {
-          if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
-          else if (rawRole === 'TUTOR') appRole = 'TEACHER';
-          else if (rawRole.includes('ALUMNO')) appRole = 'STUDENT';
-      }
+    // Strict Whitelist Logic: Only explicitly mapped roles are allowed.
+    let appRole = ROLE_MAP[rawRole];
 
-      // If still no role, SKIP THIS USER.
-      if (!appRole) continue;
-
-      let finalEmail = u.email || u.correo || u.mail || u.id;
-      // Si el email no parece email y tenemos ID, construimos uno falso para que funcione el sistema
-      if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
-          finalEmail = `${u.id}@colegiolahispanidad.es`;
-      }
-
-      if (finalEmail) {
-          const userObj = {
-            id: u.id || finalEmail,
-            name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Usuario',
-            email: finalEmail.toLowerCase().trim(),
-            role: appRole,
-            classId: u.classId || u.id_clase || null
-          };
-
-          if (appRole === 'STUDENT') {
-              allowedStudents.push(userObj);
-          } else {
-              allowedTeachers.push(userObj);
-          }
-      }
+    // Fallback inference
+    if (!appRole) {
+      if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
+      else if (rawRole === 'TUTOR') appRole = 'TEACHER';
+      else if (rawRole.includes('ALUMNO')) appRole = 'STUDENT';
     }
 
-    // Update Teachers if target is ALL or TEACHERS
-    if ((syncTarget === 'ALL' || syncTarget === 'TEACHERS') && allowedTeachers.length > 0) {
-        allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
-        usersMemoryCache = allowedTeachers;
-        updateUsersMap();
-        fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
-        console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
+    // If still no role, SKIP THIS USER.
+    if (!appRole) continue;
+
+    let finalEmail = u.email || u.correo || u.mail || u.id;
+    // Si el email no parece email y tenemos ID, construimos uno falso para que funcione el sistema
+    if (finalEmail && !finalEmail.toString().includes('@') && u.id) {
+      finalEmail = `${u.id}@colegiolahispanidad.es`;
     }
 
-    // Update Students if target is ALL or STUDENTS
-    if ((syncTarget === 'ALL' || syncTarget === 'STUDENTS') && allowedStudents.length > 0) {
-        allowedStudents.sort((a, b) => a.name.localeCompare(b.name));
-        studentsMemoryCache = allowedStudents;
-        fs.writeFileSync(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2));
-        console.log(`✅ [SYNC] ÉXITO: ${allowedStudents.length} alumnos sincronizados.`);
-    }
+    if (finalEmail) {
+      const userObj = {
+        id: u.id || finalEmail,
+        name: u.name || u.nombre || u.full_name || u.nombre_completo || 'Usuario',
+        email: finalEmail.toLowerCase().trim(),
+        role: appRole,
+        classId: u.classId || u.id_clase || null
+      };
 
-    // Reset sync target to default for future automatic updates
-    syncTarget = 'ALL';
+      if (appRole === 'STUDENT') {
+        allowedStudents.push(userObj);
+      } else {
+        allowedTeachers.push(userObj);
+      }
+    }
+  }
+
+  // Update Teachers if target is ALL or TEACHERS
+  if ((syncTarget === 'ALL' || syncTarget === 'TEACHERS') && allowedTeachers.length > 0) {
+    allowedTeachers.sort((a, b) => a.name.localeCompare(b.name));
+    usersMemoryCache = allowedTeachers;
+    updateUsersMap();
+    fs.writeFileSync(USERS_CACHE_FILE, JSON.stringify(allowedTeachers, null, 2));
+    console.log(`✅ [SYNC] ÉXITO: ${allowedTeachers.length} usuarios (profesores/admin) sincronizados.`);
+  }
+
+  // Update Students if target is ALL or STUDENTS
+  if ((syncTarget === 'ALL' || syncTarget === 'STUDENTS') && allowedStudents.length > 0) {
+    allowedStudents.sort((a, b) => a.name.localeCompare(b.name));
+    studentsMemoryCache = allowedStudents;
+    fs.writeFileSync(STUDENTS_CACHE_FILE, JSON.stringify(allowedStudents, null, 2));
+    console.log(`✅ [SYNC] ÉXITO: ${allowedStudents.length} alumnos sincronizados.`);
+  }
+
+  // Reset sync target to default for future automatic updates
+  syncTarget = 'ALL';
 };
 
 const processExternalClasses = (externalClasses) => {
-    if (!Array.isArray(externalClasses)) return;
-    
-    console.log(`🔄 [SYNC] Procesando ${externalClasses.length} clases recibidas...`);
+  if (!Array.isArray(externalClasses)) return;
 
-    const cleanClasses = externalClasses.map(c => ({
-        id: c.id,
-        name: c.name || c.nombre || 'Sin nombre'
-    })).filter(c => c.name);
+  console.log(`🔄 [SYNC] Procesando ${externalClasses.length} clases recibidas...`);
 
-    if (cleanClasses.length > 0) {
-        classesMemoryCache = cleanClasses;
-        fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
-        console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
-    }
+  const cleanClasses = externalClasses.map(c => ({
+    id: c.id,
+    name: c.name || c.nombre || 'Sin nombre'
+  })).filter(c => c.name);
+
+  if (cleanClasses.length > 0) {
+    classesMemoryCache = cleanClasses;
+    fs.writeFileSync(CLASSES_CACHE_FILE, JSON.stringify(cleanClasses, null, 2));
+    console.log(`✅ [SYNC] Clases actualizadas: ${cleanClasses.length}`);
+  }
 };
 
 const startPrismaSocket = () => {
-    console.log(`🔄 [SOCKET] Iniciando conexión a ${EXTERNAL_SOCKET_URL}`);
-    prismaSocket = ClientIO(EXTERNAL_SOCKET_URL, {
-        transports: ['websocket', 'polling'],
-        reconnection: true,
-        reconnectionDelay: 5000
-    });
+  console.log(`🔄 [SOCKET] Iniciando conexión a ${EXTERNAL_SOCKET_URL}`);
+  prismaSocket = ClientIO(EXTERNAL_SOCKET_URL, {
+    transports: ['websocket', 'polling'],
+    reconnection: true,
+    reconnectionDelay: 5000
+  });
 
-    prismaSocket.on('connect', () => {
-         console.log('✅ [SOCKET] Conectado a Prisma Edu');
-    });
+  prismaSocket.on('connect', () => {
+    console.log('✅ [SOCKET] Conectado a Prisma Edu');
+  });
 
-    prismaSocket.on('init_state', (data) => {
-         console.log('📦 [SOCKET] Recibido estado inicial');
-         if (data.users) processExternalUsers(data.users);
-         if (data.classes) processExternalClasses(data.classes);
-    });
+  prismaSocket.on('init_state', (data) => {
+    console.log('📦 [SOCKET] Recibido estado inicial');
+    if (data.users) processExternalUsers(data.users);
+    if (data.classes) processExternalClasses(data.classes);
+  });
 
-    prismaSocket.on('sync_users', (users) => {
-         console.log('🔄 [SOCKET] Actualización de usuarios recibida (Evento sync_users)');
-         processExternalUsers(users);
-    });
+  prismaSocket.on('sync_users', (users) => {
+    console.log('🔄 [SOCKET] Actualización de usuarios recibida (Evento sync_users)');
+    processExternalUsers(users);
+  });
 
-    prismaSocket.on('sync_classes', (classes) => {
-         console.log('🔄 [SOCKET] Actualización de clases recibida (Evento sync_classes)');
-         processExternalClasses(classes);
-    });
+  prismaSocket.on('sync_classes', (classes) => {
+    console.log('🔄 [SOCKET] Actualización de clases recibida (Evento sync_classes)');
+    processExternalClasses(classes);
+  });
 
-    prismaSocket.on('disconnect', () => {
-         console.log('⚠️ [SOCKET] Desconectado de Prisma Edu');
-    });
+  prismaSocket.on('disconnect', () => {
+    console.log('⚠️ [SOCKET] Desconectado de Prisma Edu');
+  });
 
-    prismaSocket.on('connect_error', (err) => {
-         console.error(`❌ [SOCKET] Error de conexión: ${err.message}`);
-    });
+  prismaSocket.on('connect_error', (err) => {
+    console.error(`❌ [SOCKET] Error de conexión: ${err.message}`);
+  });
 };
 
 // Iniciar sincronización por Socket
@@ -296,35 +334,35 @@ startPrismaSocket();
 // --- API ENDPOINTS ---
 
 app.get('/api/admin/force-sync', (req, res) => {
-    if (prismaSocket) {
-        console.log('🔄 [ADMIN] Forzando reconexión de socket...');
-        prismaSocket.disconnect();
-        prismaSocket.connect();
-        res.json({ success: true, message: 'Reconexión de socket iniciada.' });
-    } else {
-        startPrismaSocket();
-        res.json({ success: true, message: 'Socket iniciado.' });
-    }
+  if (prismaSocket) {
+    console.log('🔄 [ADMIN] Forzando reconexión de socket...');
+    prismaSocket.disconnect();
+    prismaSocket.connect();
+    res.json({ success: true, message: 'Reconexión de socket iniciada.' });
+  } else {
+    startPrismaSocket();
+    res.json({ success: true, message: 'Socket iniciado.' });
+  }
 });
 
 app.post('/api/admin/sync', (req, res) => {
-    const { target } = req.body;
-    if (target === 'TEACHERS' || target === 'STUDENTS') {
-        syncTarget = target;
-    } else {
-        syncTarget = 'ALL';
-    }
+  const { target } = req.body;
+  if (target === 'TEACHERS' || target === 'STUDENTS') {
+    syncTarget = target;
+  } else {
+    syncTarget = 'ALL';
+  }
 
-    console.log(`🔄 [ADMIN] Iniciando sincronización manual. Objetivo: ${syncTarget}`);
+  console.log(`🔄 [ADMIN] Iniciando sincronización manual. Objetivo: ${syncTarget}`);
 
-    if (prismaSocket) {
-        prismaSocket.disconnect();
-        prismaSocket.connect();
-        res.json({ success: true, message: `Sincronización de ${syncTarget} iniciada.` });
-    } else {
-        startPrismaSocket();
-        res.json({ success: true, message: 'Socket iniciado.' });
-    }
+  if (prismaSocket) {
+    prismaSocket.disconnect();
+    prismaSocket.connect();
+    res.json({ success: true, message: `Sincronización de ${syncTarget} iniciada.` });
+  } else {
+    startPrismaSocket();
+    res.json({ success: true, message: 'Socket iniciado.' });
+  }
 });
 
 app.post('/api/auth/google', async (req, res) => {
@@ -343,46 +381,46 @@ app.post('/api/auth/google', async (req, res) => {
 app.post('/api/proxy/login', async (req, res) => {
   const { email, password } = req.body;
   const cleanEmail = email ? email.trim().toLowerCase() : '';
-  
+
   try {
     const response = await fetch(`${EXTERNAL_API_BASE}/api/auth/external-check`, {
       method: 'POST',
       headers: { ...getCommonHeaders(), 'Content-Type': 'application/json' },
       body: JSON.stringify({ username: cleanEmail, email: cleanEmail, password })
     });
-    
+
     if (!response.ok) {
-        return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+      return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
-    
+
     const extUser = await response.json();
     const rawRole = (extUser.role || extUser.rol || 'TUTOR').toUpperCase();
     let appRole = ROLE_MAP[rawRole];
-    
+
     if (!appRole) {
-         if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
-         else appRole = 'TEACHER';
+      if (rawRole.includes('ADMIN') || rawRole.includes('DIRECTOR')) appRole = 'ADMIN';
+      else appRole = 'TEACHER';
     }
-    
+
     return res.json({
-        success: true,
-        role: appRole,
-        name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
-        id: extUser.id || cleanEmail,
-        email: (extUser.email || extUser.correo || cleanEmail).toLowerCase() 
+      success: true,
+      role: appRole,
+      name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
+      id: extUser.id || cleanEmail,
+      email: (extUser.email || extUser.correo || cleanEmail).toLowerCase()
     });
-  } catch (err) { 
-      res.status(503).json({ success: false, message: 'Error de conexión' }); 
+  } catch (err) {
+    res.status(503).json({ success: false, message: 'Error de conexión' });
   }
 });
 
 app.get('/api/teachers', (req, res) => {
-    const sorted = [...usersMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
-    res.json(sorted);
+  const sorted = [...usersMemoryCache].sort((a, b) => a.name.localeCompare(b.name));
+  res.json(sorted);
 });
 app.get('/api/students', (req, res) => {
-    const sorted = [...studentsMemoryCache].sort((a,b) => a.name.localeCompare(b.name));
-    res.json(sorted);
+  const sorted = [...studentsMemoryCache].sort((a, b) => a.name.localeCompare(b.name));
+  res.json(sorted);
 });
 app.get('/api/classes', (req, res) => res.json(classesMemoryCache));
 app.get('/api/bookings', (req, res) => {
@@ -392,69 +430,69 @@ app.get('/api/bookings', (req, res) => {
 app.post('/api/bookings', (req, res) => {
   try {
     const incoming = Array.isArray(req.body) ? req.body : [req.body];
-    
+
     // --- VALIDATION: Prevent past bookings for non-admins ---
     if (incoming.length > 0) {
-        const userEmail = incoming[0].teacherEmail;
-        const user = usersEmailMap.get(userEmail ? userEmail.toLowerCase() : '');
-        // If user is not found or not ADMIN, apply restriction
-        if (!user || user.role !== 'ADMIN') {
-            const now = new Date();
-            // Local date string construction YYYY-MM-DD
-            const currentYear = now.getFullYear();
-            const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
-            const currentDay = String(now.getDate()).padStart(2, '0');
-            const todayLocalStr = `${currentYear}-${currentMonth}-${currentDay}`;
+      const userEmail = incoming[0].teacherEmail;
+      const user = usersEmailMap.get(userEmail ? userEmail.toLowerCase() : '');
+      // If user is not found or not ADMIN, apply restriction
+      if (!user || user.role !== 'ADMIN') {
+        const now = new Date();
+        // Local date string construction YYYY-MM-DD
+        const currentYear = now.getFullYear();
+        const currentMonth = String(now.getMonth() + 1).padStart(2, '0');
+        const currentDay = String(now.getDate()).padStart(2, '0');
+        const todayLocalStr = `${currentYear}-${currentMonth}-${currentDay}`;
 
-            const currentHour = now.getHours();
-            const currentMinute = now.getMinutes();
-            const currentTimeVal = currentHour * 60 + currentMinute;
+        const currentHour = now.getHours();
+        const currentMinute = now.getMinutes();
+        const currentTimeVal = currentHour * 60 + currentMinute;
 
-            for (const item of incoming) {
-                if (item.date < todayLocalStr) {
-                    return res.status(403).json({ error: 'No se permiten reservas en días pasados.' });
-                }
+        for (const item of incoming) {
+          if (item.date < todayLocalStr) {
+            return res.status(403).json({ error: 'No se permiten reservas en días pasados.' });
+          }
 
-                if (item.date === todayLocalStr) {
-                    const slotId = item.slotId;
-                    const stage = item.stage;
+          if (item.date === todayLocalStr) {
+            const slotId = item.slotId;
+            const stage = item.stage;
 
-                    let slotDef;
-                    if (stage === 'PRIMARIA') {
-                        slotDef = SLOTS_PRIMARY.find(s => s.id === slotId);
-                    } else {
-                        slotDef = SLOTS_SECONDARY.find(s => s.id === slotId);
-                    }
-
-                    if (slotDef) {
-                        const [eHour, eMinute] = slotDef.end.split(':').map(Number);
-                        const slotEndVal = eHour * 60 + eMinute;
-
-                        if (currentTimeVal >= slotEndVal) {
-                             return res.status(403).json({ error: 'No se permiten reservas en horas pasadas.' });
-                        }
-                    }
-                }
+            let slotDef;
+            if (stage === 'PRIMARIA') {
+              slotDef = SLOTS_PRIMARY.find(s => s.id === slotId);
+            } else {
+              slotDef = SLOTS_SECONDARY.find(s => s.id === slotId);
             }
+
+            if (slotDef) {
+              const [eHour, eMinute] = slotDef.end.split(':').map(Number);
+              const slotEndVal = eHour * 60 + eMinute;
+
+              if (currentTimeVal >= slotEndVal) {
+                return res.status(403).json({ error: 'No se permiten reservas en horas pasadas.' });
+              }
+            }
+          }
         }
+      }
     }
     // --------------------------------------------------------
 
     for (const item of incoming) {
-       const incomingResource = item.resource || 'ROOM';
-       if (bookingsMemoryCache.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
-         return res.status(409).json({ error: 'Conflict' });
-       }
+      const incomingResource = item.resource || 'ROOM';
+      if (bookingsMemoryCache.some(b => b.date === item.date && b.slotId === item.slotId && b.stage === item.stage && (b.resource || 'ROOM') === incomingResource)) {
+        return res.status(409).json({ error: 'Conflict' });
+      }
     }
     bookingsMemoryCache.push(...incoming);
     saveBookings();
-    
+
     if (incoming[0]?.logs?.[0]) {
-        historyMemoryCache.push(incoming[0].logs[0]);
-        if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
-        saveHistory();
+      historyMemoryCache.push(incoming[0].logs[0]);
+      if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+      saveHistory();
     }
-    
+
     io.emit('server:bookings_updated', bookingsMemoryCache);
     res.status(201).json({ success: true });
   } catch (e) { res.status(500).json({ error: 'Error' }); }
@@ -476,46 +514,46 @@ app.put('/api/bookings/:id', (req, res) => {
 
 app.delete('/api/bookings/:id', (req, res) => {
   const target = bookingsMemoryCache.find(b => b.id === req.params.id);
-  if (!target) return res.status(404).json({error: 'Not found'});
-  
+  if (!target) return res.status(404).json({ error: 'Not found' });
+
   if (req.body.deleteSeries) {
-      const targetDateStr = target.date;
-      const targetDay = new Date(targetDateStr).getUTCDay();
+    const targetDateStr = target.date;
+    const targetDay = new Date(targetDateStr).getUTCDay();
 
-      const toDeleteIds = bookingsMemoryCache.filter(b => {
-          if (b.teacherEmail !== target.teacherEmail) return false;
-          if (b.slotId !== target.slotId) return false;
-          if (b.stage !== target.stage) return false;
-          if ((b.resource || 'ROOM') !== (target.resource || 'ROOM')) return false;
+    const toDeleteIds = bookingsMemoryCache.filter(b => {
+      if (b.teacherEmail !== target.teacherEmail) return false;
+      if (b.slotId !== target.slotId) return false;
+      if (b.stage !== target.stage) return false;
+      if ((b.resource || 'ROOM') !== (target.resource || 'ROOM')) return false;
 
-          if (b.date < targetDateStr) return false;
+      if (b.date < targetDateStr) return false;
 
-          const bDay = new Date(b.date).getUTCDay();
-          return bDay === targetDay;
-      }).map(b => b.id);
+      const bDay = new Date(b.date).getUTCDay();
+      return bDay === targetDay;
+    }).map(b => b.id);
 
-      const toDeleteSet = new Set(toDeleteIds);
-      bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteSet.has(b.id));
+    const toDeleteSet = new Set(toDeleteIds);
+    bookingsMemoryCache = bookingsMemoryCache.filter(b => !toDeleteSet.has(b.id));
 
-      if (req.body.user) {
-          historyMemoryCache.push({
-              action: 'DELETED_SERIES',
-              user: req.body.user.email,
-              userName: req.body.user.name,
-              timestamp: Date.now(),
-              details: `Eliminada serie de reservas de ${target.teacherName} desde ${target.date}`
-          });
-          if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
-          saveHistory();
-      }
+    if (req.body.user) {
+      historyMemoryCache.push({
+        action: 'DELETED_SERIES',
+        user: req.body.user.email,
+        userName: req.body.user.name,
+        timestamp: Date.now(),
+        details: `Eliminada serie de reservas de ${target.teacherName} desde ${target.date}`
+      });
+      if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+      saveHistory();
+    }
   } else {
-      bookingsMemoryCache = bookingsMemoryCache.filter(b => b.id !== req.params.id);
+    bookingsMemoryCache = bookingsMemoryCache.filter(b => b.id !== req.params.id);
 
-      if (req.body.user) {
-          historyMemoryCache.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
-          if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
-          saveHistory();
-      }
+    if (req.body.user) {
+      historyMemoryCache.push({ action: 'DELETED', user: req.body.user.email, userName: req.body.user.name, timestamp: Date.now(), details: `Eliminada reserva de ${target.teacherName}` });
+      if (historyMemoryCache.length > 1000) historyMemoryCache = historyMemoryCache.slice(-1000);
+      saveHistory();
+    }
   }
 
   saveBookings();
@@ -526,9 +564,9 @@ app.delete('/api/bookings/:id', (req, res) => {
 app.get('/api/incidents', (req, res) => {
   if (!fs.existsSync(INCIDENTS_FILE)) return res.json([]);
   try {
-      const incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]');
-      res.json(incidents.sort((a,b) => b.timestamp - a.timestamp));
-  } catch(e) { res.json([]); }
+    const incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]');
+    res.json(incidents.sort((a, b) => b.timestamp - a.timestamp));
+  } catch (e) { res.json([]); }
 });
 
 app.post('/api/incidents', (req, res) => {
@@ -536,7 +574,7 @@ app.post('/api/incidents', (req, res) => {
     const newIncident = req.body;
     let incidents = [];
     if (fs.existsSync(INCIDENTS_FILE)) {
-        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
+      try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch (e) { }
     }
 
     // Ensure ID and timestamp
@@ -555,7 +593,7 @@ app.patch('/api/incidents/:id', (req, res) => {
   try {
     let incidents = [];
     if (fs.existsSync(INCIDENTS_FILE)) {
-        try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch(e) {}
+      try { incidents = JSON.parse(fs.readFileSync(INCIDENTS_FILE, 'utf8') || '[]'); } catch (e) { }
     }
 
     const index = incidents.findIndex(i => i.id === req.params.id);
@@ -570,98 +608,98 @@ app.patch('/api/incidents/:id', (req, res) => {
 });
 
 app.get('/api/history', (req, res) => {
-  res.json([...historyMemoryCache].sort((a,b) => b.timestamp - a.timestamp));
+  res.json([...historyMemoryCache].sort((a, b) => b.timestamp - a.timestamp));
 });
 
 app.get('/api/admin/test-email', async (req, res) => {
-    try {
-        console.log('🧪 [ADMIN] Iniciando prueba de email...');
-        const result = await reportService.sendWeeklyReport();
-        res.json({ success: true, message: 'Proceso de reporte ejecutado.', result });
-    } catch (e) {
-        console.error(e);
-        res.status(500).json({ success: false, error: e.message });
-    }
+  try {
+    console.log('🧪 [ADMIN] Iniciando prueba de email...');
+    const result = await reportService.sendWeeklyReport();
+    res.json({ success: true, message: 'Proceso de reporte ejecutado.', result });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ success: false, error: e.message });
+  }
 });
 
 // --- BOOKING SWAP ENDPOINTS ---
 
 app.post('/api/bookings/request-swap', async (req, res) => {
-    try {
-        const { bookingId, reason, requesterEmail, requesterName, slotLabel, resourceName } = req.body;
-        const booking = bookingsMemoryCache.find(b => b.id === bookingId);
+  try {
+    const { bookingId, reason, requesterEmail, requesterName, slotLabel, resourceName } = req.body;
+    const booking = bookingsMemoryCache.find(b => b.id === bookingId);
 
-        if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
+    if (!booking) return res.status(404).json({ error: 'Reserva no encontrada' });
 
-        const protocol = req.headers['x-forwarded-proto'] || req.protocol;
-        const host = req.get('host');
-        const baseUrl = `${protocol}://${host}`;
+    const protocol = req.headers['x-forwarded-proto'] || req.protocol;
+    const host = req.get('host');
+    const baseUrl = `${protocol}://${host}`;
 
-        // Encode params
-        const token = Buffer.from(bookingId).toString('base64');
-        const reqEmailEncoded = Buffer.from(requesterEmail).toString('base64');
-        const labelEncoded = Buffer.from(slotLabel || booking.slotId).toString('base64');
-        const resourceEncoded = Buffer.from(resourceName || booking.resource).toString('base64');
+    // Encode params
+    const token = Buffer.from(bookingId).toString('base64');
+    const reqEmailEncoded = Buffer.from(requesterEmail).toString('base64');
+    const labelEncoded = Buffer.from(slotLabel || booking.slotId).toString('base64');
+    const resourceEncoded = Buffer.from(resourceName || booking.resource).toString('base64');
 
-        const confirmLink = `${baseUrl}/api/bookings/swap/confirm?token=${token}&requester=${reqEmailEncoded}&label=${labelEncoded}&resource=${resourceEncoded}`;
+    const confirmLink = `${baseUrl}/api/bookings/swap/confirm?token=${token}&requester=${reqEmailEncoded}&label=${labelEncoded}&resource=${resourceEncoded}`;
 
-        const bookingInfo = {
-            date: booking.date,
-            slotLabel: slotLabel || booking.slotId,
-            resourceName: resourceName || booking.resource
-        };
+    const bookingInfo = {
+      date: booking.date,
+      slotLabel: slotLabel || booking.slotId,
+      resourceName: resourceName || booking.resource
+    };
 
-        await reportService.sendSwapRequestEmail(booking.teacherEmail, requesterName, requesterEmail, reason, bookingInfo, confirmLink);
+    await reportService.sendSwapRequestEmail(booking.teacherEmail, requesterName, requesterEmail, reason, bookingInfo, confirmLink);
 
-        res.json({ success: true });
-    } catch (e) {
-        console.error("Error swapping", e);
-        res.status(500).json({ error: e.message });
-    }
+    res.json({ success: true });
+  } catch (e) {
+    console.error("Error swapping", e);
+    res.status(500).json({ error: e.message });
+  }
 });
 
 app.get('/api/bookings/swap/confirm', async (req, res) => {
-    try {
-        const { token, requester, label, resource } = req.query;
-        if (!token || !requester) return res.status(400).send("Enlace inválido");
+  try {
+    const { token, requester, label, resource } = req.query;
+    if (!token || !requester) return res.status(400).send("Enlace inválido");
 
-        const bookingId = Buffer.from(token, 'base64').toString('utf8');
-        const requesterEmail = Buffer.from(requester, 'base64').toString('utf8');
-        const slotLabel = label ? Buffer.from(label, 'base64').toString('utf8') : null;
-        const resourceName = resource ? Buffer.from(resource, 'base64').toString('utf8') : null;
+    const bookingId = Buffer.from(token, 'base64').toString('utf8');
+    const requesterEmail = Buffer.from(requester, 'base64').toString('utf8');
+    const slotLabel = label ? Buffer.from(label, 'base64').toString('utf8') : null;
+    const resourceName = resource ? Buffer.from(resource, 'base64').toString('utf8') : null;
 
-        const bookingIndex = bookingsMemoryCache.findIndex(b => b.id === bookingId);
-        if (bookingIndex === -1) {
-            return res.send("<h1>La reserva ya no existe o ya ha sido eliminada.</h1>");
-        }
+    const bookingIndex = bookingsMemoryCache.findIndex(b => b.id === bookingId);
+    if (bookingIndex === -1) {
+      return res.send("<h1>La reserva ya no existe o ya ha sido eliminada.</h1>");
+    }
 
-        const booking = bookingsMemoryCache[bookingIndex];
-        const ownerName = booking.teacherName;
+    const booking = bookingsMemoryCache[bookingIndex];
+    const ownerName = booking.teacherName;
 
-        // Delete booking
-        bookingsMemoryCache.splice(bookingIndex, 1);
-        saveBookings();
-        io.emit('server:bookings_updated', bookingsMemoryCache);
+    // Delete booking
+    bookingsMemoryCache.splice(bookingIndex, 1);
+    saveBookings();
+    io.emit('server:bookings_updated', bookingsMemoryCache);
 
-        // Log history
-        historyMemoryCache.push({
-            action: 'DELETED',
-            user: booking.teacherEmail,
-            userName: booking.teacherName,
-            timestamp: Date.now(),
-            details: `Reserva cedida a solicitud de ${requesterEmail}`
-        });
-        saveHistory();
+    // Log history
+    historyMemoryCache.push({
+      action: 'DELETED',
+      user: booking.teacherEmail,
+      userName: booking.teacherName,
+      timestamp: Date.now(),
+      details: `Reserva cedida a solicitud de ${requesterEmail}`
+    });
+    saveHistory();
 
-        const bookingInfo = {
-            date: booking.date,
-            slotLabel: slotLabel || booking.slotId,
-            resourceName: resourceName || booking.resource
-        };
+    const bookingInfo = {
+      date: booking.date,
+      slotLabel: slotLabel || booking.slotId,
+      resourceName: resourceName || booking.resource
+    };
 
-        await reportService.sendSwapReleasedEmail(requesterEmail, ownerName, bookingInfo);
+    await reportService.sendSwapReleasedEmail(requesterEmail, ownerName, bookingInfo);
 
-        res.send(`
+    res.send(`
             <div style="font-family: sans-serif; text-align: center; padding: 50px;">
                 <h1 style="color: green;">¡Reserva Cedida con Éxito!</h1>
                 <p>La reserva ha sido eliminada y se ha notificado al compañero/a.</p>
@@ -669,10 +707,10 @@ app.get('/api/bookings/swap/confirm', async (req, res) => {
             </div>
         `);
 
-    } catch (e) {
-        console.error("Error confirming swap", e);
-        res.status(500).send("Error interno del servidor");
-    }
+  } catch (e) {
+    console.error("Error confirming swap", e);
+    res.status(500).send("Error interno del servidor");
+  }
 });
 
 app.use(express.static(__dirname));
