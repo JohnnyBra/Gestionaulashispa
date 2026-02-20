@@ -419,6 +419,30 @@ app.post('/api/proxy/login', async (req, res) => {
   }
 });
 
+app.get('/api/proxy/me', (req, res) => {
+  const token = req.cookies.BIBLIO_SSO_TOKEN;
+  if (!token) return res.status(401).json({ success: false, message: 'No SSO session' });
+  try {
+    const JWT_SSO_SECRET = process.env.JWT_SSO_SECRET || 'fallback-secret';
+    const decoded = jwt.verify(token, JWT_SSO_SECRET);
+
+    // Rellenamos desde la caché local para obtener nombre y role real en la app
+    const cleanEmail = (decoded.email || decoded.userId || '').toLowerCase();
+    const localUser = usersEmailMap.get(cleanEmail);
+
+    if (localUser) {
+      return res.json({ success: true, user: localUser });
+    }
+
+    return res.json({
+      success: true,
+      user: { id: decoded.userId, name: decoded.userId, email: decoded.email, role: decoded.role }
+    });
+  } catch (err) {
+    return res.status(401).json({ success: false, message: 'Invalid token' });
+  }
+});
+
 app.get('/api/teachers', (req, res) => {
   const sorted = [...usersMemoryCache].sort((a, b) => a.name.localeCompare(b.name));
   res.json(sorted);
