@@ -14,30 +14,51 @@ const App: React.FC = () => {
 
   // Check for existing session in localStorage
   useEffect(() => {
-    try {
-      const savedUser = localStorage.getItem('hispanidad_user');
-
-      // FIX CRÍTICO: Si localStorage contiene la cadena "undefined" o "null", JSON.parse fallará.
-      // Verificamos explícitamente que sea una cadena válida antes de parsear.
-      if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
-        const parsed = JSON.parse(savedUser);
-
-        // Validamos que el objeto tenga lo mínimo necesario
-        if (parsed && parsed.email && parsed.role && parsed.name) {
-          setUser(parsed);
-        } else {
-          throw new Error("Datos de usuario incompletos");
+    const checkAuth = async () => {
+      let localUser = null;
+      try {
+        const savedUser = localStorage.getItem('hispanidad_user');
+        if (savedUser && savedUser !== "undefined" && savedUser !== "null") {
+          const parsed = JSON.parse(savedUser);
+          if (parsed && parsed.email && parsed.role && parsed.name) {
+            localUser = parsed;
+          }
         }
-      } else {
-        // Si es "undefined" o null, limpiamos silenciosamente
-        if (savedUser) localStorage.removeItem('hispanidad_user');
+      } catch (e) {
+        localStorage.removeItem('hispanidad_user');
       }
-    } catch (e) {
-      // Si hay cualquier error parseando (JSON corrupto), borramos todo para recuperar la app
-      console.warn("Datos de sesión corruptos detectados. Limpiando localStorage.");
-      localStorage.removeItem('hispanidad_user');
-      setUser(null);
-    }
+
+      // Probar SSO Silencioso
+      try {
+        const res = await fetch('/api/proxy/me');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.success && data.user) {
+            setUser(data.user);
+            localStorage.setItem('hispanidad_user', JSON.stringify(data.user));
+            return; // SSO tiene prioridad
+          }
+        }
+
+        // Si definitivamente no hay SSO (y SSO está activo), limpiar el localUser si res = 401
+        // (Podríamos limpiar aquí para forzar el deslogueo en la red, pero para mantener 
+        // fallback, lo dejamos pasar si falla la red)
+        if (res.status === 401 && !localUser) {
+          localStorage.removeItem('hispanidad_user');
+        }
+
+      } catch (e) {
+        // Network error, ignore and fallback to localUser
+      }
+
+      if (localUser) {
+        setUser(localUser);
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const handleLogin = (newUser: User) => {
