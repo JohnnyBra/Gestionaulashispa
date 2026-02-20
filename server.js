@@ -392,6 +392,11 @@ app.post('/api/proxy/login', async (req, res) => {
     if (!response.ok) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
+    // Si Prisma envía cookies (como BIBLIO_SSO_TOKEN), retransmitírselas al cliente
+    const setCookieHeader = response.headers.get('set-cookie');
+    if (setCookieHeader) {
+      res.setHeader('set-cookie', setCookieHeader);
+    }
 
     const extUser = await response.json();
     const rawRole = (extUser.role || extUser.rol || 'TUTOR').toUpperCase();
