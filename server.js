@@ -463,7 +463,7 @@ app.get('/api/proxy/me', (req, res) => {
 
     return res.json({
       success: true,
-      user: { id: decoded.userId, name: decoded.userId, email: decoded.email, role: decoded.role }
+      user: { id: decoded.userId, name: decoded.name || decoded.userId, email: decoded.email, role: decoded.role }
     });
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid token' });
