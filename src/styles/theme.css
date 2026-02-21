@@ -4,7 +4,7 @@
 /* ============ ROOT VARIABLES ============ */
 :root {
     /* Default (Light Mode) */
-    --bg-app: #f8fafc;
+    --bg-app: #f0f0ff;
     --bg-card: rgba(255, 255, 255, 0.7);
     --text-main: #0f172a;
     --text-muted: #64748b;
@@ -94,70 +94,163 @@
 
 /* ============ KEYFRAMES ============ */
 @keyframes float {
-    0%, 100% { transform: translateY(0px) rotate(0deg); }
-    33% { transform: translateY(-12px) rotate(1deg); }
-    66% { transform: translateY(6px) rotate(-1deg); }
+
+    0%,
+    100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+
+    33% {
+        transform: translateY(-12px) rotate(1deg);
+    }
+
+    66% {
+        transform: translateY(6px) rotate(-1deg);
+    }
 }
 
 @keyframes glow-pulse {
-    0%, 100% { opacity: 0.5; filter: blur(20px); }
-    50% { opacity: 0.8; filter: blur(25px); }
+
+    0%,
+    100% {
+        opacity: 0.5;
+        filter: blur(20px);
+    }
+
+    50% {
+        opacity: 0.8;
+        filter: blur(25px);
+    }
 }
 
 @keyframes slide-up {
-    from { transform: translateY(24px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(24px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slide-down {
-    from { transform: translateY(-24px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+        transform: translateY(-24px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slide-in-right {
-    from { transform: translateX(32px); opacity: 0; }
-    to { transform: translateX(0); opacity: 1; }
+    from {
+        transform: translateX(32px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes scale-in {
-    from { transform: scale(0.92); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
+    from {
+        transform: scale(0.92);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1);
+        opacity: 1;
+    }
 }
 
 @keyframes fade-in {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
 }
 
 @keyframes shimmer {
-    from { background-position: -200% 0; }
-    to { background-position: 200% 0; }
+    from {
+        background-position: -200% 0;
+    }
+
+    to {
+        background-position: 200% 0;
+    }
 }
 
 @keyframes bounce-subtle {
-    0%, 100% { transform: translateY(0); }
-    50% { transform: translateY(-4px); }
+
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+
+    50% {
+        transform: translateY(-4px);
+    }
 }
 
 @keyframes gradient-shift {
-    0% { background-position: 0% 50%; }
-    50% { background-position: 100% 50%; }
-    100% { background-position: 0% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    50% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0% 50%;
+    }
 }
 
 @keyframes pulse-ring {
-    0% { transform: scale(1); opacity: 0.6; }
-    100% { transform: scale(1.5); opacity: 0; }
+    0% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+
+    100% {
+        transform: scale(1.5);
+        opacity: 0;
+    }
 }
 
 @keyframes modal-in {
-    from { transform: scale(0.95) translateY(10px); opacity: 0; }
-    to { transform: scale(1) translateY(0); opacity: 1; }
+    from {
+        transform: scale(0.95) translateY(10px);
+        opacity: 0;
+    }
+
+    to {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
 }
 
 @keyframes modal-overlay-in {
-    from { opacity: 0; backdrop-filter: blur(0); }
-    to { opacity: 1; backdrop-filter: blur(12px); }
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0);
+    }
+
+    to {
+        opacity: 1;
+        backdrop-filter: blur(12px);
+    }
 }
 
 /* ============ BASE ============ */
@@ -262,10 +355,21 @@ body {
     background-attachment: fixed;
 }
 
-.mesh-tutor { background: var(--mesh-tutor); }
-.mesh-parent { background: var(--mesh-parent); }
-.mesh-student { background: var(--mesh-student); }
-.mesh-admin { background: var(--mesh-admin); }
+.mesh-tutor {
+    background: var(--mesh-tutor);
+}
+
+.mesh-parent {
+    background: var(--mesh-parent);
+}
+
+.mesh-student {
+    background: var(--mesh-student);
+}
+
+.mesh-admin {
+    background: var(--mesh-admin);
+}
 
 /* ============ ANIMATED GRADIENT TEXT ============ */
 .gradient-text {
@@ -334,9 +438,9 @@ body {
 /* ============ SHIMMER LOADING ============ */
 .shimmer {
     background: linear-gradient(90deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.08) 50%,
-        rgba(255, 255, 255, 0) 100%);
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.08) 50%,
+            rgba(255, 255, 255, 0) 100%);
     background-size: 200% 100%;
     animation: shimmer 2s linear infinite;
 }
@@ -474,14 +578,45 @@ body {
 }
 
 /* ============ STAGGERED ANIMATION DELAYS ============ */
-.stagger-1 { animation-delay: 0.05s; animation-fill-mode: both; }
-.stagger-2 { animation-delay: 0.1s; animation-fill-mode: both; }
-.stagger-3 { animation-delay: 0.15s; animation-fill-mode: both; }
-.stagger-4 { animation-delay: 0.2s; animation-fill-mode: both; }
-.stagger-5 { animation-delay: 0.25s; animation-fill-mode: both; }
-.stagger-6 { animation-delay: 0.3s; animation-fill-mode: both; }
-.stagger-7 { animation-delay: 0.35s; animation-fill-mode: both; }
-.stagger-8 { animation-delay: 0.4s; animation-fill-mode: both; }
+.stagger-1 {
+    animation-delay: 0.05s;
+    animation-fill-mode: both;
+}
+
+.stagger-2 {
+    animation-delay: 0.1s;
+    animation-fill-mode: both;
+}
+
+.stagger-3 {
+    animation-delay: 0.15s;
+    animation-fill-mode: both;
+}
+
+.stagger-4 {
+    animation-delay: 0.2s;
+    animation-fill-mode: both;
+}
+
+.stagger-5 {
+    animation-delay: 0.25s;
+    animation-fill-mode: both;
+}
+
+.stagger-6 {
+    animation-delay: 0.3s;
+    animation-fill-mode: both;
+}
+
+.stagger-7 {
+    animation-delay: 0.35s;
+    animation-fill-mode: both;
+}
+
+.stagger-8 {
+    animation-delay: 0.4s;
+    animation-fill-mode: both;
+}
 
 /* ============ SAFE AREA UTILITIES ============ */
 .bottom-nav-safe {
@@ -570,26 +705,22 @@ body {
 /* ============ PAST SLOT VISUAL INDICATORS ============ */
 .slot-past {
     background-color: #f1f5f9;
-    background-image: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 10px,
-        rgba(0, 0, 0, 0.06) 10px,
-        rgba(0, 0, 0, 0.06) 20px
-    );
+    background-image: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 10px,
+            rgba(0, 0, 0, 0.06) 10px,
+            rgba(0, 0, 0, 0.06) 20px);
     cursor: not-allowed !important;
     pointer-events: none;
 }
 
 .dark .slot-past {
     background-color: #0f172a;
-    background-image: repeating-linear-gradient(
-        45deg,
-        transparent,
-        transparent 10px,
-        rgba(255, 255, 255, 0.06) 10px,
-        rgba(255, 255, 255, 0.06) 20px
-    );
+    background-image: repeating-linear-gradient(45deg,
+            transparent,
+            transparent 10px,
+            rgba(255, 255, 255, 0.06) 10px,
+            rgba(255, 255, 255, 0.06) 20px);
 }
 
 .slot-past-booked {
@@ -604,4 +735,27 @@ body {
     -webkit-background-clip: text;
     background-clip: text;
     -webkit-text-fill-color: transparent;
+}
+
+/* ============ WATERMARK LOGO ============ */
+body::after {
+    content: "";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vmin;
+    height: 80vmin;
+    background-image: url('/logo.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    opacity: 0.05;
+    pointer-events: none;
+    z-index: -1;
+}
+
+.dark body::after {
+    opacity: 0.03;
+    filter: grayscale(1) invert(1) brightness(2);
 }
