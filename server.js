@@ -470,6 +470,15 @@ app.get('/api/proxy/me', (req, res) => {
   }
 });
 
+// SSO Logout — clears the shared SSO cookie
+app.post('/api/auth/logout', (req, res) => {
+  res.clearCookie('BIBLIO_SSO_TOKEN', {
+    domain: process.env.COOKIE_DOMAIN || '.bibliohispa.es',
+    path: '/'
+  });
+  res.json({ success: true });
+});
+
 app.get('/api/teachers', (req, res) => {
   const sorted = [...usersMemoryCache].sort((a, b) => a.name.localeCompare(b.name));
   res.json(sorted);

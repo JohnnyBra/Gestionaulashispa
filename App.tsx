@@ -73,6 +73,7 @@ const App: React.FC = () => {
     setCurrentStage(null);
     setView('DASHBOARD');
     localStorage.removeItem('hispanidad_user');
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
   };
 
   const handleSelectStage = (stage: Stage) => {
