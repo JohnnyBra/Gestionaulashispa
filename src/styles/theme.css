@@ -264,9 +264,9 @@ body {
     overscroll-behavior: none;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: var(--bg-app);
+    background: var(--mesh-tutor);
+    background-attachment: fixed;
     color: var(--text-main);
-    transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Selection */

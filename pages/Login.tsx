@@ -111,7 +111,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   };
 
   return (
-    <div className="min-h-screen flex flex-col lg:flex-row w-full bg-app overflow-hidden relative transition-colors duration-300">
+    <div className="min-h-screen flex flex-col lg:flex-row w-full overflow-hidden relative transition-colors duration-300">
 
       {/* Botón Volver a Prisma (Flotante en Desktop, Flujo en Mobile) */}
       <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center items-center gap-3 lg:block glass-light lg:bg-transparent lg:border-none lg:backdrop-blur-none border-b border-glass-border">
