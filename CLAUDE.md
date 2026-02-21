@@ -116,12 +116,15 @@ Data is loaded into memory caches on startup and written back to disk on changes
 
 ### Authentication
 
-Two authentication methods:
+Three authentication methods:
 
 1. **External login** via Prisma Edu API (`/api/proxy/login`) - validates credentials against the external system.
 2. **Google OAuth** (`/api/auth/google`) - validates Google tokens and matches against the local user cache.
+3. **SSO silent login** (`GET /api/proxy/me`) - reads `BIBLIO_SSO_TOKEN` cookie, verifies JWT, auto-logs in.
 
-Sessions are stored client-side in `localStorage` as `hispanidad_user`. There is no backend session store (stateless).
+Both `/api/proxy/login` and `/api/auth/google` create the `BIBLIO_SSO_TOKEN` cookie directly (when `ENABLE_GLOBAL_SSO=true`) using `jwt.sign()` with `JWT_SSO_SECRET`. The cookie enables cross-app SSO across all `*.bibliohispa.es` subdomains.
+
+Sessions are stored client-side in `localStorage` as `hispanidad_user`. There is no backend session store (stateless). On page load, `App.tsx` calls `/api/proxy/me` for SSO auto-login before falling back to localStorage.
 
 ### Roles
 
@@ -145,8 +148,9 @@ Roles are mapped from the external system via `ROLE_MAP` in `server.js`.
 ## API Routes (server.js)
 
 ### Authentication
-- `POST /api/proxy/login` - External credential validation
-- `POST /api/auth/google` - Google OAuth token validation
+- `POST /api/proxy/login` - External credential validation (creates SSO cookie)
+- `POST /api/auth/google` - Google OAuth token validation (creates SSO cookie)
+- `GET /api/proxy/me` - SSO silent check (reads `BIBLIO_SSO_TOKEN` cookie)
 
 ### Data
 - `GET /api/teachers` - List teachers
