@@ -373,7 +373,23 @@ app.post('/api/auth/google', async (req, res) => {
     if (!googleRes.ok) return res.status(401).json({ success: false });
     const payload = await googleRes.json();
     const user = usersEmailMap.get(payload.email.toLowerCase());
-    if (user) return res.json({ success: true, ...user });
+    if (user) {
+      // Crear cookie SSO tras login Google exitoso
+      if (process.env.ENABLE_GLOBAL_SSO === 'true') {
+        const rawRole = (user.role || 'TEACHER').toUpperCase();
+        const ssoRole = rawRole === 'TUTOR' ? 'TEACHER' : rawRole;
+        const ssoPayload = { userId: user.id, email: payload.email.toLowerCase(), role: ssoRole, profileId: user.id };
+        const ssoToken = jwt.sign(ssoPayload, process.env.JWT_SSO_SECRET || 'fallback-secret', { expiresIn: '8h' });
+        res.cookie('BIBLIO_SSO_TOKEN', ssoToken, {
+          domain: process.env.COOKIE_DOMAIN || '.bibliohispa.es',
+          path: '/',
+          httpOnly: true,
+          secure: true,
+          sameSite: 'Lax'
+        });
+      }
+      return res.json({ success: true, ...user });
+    }
     return res.status(403).json({ success: false, message: 'Usuario no registrado.' });
   } catch (e) { res.status(500).json({ success: false }); }
 });
@@ -392,12 +408,6 @@ app.post('/api/proxy/login', async (req, res) => {
     if (!response.ok) {
       return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     }
-    // Si Prisma envía cookies (como BIBLIO_SSO_TOKEN), retransmitírselas al cliente
-    const setCookieHeader = response.headers.get('set-cookie');
-    if (setCookieHeader) {
-      res.setHeader('set-cookie', setCookieHeader);
-    }
-
     const extUser = await response.json();
     const rawRole = (extUser.role || extUser.rol || 'TUTOR').toUpperCase();
     let appRole = ROLE_MAP[rawRole];
@@ -407,12 +417,29 @@ app.post('/api/proxy/login', async (req, res) => {
       else appRole = 'TEACHER';
     }
 
+    const userEmail = (extUser.email || extUser.correo || cleanEmail).toLowerCase();
+    const userId = extUser.id || cleanEmail;
+
+    // Crear cookie SSO directamente (en vez de retransmitir de PrismaEdu)
+    if (process.env.ENABLE_GLOBAL_SSO === 'true') {
+      const ssoRole = rawRole === 'TUTOR' ? 'TEACHER' : rawRole;
+      const ssoPayload = { userId, email: userEmail, role: ssoRole, profileId: userId };
+      const ssoToken = jwt.sign(ssoPayload, process.env.JWT_SSO_SECRET || 'fallback-secret', { expiresIn: '8h' });
+      res.cookie('BIBLIO_SSO_TOKEN', ssoToken, {
+        domain: process.env.COOKIE_DOMAIN || '.bibliohispa.es',
+        path: '/',
+        httpOnly: true,
+        secure: true,
+        sameSite: 'Lax'
+      });
+    }
+
     return res.json({
       success: true,
       role: appRole,
       name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
-      id: extUser.id || cleanEmail,
-      email: (extUser.email || extUser.correo || cleanEmail).toLowerCase()
+      id: userId,
+      email: userEmail
     });
   } catch (err) {
     res.status(503).json({ success: false, message: 'Error de conexión' });
