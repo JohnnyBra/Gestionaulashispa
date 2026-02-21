@@ -73,7 +73,7 @@ const App: React.FC = () => {
     setCurrentStage(null);
     setView('DASHBOARD');
     localStorage.removeItem('hispanidad_user');
-    fetch('/api/auth/logout', { method: 'POST' }).catch(() => {});
+    fetch('/api/auth/logout', { method: 'POST' }).catch(() => { });
   };
 
   const handleSelectStage = (stage: Stage) => {
@@ -123,7 +123,7 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider defaultTheme="system" storageKey="hispanidad-theme">
-      <div className="min-h-screen bg-app font-sans flex flex-col transition-colors duration-300">
+      <div className="min-h-screen font-sans flex flex-col transition-colors duration-300">
         <Navbar user={user} onLogout={handleLogout} onNavigate={handleNavigate} />
         <main className="flex-grow flex flex-col relative">
           {/* Background Mesh (Optional, if we want it global or per page. Login has its own) */}
