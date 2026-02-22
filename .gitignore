@@ -9,3 +9,4 @@ logo.png
 *.log
 *_cache.json
 history.json
+access_logs.json
