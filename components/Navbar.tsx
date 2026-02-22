@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Role } from '../types';
-import { LogOut, Shield, LayoutGrid, Sun, Moon } from 'lucide-react';
+import { LogOut, Shield, LayoutGrid, Sun, Moon, Monitor } from 'lucide-react';
 import { IncidentModal } from './IncidentModal';
 import { io } from 'socket.io-client';
 import { useTheme } from '../src/context/ThemeContext';
@@ -64,11 +64,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
 
                 {/* Theme Toggle */}
                 <button
-                  onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+                  onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
                   className="p-2 text-muted hover:bg-glass-bg rounded-lg transition-all duration-200 hover:scale-105 md:mr-2"
-                  title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                  title={theme === 'dark' ? 'Modo oscuro' : theme === 'light' ? 'Modo claro' : 'Modo sistema'}
                 >
-                  {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+                  {theme === 'dark' ? <Moon size={20} /> : theme === 'light' ? <Sun size={20} /> : <Monitor size={20} />}
                 </button>
 
                 {/* Incidents Link (Admin Only) */}
