@@ -127,7 +127,12 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
             href="https://prisma.bibliohispa.es"
             className="flex items-center gap-2 px-4 py-2 glass text-muted hover:text-primary-600 dark:hover:text-primary-400 rounded-full transition-all text-xs md:text-sm font-bold group"
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 transition-transform group-hover:-translate-x-1">
+              <rect width="7" height="7" x="3" y="3" rx="1" />
+              <rect width="7" height="7" x="14" y="3" rx="1" fill="#3b82f6" stroke="#3b82f6" />
+              <rect width="7" height="7" x="14" y="14" rx="1" />
+              <rect width="7" height="7" x="3" y="14" rx="1" />
+            </svg>
             <span>Volver a Prisma</span>
           </a>
         </div>
