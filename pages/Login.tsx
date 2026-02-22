@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { User } from '../types';
 import { loginExternal, loginGoogle } from '../services/storageService';
-import { AlertCircle, Mail, ArrowRight, Lock, Loader2, ArrowLeft, Sun, Moon } from 'lucide-react';
+import { AlertCircle, Mail, ArrowRight, Lock, Loader2, ArrowLeft, Sun, Moon, Monitor } from 'lucide-react';
 import { useTheme } from '../src/context/ThemeContext';
 
 interface LoginProps {
@@ -117,11 +117,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="lg:absolute lg:top-8 lg:right-8 z-50 p-4 lg:p-0 flex justify-center items-center gap-3 lg:block glass-light lg:bg-transparent lg:border-none lg:backdrop-blur-none border-b border-glass-border">
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
+            onClick={() => setTheme(theme === 'light' ? 'dark' : theme === 'dark' ? 'system' : 'light')}
             className="p-2 text-muted glass hover:bg-glass-bg rounded-full transition-all duration-200 hover:scale-105"
-            title={theme === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+            title={theme === 'dark' ? 'Modo oscuro' : theme === 'light' ? 'Modo claro' : 'Modo sistema'}
           >
-            {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            {theme === 'dark' ? <Moon size={18} /> : theme === 'light' ? <Sun size={18} /> : <Monitor size={18} />}
           </button>
           <a
             href="https://prisma.bibliohispa.es"
