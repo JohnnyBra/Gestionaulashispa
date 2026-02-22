@@ -43,7 +43,8 @@ else
     PORT=${PORT_INPUT:-3001}
     
     echo "PORT=$PORT" > $ENV_FILE
-    echo "API_SECRET=YOUR_API_SECRET" >> $ENV_FILE
+    read -p "Introduce el API_SECRET de Prisma: " API_SECRET_INPUT
+    echo "API_SECRET=${API_SECRET_INPUT}" >> $ENV_FILE
     echo "✅ Configuración guardada en .env"
 fi
 
