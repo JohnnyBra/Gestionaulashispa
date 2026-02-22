@@ -9,6 +9,7 @@ const { io: ClientIO } = require('socket.io-client');
 const reportService = require('./services/reportService');
 const cookieParser = require('cookie-parser');
 const jwt = require('jsonwebtoken');
+const { format } = require('date-fns');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -18,6 +19,7 @@ const USERS_CACHE_FILE = path.join(__dirname, 'users_cache.json');
 const STUDENTS_CACHE_FILE = path.join(__dirname, 'students_cache.json');
 const CLASSES_CACHE_FILE = path.join(__dirname, 'classes_cache.json');
 const INCIDENTS_FILE = path.join(__dirname, 'incidents.json');
+const ACCESS_LOGS_FILE = path.join(__dirname, 'access_logs.json');
 
 // --- CONFIGURACIÓN EXTERNA ---
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
@@ -177,6 +179,28 @@ const saveBookings = async () => {
       hasPendingSave = false;
       saveBookings();
     }
+  }
+};
+
+const logAccess = async (user, action, details = '') => {
+  try {
+    const now = new Date();
+    const entry = {
+      timestamp: now.getTime(),
+      date: format(now, 'dd/MM/yyyy'),
+      time: format(now, 'HH:mm:ss'),
+      userId: user.id || user.email,
+      userName: user.name,
+      email: user.email,
+      role: user.role,
+      action: action,
+      details: details
+    };
+
+    // Append to file (NDJSON format)
+    await fs.promises.appendFile(ACCESS_LOGS_FILE, JSON.stringify(entry) + '\n');
+  } catch (e) {
+    console.error("Error logging access:", e);
   }
 };
 
@@ -388,6 +412,7 @@ app.post('/api/auth/google', async (req, res) => {
           sameSite: 'Lax'
         });
       }
+      logAccess(user, 'LOGIN_GOOGLE');
       return res.json({ success: true, ...user });
     }
     return res.status(403).json({ success: false, message: 'Usuario no registrado.' });
@@ -434,10 +459,18 @@ app.post('/api/proxy/login', async (req, res) => {
       });
     }
 
+    const appUser = {
+      id: userId,
+      name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
+      email: userEmail,
+      role: appRole
+    };
+    logAccess(appUser, 'LOGIN_EXTERNAL');
+
     return res.json({
       success: true,
       role: appRole,
-      name: extUser.name || extUser.nombre || extUser.full_name || 'Usuario',
+      name: appUser.name,
       id: userId,
       email: userEmail
     });
@@ -458,12 +491,16 @@ app.get('/api/proxy/me', (req, res) => {
     const localUser = usersEmailMap.get(cleanEmail);
 
     if (localUser) {
+      logAccess(localUser, 'SESSION_RESTORE');
       return res.json({ success: true, user: localUser });
     }
 
+    const fallbackUser = { id: decoded.userId, name: decoded.name || decoded.userId, email: decoded.email, role: decoded.role };
+    logAccess(fallbackUser, 'SESSION_RESTORE', 'Fallback from Token');
+
     return res.json({
       success: true,
-      user: { id: decoded.userId, name: decoded.name || decoded.userId, email: decoded.email, role: decoded.role }
+      user: fallbackUser
     });
   } catch (err) {
     return res.status(401).json({ success: false, message: 'Invalid token' });
