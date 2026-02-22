@@ -23,7 +23,7 @@ const INCIDENTS_FILE = path.join(__dirname, 'incidents.json');
 const EXTERNAL_API_BASE = 'https://prisma.bibliohispa.es';
 const EXTERNAL_SOCKET_URL = 'https://prisma.bibliohispa.es';
 // Forzamos el valor por defecto si no viene en el env
-const API_SECRET = process.env.API_SECRET || 'YOUR_API_SECRET';
+const API_SECRET = process.env.API_SECRET || '';
 
 // User Agent personalizado para evitar bloqueos anti-bot genéricos
 const SERVER_USER_AGENT = 'Hispanidad-Reservas-Server/1.0';
