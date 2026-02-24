@@ -197,6 +197,16 @@ Copy `.env.template` to `.env` and fill in values:
 
 `GOOGLE_CLIENT_ID` is injected into the frontend bundle at build time via `build.js`.
 
+## Unified Header
+
+`components/Navbar.tsx` implements the unified header design shared across apps. Uses the `.glass-header` class (defined in `src/styles/theme.css`) with:
+- **Logo**: `h-10` with `dark:brightness-0 dark:invert` for theme adaptation (no background box)
+- **3-button theme toggle**: Sun / Monitor / Moon (Light / System / Dark), uses `useTheme()` from `src/context/ThemeContext.tsx`, active state styled with `text-[#234B6E]`
+- **Prisma link**: SVG icon (4 squares, top-right filled `#3b82f6`), links to `https://prisma.bibliohispa.es`
+- App-specific: incidents badge (admin), user badge with role, logout button
+
+The `.glass-header` class uses `rgba(255,255,255,0.45)` background with `backdrop-filter: blur(24px) saturate(1.6)`, with a dark variant. Theme is managed via `ThemeContext` with `useTheme()` hook supporting `'light' | 'dark' | 'system'`, toggling `.dark` class on `<html>`.
+
 ## Conventions for AI Assistants
 
 - **Language**: The application UI and most comments are in **Spanish**. Keep user-facing strings in Spanish. Code identifiers (variables, functions) use English.
