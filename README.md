@@ -6,6 +6,18 @@ Aplicación web progresiva (PWA) para la gestión de reservas del aula de inform
 
 ---
 
+## 📸 Capturas de Pantalla
+
+| Login | Dashboard — Próximas Reservas |
+|:---:|:---:|
+| ![Login](docs/screenshots/01-login.png) | ![Dashboard](docs/screenshots/02-dashboard-proximas-reservas.png) |
+
+| Calendario Semanal (Primaria) | Gestión de Incidencias |
+|:---:|:---:|
+| ![Calendario](docs/screenshots/03-calendario-semana-primaria.png) | ![Incidencias](docs/screenshots/04-incidencias.png) |
+
+---
+
 ## 🚀 Funcionalidades por Público
 
 ### 👨‍🏫 Profesorado
