@@ -6,10 +6,11 @@ interface IncidentModalProps {
   isOpen: boolean;
   onClose: () => void;
   user: User;
+  fixedResource?: string;
 }
 
-export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, user }) => {
-  const [resource, setResource] = useState('AULA');
+export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, user, fixedResource }) => {
+  const [resource, setResource] = useState(fixedResource || 'AULA');
   const [pcNumber, setPcNumber] = useState('');
   const [description, setDescription] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,7 +37,7 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
 
       if (res.ok) {
         // Reset and close
-        setResource('AULA');
+        setResource(fixedResource || 'AULA');
         setPcNumber('');
         setDescription('');
         onClose();
@@ -53,20 +54,22 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Reportar Incidencia">
+    <Modal isOpen={isOpen} onClose={onClose} title={fixedResource === 'PIZARRA' ? "Reportar Pizarra Digital" : "Reportar Incidencia"}>
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recurso Afectado</label>
-          <select
-            value={resource}
-            onChange={(e) => setResource(e.target.value)}
-            className="w-full px-3 py-2 select-glass"
-          >
-            <option value="AULA">Aula de Informática</option>
-            <option value="CARRO">Carro de Portátiles</option>
-            <option value="PIZARRA">Pizarra Digital</option>
-          </select>
-        </div>
+        {!fixedResource && (
+          <div>
+            <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Recurso Afectado</label>
+            <select
+              value={resource}
+              onChange={(e) => setResource(e.target.value)}
+              className="w-full px-3 py-2 select-glass"
+            >
+              <option value="AULA">Aula de Informática</option>
+              <option value="CARRO">Carro de Portátiles</option>
+              <option value="PIZARRA">Pizarra Digital</option>
+            </select>
+          </div>
+        )}
 
         <div>
           <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{resource === 'PIZARRA' ? 'Clase' : 'Nº de Ordenador (Opcional)'}</label>

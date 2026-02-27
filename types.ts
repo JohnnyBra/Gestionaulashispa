@@ -91,7 +91,7 @@ export const COURSES_SECONDARY = [
   '1ºA Secundaria', '1ºB Secundaria',
   '2ºA Secundaria', '2ºB Secundaria',
   '3ºA Secundaria', '3ºB Secundaria',
-  '4º Secundaria'
+  '4ºA Secundaria', '4ºB Secundaria'
 ];
 
 // Time slots definitions

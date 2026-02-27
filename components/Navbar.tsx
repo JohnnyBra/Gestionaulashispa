@@ -157,7 +157,8 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
       <IncidentModal
         isOpen={isIncidentModalOpen}
         onClose={() => setIsIncidentModalOpen(false)}
-        user={user}
+        user={user!}
+        fixedResource="PIZARRA"
       />
     </>
   );
