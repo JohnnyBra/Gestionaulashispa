@@ -185,13 +185,16 @@ export const IncidentsPage: React.FC<IncidentsPageProps> = ({ onBack }) => {
                   <div className="flex-grow">
                     <div className="flex justify-between items-start mb-1">
                       <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${incident.resource === 'AULA' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800'}`}>
+                        <span className={`px-2 py-0.5 rounded-md text-xs font-bold border ${incident.resource === 'AULA' ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-800' : incident.resource === 'PIZARRA' ? 'bg-purple-50 dark:bg-purple-900/20 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-800' : 'bg-amber-50 dark:bg-amber-900/20 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-800'}`}>
                           {incident.resource}
                         </span>
                         {incident.pcNumber && (
                           <span className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 glass-light px-2 py-0.5 rounded-md border border-glass-border">
-                            <Monitor className="w-3 h-3" />
-                            PC {incident.pcNumber}
+                            {incident.resource === 'PIZARRA' ? (
+                              <>Clase {incident.pcNumber}</>
+                            ) : (
+                              <><Monitor className="w-3 h-3" /> PC {incident.pcNumber}</>
+                            )}
                           </span>
                         )}
                       </div>

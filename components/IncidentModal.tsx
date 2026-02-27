@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Modal } from './Modal';
-import { User, Incident } from '../types';
+import { User, Incident, COURSES_PRIMARY, COURSES_SECONDARY } from '../types';
 
 interface IncidentModalProps {
   isOpen: boolean;
@@ -64,18 +64,36 @@ export const IncidentModal: React.FC<IncidentModalProps> = ({ isOpen, onClose, u
           >
             <option value="AULA">Aula de Informática</option>
             <option value="CARRO">Carro de Portátiles</option>
+            <option value="PIZARRA">Pizarra Digital</option>
           </select>
         </div>
 
         <div>
-          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Nº de Ordenador (Opcional)</label>
-          <input
-            type="text"
-            value={pcNumber}
-            onChange={(e) => setPcNumber(e.target.value)}
-            placeholder="Ej: 15"
-            className="w-full px-3 py-2 input-glass"
-          />
+          <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">{resource === 'PIZARRA' ? 'Clase' : 'Nº de Ordenador (Opcional)'}</label>
+          {resource === 'PIZARRA' ? (
+            <select
+              value={pcNumber}
+              onChange={(e) => setPcNumber(e.target.value)}
+              required
+              className="w-full px-3 py-2 select-glass"
+            >
+              <option value="">Selecciona una clase</option>
+              <optgroup label="Primaria">
+                {COURSES_PRIMARY.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+              <optgroup label="Secundaria">
+                {COURSES_SECONDARY.map(c => <option key={c} value={c}>{c}</option>)}
+              </optgroup>
+            </select>
+          ) : (
+            <input
+              type="text"
+              value={pcNumber}
+              onChange={(e) => setPcNumber(e.target.value)}
+              placeholder="Ej: 15"
+              className="w-full px-3 py-2 input-glass"
+            />
+          )}
         </div>
 
         <div>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { User, Role } from '../types';
-import { LogOut, Shield, Sun, Moon, Monitor } from 'lucide-react';
+import { LogOut, Shield, Sun, Moon, Monitor, AlertTriangle } from 'lucide-react';
 import { IncidentModal } from './IncidentModal';
 import { io } from 'socket.io-client';
 import { useTheme } from '../src/context/ThemeContext';
@@ -76,6 +76,16 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
                   )}
                 </button>
               )}
+
+              {/* Report Pizarra Button */}
+              <button
+                onClick={() => setIsIncidentModalOpen(true)}
+                className="flex items-center gap-1.5 p-2 md:px-3 md:py-2 glass hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-600 hover:text-red-600 dark:text-slate-300 dark:hover:text-red-400 rounded-lg md:rounded-xl transition-all border border-transparent hover:border-red-200 dark:hover:border-red-800 font-semibold text-xs md:text-sm"
+                title="Reportar Pizarra Digital"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span className="hidden xl:inline">Reportar Pizarra</span>
+              </button>
 
               {/* User Badge */}
               <div className="flex items-center glass rounded-full pl-1 pr-1 md:pr-4 py-1">
