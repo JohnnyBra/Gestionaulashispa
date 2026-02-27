@@ -21,7 +21,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
 
     const fetchCount = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/incidents');
+        const res = await fetch('/api/incidents');
         const data = await res.json();
         if (Array.isArray(data)) {
           setUnresolvedCount(data.filter((i: any) => !i.isResolved).length);
@@ -30,7 +30,7 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
     };
     fetchCount();
 
-    const socket = io('http://localhost:3001');
+    const socket = io();
     socket.on('server:incidents_updated', (data: any[]) => {
       setUnresolvedCount(data.filter(i => !i.isResolved).length);
     });
