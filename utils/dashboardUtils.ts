@@ -3,22 +3,30 @@ import { isBookableDay, formatDate, formatDisplayDate } from './dateUtils';
 import { addDays, isSameDay, parse, isAfter } from 'date-fns';
 import { es } from 'date-fns/locale';
 
+const ALL_SLOTS = [...SLOTS_PRIMARY, ...SLOTS_SECONDARY];
+
 export const getUserUpcomingBookings = (bookings: Booking[], user: User): Booking[] => {
   const now = new Date();
   const todayStr = formatDate(now);
-  const nowTime = now.getHours() * 60 + now.getMinutes();
 
   return bookings
     .filter(b => {
       if (b.teacherEmail !== user.email) return false;
 
-      // Filter out past dates
+      // Descartar fechas pasadas
       if (b.date < todayStr) return false;
 
-      // If today, check time (optional, but good for "upcoming")
-      // But keeping it simple: just date >= today is usually enough,
-      // maybe filter out passed slots if we want to be precise.
-      // Let's just return date >= today.
+      // Si es hoy, descartar si la hora de fin ya pasó
+      if (b.date === todayStr) {
+        const slot = ALL_SLOTS.find(s => s.id === b.slotId);
+        if (slot) {
+          const [endH, endM] = slot.end.split(':').map(Number);
+          const slotEnd = new Date(now);
+          slotEnd.setHours(endH, endM, 0, 0);
+          if (now >= slotEnd) return false;
+        }
+      }
+
       return true;
     })
     .sort((a, b) => {
