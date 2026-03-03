@@ -36,26 +36,23 @@ const App: React.FC = () => {
           if (data.success && data.user) {
             setUser(data.user);
             localStorage.setItem('hispanidad_user', JSON.stringify(data.user));
-            return; // SSO tiene prioridad
+            return;
           }
         }
 
-        // Si definitivamente no hay SSO (y SSO está activo), limpiar el localUser si res = 401
-        // (Podríamos limpiar aquí para forzar el deslogueo en la red, pero para mantener 
-        // fallback, lo dejamos pasar si falla la red)
-        if (res.status === 401 && !localUser) {
-          localStorage.removeItem('hispanidad_user');
-        }
-
-      } catch (e) {
-        // Network error, ignore and fallback to localUser
-      }
-
-      if (localUser) {
-        setUser(localUser);
-      } else {
+        // El servidor respondió (401 u otro): sesión inválida → forzar login
+        localStorage.removeItem('hispanidad_user');
         setUser(null);
+        return;
+      } catch (e) {
+        // Error de red: usar datos locales como fallback temporal
+        if (localUser) {
+          setUser(localUser);
+          return;
+        }
       }
+
+      setUser(null);
     };
 
     checkAuth();

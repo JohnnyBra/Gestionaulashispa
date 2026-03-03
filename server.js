@@ -409,7 +409,8 @@ app.post('/api/auth/google', async (req, res) => {
           path: '/',
           httpOnly: true,
           secure: true,
-          sameSite: 'Lax'
+          sameSite: 'Lax',
+          maxAge: 8 * 60 * 60 * 1000
         });
       }
       logAccess(user, 'LOGIN_GOOGLE');
