@@ -34,6 +34,7 @@ const App: React.FC = () => {
         if (res.ok) {
           const data = await res.json();
           if (data.success && data.user) {
+            localStorage.removeItem('aulas_theme_manual');
             setUser(data.user);
             localStorage.setItem('hispanidad_user', JSON.stringify(data.user));
             return;
@@ -60,6 +61,7 @@ const App: React.FC = () => {
 
   const handleLogin = (newUser: User) => {
     if (!newUser) return; // Protección extra
+    localStorage.removeItem('aulas_theme_manual');
     setUser(newUser);
     // Aseguramos que nunca guardamos "undefined" como string
     localStorage.setItem('hispanidad_user', JSON.stringify(newUser));
