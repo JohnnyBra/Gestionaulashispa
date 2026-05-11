@@ -9,6 +9,7 @@ import { IncidentsPage } from './pages/IncidentsPage';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const [currentStage, setCurrentStage] = useState<Stage | null>(null);
   const [view, setView] = useState<'DASHBOARD' | 'CALENDAR' | 'INCIDENTS'>('DASHBOARD');
 
@@ -66,7 +67,7 @@ const App: React.FC = () => {
       setUser(null);
     };
 
-    checkAuth();
+    checkAuth().finally(() => setAuthChecked(true));
   }, []);
 
   const handleLogin = (newUser: User) => {
@@ -112,7 +113,13 @@ const App: React.FC = () => {
 
   // View Logic
   let content;
-  if (!user) {
+  if (!authChecked) {
+    content = (
+      <div className="flex-grow flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-primary-200 border-t-primary-600 rounded-full animate-spin" />
+      </div>
+    );
+  } else if (!user) {
     content = <Login onLogin={handleLogin} />;
   } else if (view === 'INCIDENTS') {
     content = <IncidentsPage onBack={handleBackFromIncidents} />;
