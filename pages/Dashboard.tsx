@@ -44,7 +44,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
    };
 
    return (
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 animate-fade-in pb-20">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12 pb-20">
 
          {/* Hero Header */}
          <div className="text-center mb-8 md:mb-12 relative">
