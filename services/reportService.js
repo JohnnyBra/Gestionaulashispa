@@ -6,6 +6,16 @@ const { format, subDays } = require('date-fns');
 
 const INCIDENTS_FILE = path.join(__dirname, '../incidents.json');
 
+const escapeHtml = (str) => {
+  if (str == null) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+};
+
 const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
     port: parseInt(process.env.EMAIL_PORT || '465'),
@@ -38,20 +48,20 @@ const sendSwapRequestEmail = async (to, requesterName, requesterEmail, reason, b
         <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #e2e8f0; border-radius: 10px; max-width: 600px; margin: 0 auto;">
             <h2 style="color: #1e293b;">Solicitud de cambio de reserva</h2>
             <p>Hola,</p>
-            <p>El compañero/a <strong>${requesterName}</strong> (${requesterEmail}) está interesado/a en tu reserva y solicita si puedes cedérsela.</p>
+            <p>El compañero/a <strong>${escapeHtml(requesterName)}</strong> (${escapeHtml(requesterEmail)}) está interesado/a en tu reserva y solicita si puedes cedérsela.</p>
 
             <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; margin: 20px 0;">
                 <h3 style="margin-top: 0; color: #334155; font-size: 16px;">Detalles de la reserva:</h3>
                 <ul style="list-style: none; padding: 0; margin: 0; color: #475569;">
-                    <li style="margin-bottom: 5px;">📅 <strong>Fecha:</strong> ${bookingInfo.date}</li>
-                    <li style="margin-bottom: 5px;">⏰ <strong>Horario:</strong> ${bookingInfo.slotLabel}</li>
-                    <li style="margin-bottom: 5px;">🏫 <strong>Recurso:</strong> ${bookingInfo.resourceName}</li>
+                    <li style="margin-bottom: 5px;">📅 <strong>Fecha:</strong> ${escapeHtml(bookingInfo.date)}</li>
+                    <li style="margin-bottom: 5px;">⏰ <strong>Horario:</strong> ${escapeHtml(bookingInfo.slotLabel)}</li>
+                    <li style="margin-bottom: 5px;">🏫 <strong>Recurso:</strong> ${escapeHtml(bookingInfo.resourceName)}</li>
                 </ul>
             </div>
 
             <div style="background-color: #fff1f2; padding: 15px; border-radius: 8px; margin: 20px 0; border: 1px solid #fecdd3;">
                 <p style="margin: 0; font-weight: bold; color: #9f1239;">Motivo de la solicitud:</p>
-                <p style="margin-top: 5px; color: #881337;">"${reason}"</p>
+                <p style="margin-top: 5px; color: #881337;">"${escapeHtml(reason)}"</p>
             </div>
 
             <p>Si estás de acuerdo en ceder tu hora, haz clic en el siguiente botón. <strong>Esto eliminará tu reserva inmediatamente</strong> y avisará al solicitante para que pueda reservar.</p>

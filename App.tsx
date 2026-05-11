@@ -41,7 +41,17 @@ const App: React.FC = () => {
           }
         }
 
-        // El servidor respondió (401 u otro): sesión inválida → forzar login
+        if (res.status === 401) {
+          const data = await res.json().catch(() => ({}));
+          // "No SSO session" = no hay cookie SSO (entorno sin SSO activo)
+          // Usar localStorage como fallback en vez de forzar re-login
+          if (data.message === 'No SSO session' && localUser) {
+            setUser(localUser);
+            return;
+          }
+        }
+
+        // Token inválido/expirado u otro error: forzar re-login
         localStorage.removeItem('hispanidad_user');
         setUser(null);
         return;

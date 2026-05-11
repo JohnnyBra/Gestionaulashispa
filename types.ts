@@ -12,6 +12,7 @@ export enum Role {
 export type ResourceType = 'ROOM' | 'CART';
 
 export interface User {
+  id?: string;
   email: string;
   name: string;
   role: Role;
@@ -41,7 +42,7 @@ export interface TimeSlot {
 }
 
 export interface ActionLog {
-  action: 'CREATED' | 'BLOCKED' | 'DELETED';
+  action: 'CREATED' | 'BLOCKED' | 'DELETED' | 'DELETED_SERIES';
   user: string; // Email of the user who performed the action
   userName: string;
   timestamp: number;

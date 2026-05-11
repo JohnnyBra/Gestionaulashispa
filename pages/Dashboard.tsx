@@ -4,6 +4,7 @@ import { BookOpen, Monitor, ArrowRight, Calendar, Loader2, Clock } from 'lucide-
 import { getBookings } from '../services/storageService';
 import { getUserUpcomingBookings, getFreeSlots } from '../utils/dashboardUtils';
 import { formatDisplayDate } from '../utils/dateUtils';
+import { io } from 'socket.io-client';
 
 interface DashboardProps {
    onSelectStage: (stage: Stage) => void;
@@ -26,6 +27,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
          }
       };
       fetchBookings();
+
+      const socket = io();
+      socket.on('server:bookings_updated', setBookings);
+      return () => { socket.disconnect(); };
    }, []);
 
    const upcomingBookings = getUserUpcomingBookings(bookings, user);

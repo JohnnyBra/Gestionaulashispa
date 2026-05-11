@@ -215,7 +215,7 @@ export const CalendarView: React.FC<CalendarViewProps> = ({ stage, user, onBack 
             if (isRecurring && user.role === Role.ADMIN && recurringEndDate) {
                 const batch: Booking[] = [];
                 let loop = selectedSlot.date;
-                while (loop <= new Date(recurringEndDate)) {
+                while (formatDate(loop) <= recurringEndDate) {
                     if (isBookableDay(loop)) batch.push({ ...baseBooking, id: crypto.randomUUID(), date: formatDate(loop) } as Booking);
                     loop = addWeeks(loop, 1);
                 }

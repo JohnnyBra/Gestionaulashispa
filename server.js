@@ -52,34 +52,36 @@ app.use(cookieParser());
 const JWT_SSO_SECRET = process.env.JWT_SSO_SECRET || 'fallback-secret';
 
 const globalAuthMiddleware = async (req, res, next) => {
+  const isPublicRoute =
+    !req.path.startsWith('/api/') ||
+    req.path.startsWith('/api/auth') ||
+    req.path.startsWith('/api/proxy') ||
+    req.path.startsWith('/api/bookings/swap/confirm');
+
+  if (isPublicRoute) return next();
   if (process.env.ENABLE_GLOBAL_SSO !== 'true') return next();
 
-  if (req.path.startsWith('/api/auth') || req.path.startsWith('/api/proxy') || req.path.startsWith('/assets') || req.path === '/favicon.ico') {
-    return next();
-  }
-
   const token = req.cookies.BIBLIO_SSO_TOKEN;
-  if (!token) return next();
+  if (!token) return res.status(401).json({ success: false, message: 'No autorizado' });
 
   try {
     const decoded = jwt.verify(token, JWT_SSO_SECRET);
     if (decoded.role === 'FAMILY' || decoded.role === 'STUDENT') {
-      if (req.path.startsWith('/api/')) {
-        return res.status(403).json({ success: false, message: 'Acceso denegado a satélites para este rol.' });
-      }
-      return res.redirect('https://prisma.bibliohispa.es');
+      return res.status(403).json({ success: false, message: 'Acceso denegado a satélites para este rol.' });
     }
-
-    if (decoded.role === 'TEACHER' || decoded.role === 'ADMIN') {
-      // Sincronización de permisos (check-access via Prisma) se asume manejada
-      // por los endpoints al usar la base de cacheada local (la "lógica actual").
-      req.ssoUser = decoded;
-      return next();
-    }
+    req.ssoUser = decoded;
     return next();
   } catch (err) {
-    return next();
+    return res.status(401).json({ success: false, message: 'Sesión inválida' });
   }
+};
+
+const requireAdmin = (req, res, next) => {
+  if (process.env.ENABLE_GLOBAL_SSO !== 'true') return next();
+  if (!req.ssoUser || req.ssoUser.role !== 'ADMIN') {
+    return res.status(403).json({ success: false, message: 'Se requiere rol de administrador' });
+  }
+  next();
 };
 
 app.use(globalAuthMiddleware);
@@ -357,7 +359,7 @@ startPrismaSocket();
 
 // --- API ENDPOINTS ---
 
-app.get('/api/admin/force-sync', (req, res) => {
+app.get('/api/admin/force-sync', requireAdmin, (req, res) => {
   if (prismaSocket) {
     console.log('🔄 [ADMIN] Forzando reconexión de socket...');
     prismaSocket.disconnect();
@@ -369,7 +371,7 @@ app.get('/api/admin/force-sync', (req, res) => {
   }
 });
 
-app.post('/api/admin/sync', (req, res) => {
+app.post('/api/admin/sync', requireAdmin, (req, res) => {
   const { target } = req.body;
   if (target === 'TEACHERS' || target === 'STUDENTS') {
     syncTarget = target;
@@ -456,7 +458,8 @@ app.post('/api/proxy/login', async (req, res) => {
         path: '/',
         httpOnly: true,
         secure: true,
-        sameSite: 'Lax'
+        sameSite: 'Lax',
+        maxAge: 8 * 60 * 60 * 1000
       });
     }
 
@@ -714,7 +717,7 @@ app.get('/api/history', (req, res) => {
   res.json([...historyMemoryCache].sort((a, b) => b.timestamp - a.timestamp));
 });
 
-app.get('/api/admin/test-email', async (req, res) => {
+app.get('/api/admin/test-email', requireAdmin, async (req, res) => {
   try {
     console.log('🧪 [ADMIN] Iniciando prueba de email...');
     const result = await reportService.sendWeeklyReport();
