@@ -2,12 +2,16 @@ import { Booking, Stage, User, ActionLog, ClassGroup } from '../types';
 
 export const getBookings = async (): Promise<Booking[]> => {
   const response = await fetch('/api/bookings');
-  return await response.json();
+  if (!response.ok) return [];
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
 };
 
 export const getHistory = async (): Promise<ActionLog[]> => {
   const response = await fetch('/api/history');
-  return await response.json();
+  if (!response.ok) return [];
+  const data = await response.json();
+  return Array.isArray(data) ? data : [];
 };
 
 export const getTeachers = async (): Promise<{name: string, email: string}[]> => {
