@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#161040" media="(prefers-color-scheme: dark)" />
-  <meta name="theme-color" content="#f0f0ff" media="(prefers-color-scheme: light)" />
+  <meta name="theme-color" content="#f5f3ee" media="(prefers-color-scheme: light)" />
   <title>Reservas - Cooperativa de Enseñanza La Hispanidad</title>
   <link rel="icon" type="image/png" href="https://prisma.bibliohispa.es/suite/iconos/aulas-64.png" />
   <link rel="apple-touch-icon" href="https://prisma.bibliohispa.es/suite/iconos/aulas-180.png" />
@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link
-    href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
+    href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap"
     rel="stylesheet" />
   <!-- Identidad común de la Suite La Hispanidad (cabecera, firma, escudo): se sirve desde Prisma -->
   <link rel="stylesheet" href="https://prisma.bibliohispa.es/suite/hispanidad-suite.css" />
@@ -26,12 +26,16 @@
       theme: {
         extend: {
           fontFamily: {
-            display: ['Outfit', 'sans-serif'],
-            body: ['Plus Jakarta Sans', 'sans-serif'],
-            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            display: ['Bricolage Grotesque', 'Figtree', 'sans-serif'],
+            body: ['Figtree', 'sans-serif'],
+            sans: ['Figtree', 'sans-serif'],
           },
           colors: {
-            primary: { 50: '#eef2ff', 100: '#e0e7ff', 200: '#c7d2fe', 300: '#a5b4fc', 400: '#818cf8', 500: '#6366f1', 600: '#4f46e5', 700: '#4338ca', 800: '#3730a3', 900: '#312e81', 950: '#1e1b4b' },
+            // Sin violeta: la Suite La Hispanidad lo redirige a su celeste
+            indigo: { 50: '#eef5fb', 100: '#d5e7f6', 200: '#abcfed', 300: '#78b1e0', 400: '#4a9ad8', 500: '#2373bd', 600: '#145ea6', 700: '#0a4a8c', 800: '#0b3d72', 900: '#0c325c', 950: '#081f3a' },
+            violet: { 50: '#ecf9fe', 100: '#d2f0fc', 200: '#a6e1f8', 300: '#6ccdf2', 400: '#30b5e8', 500: '#0aa0dc', 600: '#0882b6', 700: '#0b6893', 800: '#0f5678', 900: '#124864', 950: '#0b2f42' },
+            purple: { 50: '#ecf9fe', 100: '#d2f0fc', 200: '#a6e1f8', 300: '#6ccdf2', 400: '#30b5e8', 500: '#0aa0dc', 600: '#0882b6', 700: '#0b6893', 800: '#0f5678', 900: '#124864', 950: '#0b2f42' },
+            primary: { 50: '#eef5fb', 100: '#d5e7f6', 200: '#abcfed', 300: '#78b1e0', 400: '#4a9ad8', 500: '#2373bd', 600: '#145ea6', 700: '#0a4a8c', 800: '#0b3d72', 900: '#0c325c', 950: '#081f3a' },
             app: 'var(--bg-app)',
             card: 'var(--bg-card)',
             glass: {
@@ -42,7 +46,7 @@
             brand: {
               50: '#f0f9ff', 100: '#e0f2fe', 200: '#bae6fd', 300: '#7dd3fc', 400: '#38bdf8', 500: '#0ea5e9', 600: '#0284c7', 700: '#0369a1', 800: '#075985', 900: '#0c4a6e', 950: '#082f49',
             },
-            accent: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#c084fc', 500: '#a855f7', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87', 950: '#3b0764' },
+            accent: { 50: '#faf5ff', 100: '#f3e8ff', 200: '#e9d5ff', 300: '#d8b4fe', 400: '#30b5e8', 500: '#0aa0dc', 600: '#9333ea', 700: '#7e22ce', 800: '#6b21a8', 900: '#581c87', 950: '#3b0764' },
           },
           animation: {
             'float': 'float 6s ease-in-out infinite',
