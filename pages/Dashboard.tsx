@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Stage, User, Booking, SLOTS_PRIMARY, SLOTS_SECONDARY } from '../types';
-import { BookOpen, Monitor, ArrowRight, Calendar, Loader2, Clock } from 'lucide-react';
+import { ArrowRight, Calendar, Loader2, Clock } from 'lucide-react';
 import { getBookings } from '../services/storageService';
 import { getUserUpcomingBookings, getFreeSlots } from '../utils/dashboardUtils';
 import { formatDisplayDate } from '../utils/dateUtils';
@@ -91,8 +91,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
                   <div className="flex justify-between items-start">
-                     <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-800 group-hover:scale-110 transition-transform duration-300">
-                        <BookOpen className="h-6 w-6 md:h-7 md:w-7" />
+                     <div className="h-16 w-16 md:h-20 md:w-20 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                        <img src="https://prisma.bibliohispa.es/suite/iconos/idiomas.webp" alt="" className="h-full w-full object-contain drop-shadow-lg" />
                      </div>
                      <div className="px-3 py-1 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full text-xs font-bold text-slate-500 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
                         1º - 6º Primaria
@@ -141,8 +141,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                {/* Content Layer */}
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
                   <div className="flex justify-between items-start">
-                     <div className="h-12 w-12 md:h-14 md:w-14 rounded-2xl bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 flex items-center justify-center border border-emerald-100 dark:border-emerald-800 group-hover:scale-110 transition-transform duration-300">
-                        <Monitor className="h-6 w-6 md:h-7 md:w-7" />
+                     <div className="h-16 w-16 md:h-20 md:w-20 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
+                        <img src="https://prisma.bibliohispa.es/suite/iconos/informatica.webp" alt="" className="h-full w-full object-contain drop-shadow-lg" />
                      </div>
                      <div className="px-3 py-1 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full text-xs font-bold text-slate-500 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
                         1º - 4º ESO
