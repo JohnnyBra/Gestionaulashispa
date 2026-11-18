@@ -40,31 +40,30 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
 
   return (
     <>
-      <div className="glass-header sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
-
-          {/* Logo */}
-          <div
-            className="flex items-center gap-2 cursor-pointer group"
-            onClick={() => onNavigate('DASHBOARD')}
+      {/* Cabecera común de la Suite La Hispanidad (kit servido desde Prisma) */}
+      <header className="hs-header gap-2 !px-3 sm:!px-4">
+          <a
+            className="hs-marca min-w-0"
+            href="/"
+            onClick={(e) => { e.preventDefault(); onNavigate('DASHBOARD'); }}
           >
-            <img
-              src="/logo.png"
-              alt="Logo La Hispanidad"
-              className="h-10 w-auto object-contain dark:brightness-0 dark:invert group-hover:scale-105 transition-transform duration-200"
-            />
-          </div>
+            <img className="hs-escudo" src="https://prisma.bibliohispa.es/suite/escudo.png" alt="Colegio La Hispanidad" />
+            <span className="min-w-0 overflow-hidden">
+              <span className="hs-marca-nombre">Reservas Aulas</span>
+              <span className="hs-firma truncate">Creado por Javi Barrero</span>
+            </span>
+          </a>
 
           {/* Actions */}
           {user && (
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3 ml-auto shrink-0">
 
               {/* Incidents Link (Admin Only) */}
               {user.role === Role.ADMIN && (
                 <button
                   onClick={() => onNavigate('INCIDENTS')}
                   className="relative flex items-center gap-2 p-2 md:px-4 md:py-2 glass rounded-lg md:rounded-xl transition-all duration-200 font-semibold text-xs md:text-sm text-slate-700 dark:text-slate-300 hover:bg-glass-bg hover:scale-[1.02]"
-                  title="Gestionar Incidencias"
+                  title="Gestionar Incidencias" aria-label="Gestionar incidencias"
                 >
                   <Shield className="h-4 w-4" />
                   <span className="hidden lg:inline">Incidencias</span>
@@ -81,14 +80,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
               <button
                 onClick={() => setIsIncidentModalOpen(true)}
                 className="flex items-center gap-1.5 p-2 md:px-3 md:py-2 glass hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-600 hover:text-red-600 dark:text-slate-300 dark:hover:text-red-400 rounded-lg md:rounded-xl transition-all border border-transparent hover:border-red-200 dark:hover:border-red-800 font-semibold text-xs md:text-sm"
-                title="Reportar Pizarra Digital"
+                title="Reportar Pizarra Digital" aria-label="Reportar pizarra digital"
               >
                 <AlertTriangle className="h-4 w-4" />
                 <span className="hidden xl:inline">Reportar Pizarra</span>
               </button>
 
               {/* User Badge */}
-              <div className="flex items-center glass rounded-full pl-1 pr-1 md:pr-4 py-1">
+              <div className="hidden md:flex items-center glass rounded-full pl-1 pr-1 md:pr-4 py-1">
                 <div className={`w-7 h-7 md:w-8 md:h-8 rounded-full flex items-center justify-center ${user.role === Role.ADMIN ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' : 'bg-primary-100 text-primary-600 dark:bg-brand-500/20 dark:text-brand-400'} ${!user.role ? 'mr-0' : 'md:mr-3'}`}>
                   {user.role === Role.ADMIN ? <Shield className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <span className="font-bold text-xs">{user.name.charAt(0)}</span>}
                 </div>
@@ -101,25 +100,34 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
               <div className="h-6 w-px bg-glass-border mx-1 hidden md:block"></div>
 
               {/* Theme Toggle (3 buttons) */}
-              <div className="flex bg-gray-200 dark:bg-zinc-800 rounded-lg p-0.5">
+              {/* En móvil, un solo botón que va cambiando de tema */}
+              <button
+                onClick={() => setTheme(theme === 'light' ? 'system' : theme === 'system' ? 'dark' : 'light')}
+                className="sm:hidden p-2 glass rounded-lg text-slate-600 dark:text-slate-300"
+                aria-label={`Tema: ${theme === 'light' ? 'claro' : theme === 'system' ? 'automático' : 'oscuro'}. Cambiar`}
+                title="Cambiar tema"
+              >
+                {theme === 'light' ? <Sun className="h-4 w-4" /> : theme === 'system' ? <Monitor className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              </button>
+              <div className="hidden sm:flex bg-gray-200 dark:bg-zinc-800 rounded-lg p-0.5">
                 <button
                   onClick={() => setTheme('light')}
-                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'light' ? 'bg-white text-[#234B6E] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  title="Modo claro"
+                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'light' ? 'bg-white text-[#0a4a8c] dark:text-sky-300 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  title="Modo claro" aria-label="Modo claro"
                 >
                   <Sun size={14} />
                 </button>
                 <button
                   onClick={() => setTheme('system')}
-                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'system' ? 'bg-white dark:bg-zinc-700 text-[#234B6E] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  title="Automático"
+                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'system' ? 'bg-white dark:bg-zinc-700 text-[#0a4a8c] dark:text-sky-300 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  title="Automático" aria-label="Automático"
                 >
                   <Monitor size={14} />
                 </button>
                 <button
                   onClick={() => setTheme('dark')}
-                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'dark' ? 'bg-zinc-700 text-[#234B6E] shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
-                  title="Modo oscuro"
+                  className={`flex justify-center p-1.5 rounded-md text-sm transition-colors ${theme === 'dark' ? 'bg-zinc-700 text-[#0a4a8c] dark:text-sky-300 shadow-sm' : 'text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                  title="Modo oscuro" aria-label="Modo oscuro"
                 >
                   <Moon size={14} />
                 </button>
@@ -128,15 +136,11 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
               {/* Prisma Link */}
               <a
                 href="https://prisma.bibliohispa.es"
-                className="flex items-center gap-1.5 px-2.5 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors font-medium"
+                aria-label="Ir al Portal Prisma"
+                className="flex items-center gap-1.5 px-2 sm:px-2.5 py-1.5 text-sm text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 rounded-lg transition-colors font-medium"
                 title="Ir al Portal Prisma"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <rect width="7" height="7" x="3" y="3" rx="1" />
-                  <rect width="7" height="7" x="14" y="3" rx="1" fill="#3b82f6" stroke="#3b82f6" />
-                  <rect width="7" height="7" x="14" y="14" rx="1" />
-                  <rect width="7" height="7" x="3" y="14" rx="1" />
-                </svg>
+                <span className="hs-prisma" style={{ '--t': '18px' } as React.CSSProperties} aria-hidden="true" />
                 <span className="hidden sm:inline">Prisma</span>
               </a>
 
@@ -144,15 +148,14 @@ export const Navbar: React.FC<NavbarProps> = ({ user, onLogout, onNavigate }) =>
               <button
                 onClick={onLogout}
                 className="flex items-center gap-2 p-2 md:px-4 md:py-2 bg-red-500/10 hover:bg-red-500/20 text-red-600 dark:text-red-400 rounded-lg md:rounded-xl transition-all border border-red-500/10 hover:border-red-500/30 font-semibold text-xs md:text-sm"
-                title="Cerrar sesión"
+                title="Cerrar sesión" aria-label="Cerrar sesión"
               >
                 <LogOut className="h-4 w-4" />
                 <span className="hidden md:inline">Salir</span>
               </button>
             </div>
           )}
-        </div>
-      </div>
+      </header>
 
       <IncidentModal
         isOpen={isIncidentModalOpen}
