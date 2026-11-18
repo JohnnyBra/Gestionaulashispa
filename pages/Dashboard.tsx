@@ -92,7 +92,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
                   <div className="flex justify-between items-start">
                      <div className="h-16 w-16 md:h-20 md:w-20 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-                        <img src="https://prisma.bibliohispa.es/suite/iconos/idiomas.webp" alt="" className="h-full w-full object-contain drop-shadow-lg" />
+                        <img src="https://prisma.bibliohispa.es/suite/iconos/idiomas.webp" alt="" className="h-full w-full object-contain" />
                      </div>
                      <div className="px-3 py-1 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full text-xs font-bold text-slate-500 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
                         1º - 6º Primaria
@@ -142,7 +142,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ onSelectStage, user }) => 
                <div className="relative z-20 p-6 md:p-8 flex-grow flex flex-col justify-between">
                   <div className="flex justify-between items-start">
                      <div className="h-16 w-16 md:h-20 md:w-20 flex items-center justify-center group-hover:scale-110 group-hover:-rotate-3 transition-transform duration-300">
-                        <img src="https://prisma.bibliohispa.es/suite/iconos/informatica.webp" alt="" className="h-full w-full object-contain drop-shadow-lg" />
+                        <img src="https://prisma.bibliohispa.es/suite/iconos/informatica.webp" alt="" className="h-full w-full object-contain" />
                      </div>
                      <div className="px-3 py-1 bg-white/60 dark:bg-slate-800/60 backdrop-blur-md rounded-full text-xs font-bold text-slate-500 dark:text-slate-300 border border-slate-100 dark:border-slate-700">
                         1º - 4º ESO
