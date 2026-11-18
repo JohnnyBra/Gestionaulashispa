@@ -55,10 +55,12 @@ export function ThemeProvider({
                 : 'light';
 
             root.classList.add(systemTheme);
+            root.setAttribute('data-theme', systemTheme); // lo lee el kit de la Suite
             return;
         }
 
         root.classList.add(theme);
+        root.setAttribute('data-theme', theme);
     }, [theme]);
 
     // Re-sync from PrismaEdu cookie when tab regains focus (if no manual override)
